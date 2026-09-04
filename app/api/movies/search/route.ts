@@ -5,12 +5,13 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
+    const lang = searchParams.get("lang") || "es-ES";
 
     if (!query || !query.trim()) {
       return NextResponse.json({ results: [] });
     }
 
-    const results = await searchMovies(query);
+    const results = await searchMovies(query, lang);
 
     // Ordenar los resultados por popularidad (relevancia) de forma descendente
     const sortedResults = [...results].sort((a, b) => b.popularity - a.popularity);

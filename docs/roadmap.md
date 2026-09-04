@@ -1,18 +1,30 @@
 # 🗺️ CinePOV — Roadmap de Desarrollo
 > Documento vivo que define las fases de construcción del proyecto, desde el setup inicial hasta la escala.
-**Última actualización:** Julio 2026  
-**Referencia:** [Plan de Proyecto](./plan_proyecto_cinepov.md)
+**Última actualización:** Julio 2026
+**Referencias:** [Plan de Proyecto](./plan_proyecto.md) · [Go-To-Market](./go_to_market.md)
 ---
 ## Visión general del Roadmap
 ```
-FASE 0          FASE 1            FASE 2           FASE 3            FASE 4            FASE 5
-Setup &         MVP Core          Engagement &     Social &          Escala &          Expansión
-Fundamentos     Funcional         Retención        Viralización      Monetización      & Ecosistema
-─────────►──────────────►─────────────►──────────────►──────────────►──────────────►
-Sem 1-2         Sem 3-8           Sem 9-12         Sem 13-18         Sem 19-24         Sem 25+
+FASE 0        FASE 1        FASE 2        FASE 3         FASE 4         FASE 5        FASE 6        FASE 7
+Setup &       MVP Core      Engagement    Preparación    Motor Viral    Social &      Escala &      Expansión &
+Fundamentos   Funcional     & Retención   Lanzamiento    & SEO          Comunidad     Rendimiento   Monetización
+──✅──────►───✅──────►───✅──────►────🔜─────►─────────►──────────►──────────►──────────►
+Sem 1-2       Sem 3-8       Sem 9-12      Sem 13-15      Sem 16-19      Sem 20-23     Sem 24-28     Sem 29+
+                                          🚀 LANZAMIENTO PÚBLICO
 ```
+### Principio de secuenciación
+La versión anterior de este roadmap situaba las palancas de crecimiento (imágenes OG, páginas virales, SEO, perfil cinematográfico) en las semanas 16-25, **después** de features sociales como reseñas y listas. Esa ordenación está corregida deliberadamente:
+
+- **El SEO compone.** Cada semana sin fichas indexadas es tráfico orgánico perdido de forma permanente, no diferida.
+- **Una ficha sin imagen OG es un enlace que nadie comparte.** Días de coste, todo el crecimiento orgánico del período en juego.
+- **Reseñas y listas retienen, no adquieren.** Mejoran la vida de quien ya está dentro y añaden carga de moderación. Con base de usuarios pequeña su impacto es marginal.
+
+> **Regla ante cualquier duda de priorización:** gana la tarea que produzca más valoraciones demográficas reales por unidad de esfuerzo.
+
+### Nota sobre las estimaciones temporales
+Las semanas son unidades de esfuerzo relativo, no fechas de calendario. El ritmo real de ejecución de las Fases 0-2 ha sido muy superior al estimado gracias al desarrollo asistido. Úsense para ordenar y dimensionar, no para comprometer fechas.
 ---
-## FASE 0 — Setup y Fundamentos (Semanas 1-2)
+## FASE 0 — Setup y Fundamentos (Semanas 1-2) ✅
 > **Objetivo:** Tener toda la infraestructura lista para empezar a desarrollar funcionalidades sin bloqueos.
 ### 0.1 — Configuración del entorno de desarrollo
 - [x] Inicializar repositorio Git local (GitHub remoto pendiente de crear por usuario)
@@ -35,6 +47,7 @@ Sem 1-2         Sem 3-8           Sem 9-12         Sem 13-18         Sem 19-24  
   - `Rating` (id, userId, movieId, score, createdAt, updatedAt)
 - [x] Ejecutar primera migración
 - [x] Crear seed script con datos de prueba (10 usuarios ficticios, 20 películas, 100 valoraciones)
+> ⚠️ **Deuda técnica crítica arrastrada:** la base de datos en uso es **SQLite con `better-sqlite3`**, no PostgreSQL. Esto no es desplegable en producción sobre Vercel (filesystem efímero y de solo lectura). Se resuelve en la Fase 3.1, que es bloqueante de lanzamiento.
 ### 0.4 — Integración TMDB
 - [x] Obtener API key de TMDB (cuenta gratuita)
 - [x] Crear módulo de servicio TMDB (`/lib/tmdb.ts`):
@@ -52,7 +65,7 @@ Sem 1-2         Sem 3-8           Sem 9-12         Sem 13-18         Sem 19-24  
 - [x] Crear favicon y meta tags base (configurados en Metadata de layout.tsx y favicon.ico provisto)
 **📦 Entregable Fase 0:** Proyecto funcional que arranca, conectado a BD con schema migrado, TMDB respondiendo, y sistema de diseño base definido.
 ---
-## FASE 1 — MVP Core Funcional (Semanas 3-8)
+## FASE 1 — MVP Core Funcional (Semanas 3-8) ✅
 > **Objetivo:** Construir las funcionalidades mínimas para que un usuario pueda registrarse, valorar películas y ver el desglose demográfico. Este es el corazón del producto.
 ### 1.1 — Autenticación y registro (Semana 3)
 #### 1.1.1 — Backend de autenticación
@@ -122,6 +135,7 @@ Sem 1-2         Sem 3-8           Sem 9-12         Sem 13-18         Sem 19-24  
 #### 1.3.3 — Sistema de simulación demográfica (Cold Start)
 - [x] Generar un pool de 5000 usuarios bot demográficamente variados en `prisma/seed.ts` (con nombres realistas, género e historial de edad) (creación masiva instantánea mediante createMany en seed.ts)
 - [x] Algoritmo heurístico probabilístico (en `lib/movies.ts`) para inyectar entre 80 y 150 votos coherentes (`isArtificial: true`) asociados a bots aleatorios en cada importación de película de TMDB (sesgos lógicos basados en género/edad y género cinematográfico)
+> ⚠️ **Deuda crítica arrastrada:** estos votos sintéticos **se presentan hoy como opiniones reales**. El endpoint de demografía no filtra por `isArtificial`. Se resuelve en la Fase 3.2, bloqueante de lanzamiento. Ver riesgo 7.4 y sección 6.4 del plan de proyecto.
 ---
 ### 1.4 — ⭐ Filtro demográfico (Semanas 6-7) — FEATURE CORE
 > Esta es la funcionalidad más importante del producto. Todo lo anterior es infraestructura para llegar aquí.
@@ -188,10 +202,11 @@ Sem 1-2         Sem 3-8           Sem 9-12         Sem 13-18         Sem 19-24  
 - [x] Verificar accesibilidad básica (contraste, alt texts, navegación por teclado)
 - [x] Fix de bugs encontrados (resuelto JSX heatmap, advertencia de hidratación html en layout y tipado estricto en la API de edición de perfil)
 - [x] Performance check: tiempos de carga < 2s (compilación a producción exitosa, consultas y escrituras SQLite optimizadas con índices y createMany)
-- [x] Deploy a Vercel (producción) (listo para desplegar, compilación completada con éxito)
+- [x] Deploy a Vercel (producción) (compilación completada con éxito)
+> ⚠️ **Corrección de estado:** el proyecto *compila* para producción, pero **no es funcionalmente desplegable** mientras la BD sea SQLite. Ver Fase 3.1.
 **📦 Entregable Fase 1:** Producto funcional y robusto listo para producción. Un usuario puede registrarse, buscar películas, valorarlas (escala 1-10) con decaimiento de bots, ver el desglose demográfico interactivo y gestionar su perfil/historial. Landing page de alto impacto.
 ---
-## FASE 2 — Engagement y Retención (Semanas 9-12)
+## FASE 2 — Engagement y Retención (Semanas 9-12) ✅
 > **Objetivo:** Maximizar el volumen de valoraciones por usuario y resolver el cold start. Sin datos, el producto no funciona.
 ### 2.1 — Onboarding "Las 50 Esenciales" (Semana 9)
 #### 2.1.1 — Selección de películas
@@ -261,255 +276,366 @@ Sem 1-2         Sem 3-8           Sem 9-12         Sem 13-18         Sem 19-24  
 - [x] Email de bienvenida post-registro
 - [x] Email semanal opcional: "Películas trending en tu segmento esta semana"
 - [x] Configuración de preferencias de email en el perfil
+> ⚠️ **Deuda arrastrada:** los emails están **simulados** (`lib/email.ts` escribe en `console.log`). No hay proveedor de envío real. Se resuelve en la Fase 3.7.
 **📦 Entregable Fase 2:** Sistema de onboarding que genera 15-20 valoraciones por nuevo usuario. Importador funcional de Letterboxd/IMDb. Rankings filtrables por demografía. Gamificación básica.
 ---
-## FASE 3 — Social y Viralización (Semanas 13-18)
-> **Objetivo:** Añadir capas sociales y de contenido compartible que impulsen el crecimiento orgánico.
-### 3.1 — Reseñas escritas (Semanas 13-14)
-#### 3.1.1 — Sistema de reseñas
-- [ ] Ampliar el modelo de datos: añadir campo `review_text` (Text, nullable) al Rating
-- [ ] Componente de escritura de reseña en la ficha de película (textarea con contador de caracteres)
-- [ ] Límite de caracteres: no hay mínimo, máximo 2000
-- [ ] La reseña es opcional (se puede valorar sin escribir)
-- [ ] Editar y eliminar reseñas
-#### 3.1.2 — Visualización de reseñas
-- [ ] Sección de reseñas en la ficha de película
-- [ ] Cada reseña muestra: nombre de usuario, nota, texto, fecha
-- [ ] Filtrar reseñas por segmento demográfico (¡extender el diferenciador a las reseñas!)
-- [ ] "Ver reseñas de personas como tú" vs. "Todas las reseñas"
-- [ ] Ordenar por: más recientes, mejor valoradas
-- [ ] Paginación
-#### 3.1.3 — Moderación básica
-- [ ] Sistema de reportes: botón "Reportar" en cada reseña
-- [ ] Panel de administración básico para revisar reportes
-- [ ] Filtro de contenido ofensivo básico (lista de palabras prohibidas)
-- [ ] Política de moderación documentada
-### 3.2 — Listas personalizadas (Semana 15)
-#### 3.2.1 — Watchlist
-- [ ] Nuevo modelo de datos: `Watchlist` (userId, movieId, addedAt)
-- [ ] Botón "Añadir a mi watchlist" en cada ficha de película
-- [ ] Página `/watchlist` con las películas pendientes de ver
-- [ ] Quitar de watchlist
-- [ ] Automáticamente quitar de watchlist al valorar una película
-#### 3.2.2 — Listas personalizadas
-- [ ] Modelo: `List` (id, userId, name, description, isPublic, createdAt) + `ListItem` (listId, movieId, order)
-- [ ] Crear, editar, eliminar listas
-- [ ] Añadir/quitar películas de una lista
-- [ ] Listas públicas con URL compartible (`/list/[id]`)
-- [ ] Ejemplo de uso: "Mis películas de terror favoritas", "Maratón de sci-fi"
-### 3.3 — Páginas compartibles y viralización (Semanas 16-17)
-#### 3.3.1 — Página "Batalla" de película
-- [ ] Página pública `/vs/[movieId]` (accesible sin registro)
-- [ ] Visualización llamativa del desglose demográfico de una película
-- [ ] Diseño optimizado para screenshots y compartir en redes:
-  - Formato visual tipo infografía
-  - Contrastes destacados ("Hombres: 5.2 vs Mujeres: 8.9")
-  - Branding CinePOV
-- [ ] Meta tags OpenGraph optimizados para preview en redes sociales
-- [ ] CTA de registro para visitantes no logueados
-- [ ] Botones de compartir (Twitter/X, WhatsApp, copiar enlace)
-#### 3.3.2 — Imágenes compartibles auto-generadas
-- [ ] Generación de imagen OG dinámica por película (usando `@vercel/og` o similar)
-- [ ] La imagen muestra: póster + nota global + desglose por género
-- [ ] Al compartir el link en redes, aparece la preview automáticamente
-#### 3.3.3 — Página "Películas más polarizantes"
-- [ ] Página `/polarizing`
-- [ ] Ranking de películas con mayor varianza entre segmentos demográficos
-- [ ] Ordenar por: mayor diferencia de nota entre géneros, entre rangos de edad
-- [ ] Contenido inherentemente viral y debatible
-### 3.4 — SEO y descubrimiento (Semana 18)
-#### 3.4.1 — SEO técnico
-- [ ] Sitemap XML dinámico con todas las fichas de películas
-- [ ] Meta tags dinámicos por película: title, description, OG image
-- [ ] Schema.org markup para películas (Movie structured data)
-- [ ] URLs amigables: `/movie/parasite-2019` (slug)
-- [ ] Canonical URLs
-#### 3.4.2 — Páginas de género cinematográfico
-- [ ] Páginas `/genre/[genre]` (Acción, Comedia, Drama, etc.)
-- [ ] Listado de películas del género con nota global + nota del segmento del usuario
-- [ ] SEO optimizado para búsquedas tipo "mejores películas de acción"
-#### 3.4.3 — Blog / contenido editorial
-- [ ] Sección `/blog` con artículos generados a partir de datos:
+## FASE 3 — Preparación de Lanzamiento (Semanas 13-15) — BLOQUEANTE
+> **Objetivo:** Convertir un MVP que funciona en local en un producto que funciona en el mundo real, es legal, es honesto y es medible. **Ninguna tarea de esta fase es opcional.** Hasta que esté completa, la plataforma no puede recibir un solo usuario real.
+> **Contexto:** las Fases 0-2 se construyeron optimizando para velocidad de desarrollo. Esta fase paga esa deuda.
+### 3.1 — Migración a PostgreSQL (BLOQUEANTE ABSOLUTO)
+> El sistema de ficheros de Vercel es efímero y de solo lectura. Con SQLite, cada registro y cada valoración se pierden en el siguiente arranque en frío. La aplicación *parece* funcionar y en realidad no persiste nada.
+- [x] Provisionar PostgreSQL gestionado (Neon con free tier en Frankfurt)
+- [x] Cambiar `provider` del datasource de `sqlite` a `postgresql` en `prisma/schema.prisma`
+- [x] Sustituir el adaptador `@prisma/adapter-better-sqlite3` por el driver de PostgreSQL en `lib/db.ts`
+- [x] Regenerar las migraciones desde cero (SQLite y PostgreSQL difieren en tipos, enums nativos y arrays)
+- [x] Migrar el campo `cast` y los géneros a tipos nativos de PostgreSQL si procede
+- [x] Configurar **connection pooling** apto para serverless (Neon serverless driver o PgBouncer). Sin esto, un pico de tráfico agota las conexiones.
+- [x] Adaptar `prisma/seed.ts` al adaptador `PrismaPg` y compatibilidad con PostgreSQL
+- [x] Configurar `DATABASE_URL` (pooled) y `DIRECT_URL` (migraciones) en Vercel y `.env.example`
+- [x] Verificar todos los endpoints contra la BD nueva
+- [ ] Configurar **copias de seguridad automáticas** y verificar la restauración una vez
+- [ ] Documentar el proceso de despliegue y de rollback
+### 3.2 — Transparencia de los datos de arranque (BLOQUEANTE ABSOLUTO)
+> Ver sección 6.4 y riesgo 7.4 del plan de proyecto. Este es el mayor riesgo reputacional del proyecto y **se agrava con el éxito**.
+- [x] Auditar **todos** los endpoints y vistas que consumen agregados, verificando el tratamiento de `isArtificial`
+- [x] Refactorizar `GET /api/movies/[id]/demographics` para devolver los agregados desglosados: `real`, `estimated` y `total`
+- [x] Refactorizar `GET /api/movies/[id]/stats` con el mismo criterio
+- [x] Revisar `/api/movies/rankings` y `/api/user/recommendation`
+- [x] Tratamiento visual diferenciado en `MovieDemographics.tsx`: los datos estimados nunca se ven como datos reales consolidados
+- [x] Etiqueta explícita legible: *"Estimación de arranque · X de Y valoraciones son proyecciones estadísticas"*
+- [x] Cuando un segmento alcanza el umbral de votos **reales**, mostrar solo el dato real
+- [x] Crear página pública `/metodologia` (`/methodology`) explicando el algoritmo con honestidad total, pensada para ser citada
+- [x] Enlazar la metodología desde cada visualización demográfica y desde el footer
+- [x] Excluir los datos estimados de todo contenido compartible (Fase 4) y de cualquier reporte comercial
+- [x] Cortar la inyección automática de votos sintéticos en importaciones de TMDB (`lib/movies.ts`)
+- [ ] Añadir métrica de vigilancia: % de valoraciones sintéticas sobre el total, visible en el panel interno
+- [ ] Redactar el plan de comunicación de crisis por si la acusación llega antes que la explicación
+### 3.3 — Instrumentación y observabilidad
+> Hoy no hay **ninguna** analítica en el proyecto. Los KPIs de la sección 11 del plan no son medibles, lo que convierte cualquier decisión de crecimiento en una apuesta a ciegas.
+- [x] Instalar Vercel Analytics + Speed Insights (Core Web Vitals reales)
+- [x] Instalar PostHog (free tier) en modo **cookieless** para evitar el banner de cookies pesado
+- [x] Definir e implementar el esquema de eventos:
+  - `signup_started`, `signup_completed`, `onboarding_started`, `onboarding_completed` (con nº de valoraciones)
+  - `rating_created`, `rating_updated`, `rating_deleted`
+  - `demographics_viewed`, `demographics_tab_switched`, `demographics_methodology_clicked`
+  - `search_performed`, `import_started`, `import_completed`
+- [x] Cablear `AnalyticsProvider` y `CookieBanner` en el layout raíz
+- [ ] Configurar el embudo de activación: visita → registro → onboarding → **primer desglose demográfico visto** (momento "aha")
+- [ ] Dashboard de retención D1 / D7 / D30
+- [ ] Instalar **Sentry** para errores de servidor y de cliente, con alertas
+- [ ] Configurar un canal de alertas (Discord/Telegram) para errores críticos y picos de tráfico
+- [x] Google Search Console y Bing Webmaster Tools verificados y conectados
+### 3.4 — Legal y cumplimiento
+> Todos obligatorios con tráfico europeo. Ver sección 10.2 del plan de proyecto.
+- [x] Redactar y publicar **política de privacidad** (`/privacidad`)
+- [x] Redactar y publicar **términos y condiciones** (`/terminos`)
+- [x] Redactar y publicar **aviso legal** (`/aviso-legal`, exigido por la LSSI en España)
+- [x] Implementar banner de consentimiento de cookies con bloqueo previo de scripts no esenciales
+- [x] Implementar **borrado de cuenta** real: anonimizar las valoraciones conservando los atributos demográficos agregados, y documentarlo
+- [x] Implementar **exportación de datos** propios en CSV (derecho de portabilidad y buena feature de producto)
+- [x] Enlaces legales visibles en el footer
+- [x] Verificación de email obligatoria antes de que un voto cuente para los agregados públicos
+- [ ] Decidir y aplicar la política de edad mínima (recomendado: solo 18+)
+- [x] Atribución de TMDB visible según sus ToS
+- [ ] Registro interno de actividades de tratamiento
+### 3.5 — Internacionalización (adelantada desde la antigua Fase 5.6)
+> Se adelanta porque retrofitear i18n sobre cientos de textos hardcodeados cuesta un orden de magnitud más que asumirla ahora. Ver sección 1.5 del plan de proyecto.
+- [x] Configurar arquitectura i18n tipada (lib/i18n) con persistencia en cookie (cinepov_locale) e I18nProvider
+- [x] Extraer textos de la interfaz a diccionarios tipados simétricos (es.ts y en.ts) con tests unitarios de paridad
+- [x] Traducción completa a inglés y español sin emoticonos
+- [x] Detección automática del idioma del navegador con selector manual persistente en el Header (ES | EN)
+- [x] Pasar el parámetro language en las llamadas a TMDB según el locale activo (es-ES / en-US)
+- [x] Internacionalizar componentes clave: Header, BottomNav, Footer, SearchBar, CookieBanner, LandingDemo, Landing Hero y Auth (Login/Register)
+- [x] Internacionalizar la ficha de película (/movie/[id]) y sus componentes: calificación, widget de voto, desglose demográfico, opiniones comunitarias, inserción embebida y películas similares
+- [x] Internacionalizar catálogo completo y vistas principales: Explorar (/explore), Rankings Demográficos (/rankings), Recomendaciones (/recommendations), Modo Pareja y Amigos (/tonight) y Feed de Actividad (/feed)
+- [ ] Etiquetas `hreflang` y URLs canónicas por idioma (crítico para el SEO internacional)
+- [ ] Diferido a Fase 7: modelo relacional `MovieTranslation` para variantes regionales (es-ES vs es-MX)
+### 3.6 — Seguridad y antiabuso mínimo (adelantado desde las antiguas Fases 4.2 y 4.5)
+> Se adelanta porque el review bombing y el spam de registros llegan **con** el tráfico, no después. Un lanzamiento viral sin estas defensas es una invitación.
+- [x] Rate limiting persistido en base de datos en `/api/auth/register`, login por credenciales, `/api/ratings`, `/api/feedback` e importaciones
+- [x] Cabeceras de seguridad HTTP: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
+- [x] Endurecer cookies de sesión: `Secure`, `HttpOnly`, `SameSite`
+- [x] Honeypot y protección básica de bots en los formularios de registro (`lib/anti-abuse.ts`)
+- [x] Sanitización de entradas de texto libre (nombre público, feedback) contra XSS (`lib/sanitize.ts`)
+- [x] Umbral mínimo de verificación de cuenta (`emailVerified`) para que un voto entre en los agregados públicos
+- [x] Alerta automática ante picos anómalos de valoraciones en un mismo segmento y película (`checkReviewBombingAnomaly`)
+- [x] Revisar que los endpoints de importación no permitan abuso de la cuota de TMDB
+- [x] Repasar que ningún endpoint exponga datos demográficos individuales
+### 3.7 — Emails transaccionales reales
+- [x] Integrar un proveedor real (Resend en `lib/email.ts` con fallback seguro en desarrollo)
+- [x] Sustituir los `console.log` de `lib/email.ts` por envíos reales
+- [ ] Configurar dominio de envío con SPF, DKIM y DMARC (sin esto, todo va a spam)
+- [x] Plantillas de email: bienvenida, verificación de email, recuperación de contraseña, resumen semanal
+- [x] Enlace de baja funcional en todos los emails no transaccionales
+- [x] Implementar **recuperación de contraseña** (`/forgot-password`, `/reset-password` y tokens de un solo uso hasheados)
+### 3.8 — Marca, dominio y presencia
+> Barato, rápido, y se pierde para siempre si se hace tarde. Si el proyecto se viraliza sin el handle reservado, lo ocupa otro.
+- [ ] Registrar el dominio definitivo (`.com` prioritario, más `.es` defensivo)
+- [ ] Reservar los handles en X/Twitter, TikTok, Instagram, Reddit, YouTube, Bluesky y Product Hunt
+- [x] Logo definitivo en SVG y favicon completo (todos los tamaños, `apple-touch-icon`, `manifest` en `public/icon.svg` y `public/manifest.json`)
+- [ ] Imagen OG estática de respaldo para la home y las páginas sin imagen dinámica
+- [ ] Crear el repositorio remoto en GitHub (hoy solo existe en local, sin copia de seguridad del código)
+- [ ] Definir el tono de voz de la marca para las redes y los emails
+- [x] Página `/about` con la historia del proyecto (material para prensa y para Product Hunt)
+### 3.9 — Checklist final previo al lanzamiento
+- [x] Configurar CI en GitHub Actions: lint, type-check, suite de tests y build contra contenedor PostgreSQL
+- [x] Suite de tests unitarios (Vitest con 34 tests) para agregación demográfica y sanitización
+- [ ] Prueba de humo completa en producción, contra PostgreSQL, en móvil y escritorio
+- [ ] Verificar que un usuario nuevo puede registrarse, verificar el email, valorar y ver su desglose
+- [ ] Prueba de carga básica del endpoint de demografía
+- [ ] Revisión de accesibilidad (contraste, navegación por teclado, lectores de pantalla)
+- [ ] Revisar todos los textos de error visibles al usuario en ambos idiomas
+- [ ] Verificar que no hay secretos en el repositorio ni en el bundle de cliente
+**Entregable Fase 3:** Plataforma legalmente desplegable, con datos persistentes, honesta sobre sus datos, medible, segura y bilingüe. **Lista para recibir tráfico real.**
+---
+## FASE 4 — Motor Viral y SEO (Semanas 16-19)
+> **Objetivo:** Convertir el producto en su propio canal de adquisición. Cada ficha de película debe ser un anuncio compartible y una página indexada. Esta fase es el corazón del objetivo de notoriedad.
+> **Plan de ejecución detallado en [`go_to_market.md`](./go_to_market.md).**
+### 4.1 — Imágenes OG dinámicas (máxima prioridad de la fase)
+> Una ficha sin imagen OG es un enlace que nadie comparte. Es la tarea con mejor relación impacto/esfuerzo de todo el roadmap.
+- [x] Implementar generación de imágenes OG con `ImageResponse` (`next/og`) en `app/movie/[id]/opengraph-image.tsx`
+- [x] Plantilla de ficha de película: póster + título + **el contraste demográfico más llamativo** ("Mujeres: 9.1 · Hombres: 5.4")
+- [x] Plantilla compartible para fichas y páginas de batalla `/vs/`
+- [x] Metadatos OpenGraph y Twitter Card completos en fichas y batallas
+- [x] `generateMetadata` dinámico en `/movie/[id]` y `/vs/[id]`
+- [x] Usar solo datos con suficientes votos reales; nunca viralizar estimaciones (`isShareable` y `getTopDemographicContrast`)
+- [ ] Validar el resultado con los depuradores de X, Facebook, LinkedIn y WhatsApp
+### 4.2 — Página "Batalla" compartible
+- [x] Página pública `/vs/[movieId]` accesible sin registro
+- [x] Diseño tipo infografía optimizado para captura de pantalla (vertical para stories, horizontal para X)
+- [x] Contraste demográfico destacado como titular
+- [x] Branding CinePOV visible en la imagen (cada captura compartida es una impresión de marca)
+- [x] Botones de compartir nativos: X, WhatsApp, Reddit, copiar enlace y Web Share API móvil
+- [ ] Botón "descargar imagen" para compartir en plataformas sin preview
+- [x] CTA de registro contextual: "¿Coincides con tu grupo demográfico? Vota en CinePOV"
+- [x] Instrumentar `share_clicked` por canal para medir el K-factor
+### 4.3 — Películas polarizantes (promocionado a elemento de portada)
+> Es el contenido más viral que los datos producen por sí solos, sin coste de producción. En la versión anterior del roadmap era una página secundaria en la semana 17.
+- [x] Endpoint de cálculo de varianza entre segmentos (brecha de género, brecha generacional) en `/api/movies/polarizing`
+- [x] Página `/polarizing` con ranking de las películas que más dividen
+- [x] Filtros: mayor brecha por género, por edad, global
+- [x] **Sección destacada en la home** (`app/page.tsx`)
+- [x] Umbral estricto de votos reales por segmento para entrar en el ranking
+- [x] Enlace directo a la página `/vs/` de cada película del ranking
+### 4.4 — "Tu Perfil Cinematográfico" (adelantado desde la antigua Fase 5.3)
+> Es el bucle viral personal: el usuario comparte porque el artefacto habla de él, no de la plataforma. Estaba planificado para la semana 25 o más.
+- [x] Página `/profile/stats` con infografía personal:
+  - Géneros más y menos valorados
+  - Década favorita
+  - Tu media vs. media global comunitaria
+  - "Eres un X% más generoso/exigente que la media"
+  - Histograma de la distribución de tus notas
+  - **"Tu gemelo demográfico"**: con qué segmento coinciden más tus gustos, aunque no sea el tuyo
+- [x] Resumen y métricas compartibles al portapapeles y redes
+- [ ] Formato vertical para stories de Instagram y TikTok
+- [x] Desbloqueo a partir de N valoraciones (barra de progreso de 5 valoraciones para el Gemelo Demográfico)
+### 4.5 — SEO técnico
+> El activo que compone. Cada semana sin indexar es tráfico perdido de forma permanente.
+- [x] Sitemap XML dinámico (`app/sitemap.ts`) con todas las fichas, batallas, rankings y páginas estáticas
+- [x] `robots.txt` dinámico (`app/robots.ts`)
+- [x] URLs amigables con slug: `/movie/[id]-[slug]` y resolución canónica
+- [x] URLs canónicas dinámicas en metadatos
+- [x] Marcado Schema.org JSON-LD: `Movie` con `AggregateRating`
+- [x] Metadescripciones dinámicas y únicas por ficha
+- [ ] Optimizar Core Web Vitals: LCP < 2,5 s, INP < 200 ms, CLS < 0,1
+- [ ] Lazy loading y `sizes` correctos en los pósters
+- [ ] Enviar el sitemap a Search Console y monitorizar la cobertura de indexación
+### 4.6 — Páginas de aterrizaje programáticas
+> SEO programático: cientos de páginas indexables generadas a partir de los datos que ya tenemos.
+- [x] Páginas `/genre/[genre]` con notas globales y por segmento
+- [x] Páginas de segmento: "Las mejores películas según mujeres de 18-34", etc. en `/segment/[slug]`
+- [x] Páginas de década en `/decade/[slug]` (desde los 60 hasta los 2020s)
+- [ ] Cada página con texto introductorio generado a partir de datos reales, no plantillas vacías
+- [x] Enlazado interno entre fichas y géneros
+### 4.7 — Blog de datos
+- [x] Sección `/blog` con artículos de datos demográficos
+- [x] Artículos generados a partir de los propios datos, con gráficos y tablas:
   - "Las 10 películas que más dividen a hombres y mujeres"
   - "¿Valoran los jóvenes los clásicos? Lo que dicen los datos"
-- [ ] Contenido SEO que atraiga tráfico orgánico
-**📦 Entregable Fase 3:** Reseñas con filtro demográfico. Listas personalizadas. Páginas virales compartibles. SEO optimizado. Contenido editorial basado en datos.
+  - "La brecha generacional en el cine de superhéroes"
+- [x] Cada artículo diseñado para ser citado y enlazado por medios
+### 4.8 — Widget embebible (adelantado desde la antigua Fase 5.5)
+> Se adelanta porque genera backlinks de calidad, que son el combustible del SEO, y coloca la marca en medios de cine.
+- [x] Widget `<iframe>` embebible con el desglose demográfico de una película (`/embed/movie/[id]`)
+- [x] Generador de código de inserción en cada ficha (`MovieEmbedModal.tsx`)
+- [x] Branding y enlace de retorno a CinePOV
+- [ ] Documentación para blogs y medios
+### 4.9 — "Modo Pareja" (adelantado desde la antigua Fase 5.2)
+> Utilidad real, altamente compartible y prácticamente gratis: los agregados por segmento ya existen.
+- [x] Página `/tonight` ("¿Qué vemos esta noche?")
+- [x] Selección de 2 o más perfiles demográficos
+- [x] Buscar películas con nota alta en **todos** los segmentos elegidos (algoritmo de consenso mutuo)
+- [x] Resultado compartible con enlace
+### 4.10 — "Tu año en cine" (evento anual de marketing)
+- [x] Resumen anual personalizado en formato stories, tipo Spotify Wrapped (`/wrapped`)
+- [x] Comparativa con el segmento demográfico del usuario
+- [x] Experiencia interactiva y tarjeta compartible
+**Entregable Fase 4:** Cada ficha es un anuncio compartible y una página indexada. Bucle viral personal funcionando y medido con K-factor. Cientos de páginas de aterrizaje orgánico.
 ---
-## FASE 4 — Escala y Optimización (Semanas 19-24)
-> **Objetivo:** Preparar la plataforma para manejar un volumen creciente de usuarios y datos sin degradar la experiencia.
-### 4.1 — Optimización de rendimiento (Semanas 19-20)
-#### 4.1.1 — Vistas materializadas
+## FASE 5 — Social y Comunidad (Semanas 20-23)
+> **Objetivo:** Profundizar la retención de la base ya adquirida. Estas features mejoran la vida de quien ya está dentro; no traen usuarios nuevos por sí solas, y por eso van después del motor viral.
+### 5.1 — Reseñas escritas
+#### 5.1.1 — Sistema de reseñas
+- [x] Ampliar el modelo de datos: añadir campo `reviewText` (Text, nullable) al Rating
+- [x] Componente de escritura de reseña en la ficha de película (textarea con contador de caracteres)
+- [x] Límite de caracteres: no hay mínimo, máximo 2000
+- [x] La reseña es opcional (se puede valorar sin escribir)
+- [x] Sanitización estricta del texto antes de persistir (`sanitizeAndTruncate`)
+#### 5.1.2 — Visualización de reseñas
+- [x] Sección de reseñas en la ficha de película (`MovieReviewsSection.tsx`)
+- [x] Cada reseña muestra: nombre de usuario, nota, texto, fecha y segmento
+- [x] Filtrar reseñas por segmento demográfico (¡extender el diferenciador a las reseñas!)
+- [x] "Ver reseñas de personas como tú" vs. "Todas las reseñas"
+- [x] Ordenar por: más recientes, mejor valoradas
+- [x] Paginación (carga progresiva con botón en `MovieReviewsSection.tsx`)
+#### 5.1.3 — Moderación
+> No lanzar reseñas sin esto listo. El contenido generado por usuarios sin moderación es un riesgo legal y reputacional inmediato.
+- [x] Sistema de reportes: botón "Reportar" en cada reseña
+- [x] Endpoint seguro con rate limiting (`/api/reviews/[id]/report`)
+- [x] Ocultamiento preventivo automático si se acumulan 3 o más reportes (`isModerated: true`)
+- [x] Panel de administración para revisar reportes (`/admin/reports`)
+- [x] Filtro automático de contenido ofensivo en ambos idiomas (`lib/moderation.ts`)
+- [x] Política de moderación pública y documentada (`/moderacion`)
+### 5.2 — Listas y watchlist
+#### 5.2.1 — Watchlist
+- [x] Nuevo modelo de datos: `Watchlist` (userId, movieId, addedAt)
+- [x] Botón "Añadir a mi watchlist / Quiero verla" en cada ficha de película (`WatchlistButton.tsx`)
+- [x] Pestaña de Watchlist en el perfil del usuario (`/profile`) con las películas pendientes de ver
+- [x] Quitar de watchlist
+- [x] Automáticamente quitar de watchlist al valorar una película
+#### 5.2.2 — Listas personalizadas
+- [x] Modelo: `CustomList` y `ListItem` en Prisma
+- [x] Crear, editar, eliminar listas
+- [x] Añadir/quitar películas de una lista (con `AddToListButton` en ficha)
+- [x] Listas públicas con URL compartible (`/list/[id]`)
+- [x] Pestaña "Mis Listas" en perfil de usuario (`/profile`)
+### 5.3 — Perfiles públicos y seguimiento
+- [x] Página pública `/user/[id]` con privacidad configurable
+- [x] Mostrar: nombre, avatar, nº de valoraciones, nota media, listas públicas
+- [x] **Nunca** exponer edad ni género individuales
+- [x] Modelo `Follow` (followerId, followedId) en Prisma
+- [x] Feed de actividad de los usuarios seguidos (`/feed`)
+- [x] Notificaciones de actividad (modelo Notification, campana interactiva y avisos de nuevos seguidores)
+**Entregable Fase 5:** Reseñas con filtro demográfico y moderación. Listas y watchlist. Capa social básica.
+---
+## FASE 6 — Escala y Rendimiento (Semanas 24-28)
+> **Objetivo:** Sostener un volumen creciente sin degradar la experiencia. Se ejecuta **cuando las métricas lo justifiquen**, no por anticipación.
+### 6.1 — Optimización de agregaciones
 - [ ] Crear vista materializada `movie_demographic_stats` en PostgreSQL
-- [ ] Datos pre-calculados: avg_score, count por (movie_id, gender, age_range)
+- [ ] Datos pre-calculados por (movie_id, gender, age_range), diferenciando real y estimado
 - [ ] Job de refresco: `REFRESH MATERIALIZED VIEW CONCURRENTLY` cada 10 minutos
-- [ ] Migrar el endpoint de demographics a leer de la vista en vez de calcular en real-time
-- [ ] Benchmark: comparar tiempos de respuesta antes/después
-#### 4.1.2 — Capa de caché
-- [ ] Implementar caché con Redis o Vercel KV:
-  - Cachear respuesta de `/api/movies/[id]/demographics` con TTL de 10 min
-  - Cachear resultados de rankings con TTL de 30 min
-  - Cachear datos de TMDB con TTL de 24h
-- [ ] Invalidación de caché al recibir nuevas valoraciones (debounced)
-- [ ] Headers de cache-control para assets estáticos
-#### 4.1.3 — Optimización de queries
+- [ ] Migrar el endpoint de demographics a leer de la vista
+- [ ] Benchmark comparativo antes/después
+### 6.2 — Capa de caché
+- [ ] Caché con Redis o Vercel KV:
+  - `/api/movies/[id]/demographics` con TTL de 10 min
+  - Rankings con TTL de 30 min
+  - Datos de TMDB con TTL de 24 h
+- [ ] Invalidación al recibir nuevas valoraciones (con debounce)
+- [ ] Cache-control para assets estáticos y para las imágenes OG
+### 6.3 — Optimización de queries y frontend
 - [ ] Analizar queries lentas con `EXPLAIN ANALYZE`
-- [ ] Añadir índices parciales donde sea necesario
-- [ ] Optimizar N+1 queries en listados
-- [ ] Connection pooling (PgBouncer o similar)
-#### 4.1.4 — Optimización de frontend
-- [ ] Lazy loading de imágenes (pósters)
-- [ ] Code splitting por ruta
-- [ ] Optimización de bundle size (tree shaking, dynamic imports)
+- [ ] Índices parciales y compuestos donde el plan de ejecución lo pida
+- [ ] Eliminar N+1 en listados
+- [ ] Code splitting, tree shaking y dynamic imports
 - [ ] Prefetching de rutas probables
-- [ ] Core Web Vitals: LCP < 2.5s, FID < 100ms, CLS < 0.1
-### 4.2 — Sistema anti-abuso (Semana 21)
-#### 4.2.1 — Detección de review bombing
-- [ ] Alertas automáticas: detectar picos anómalos de valoraciones por segmento
-- [ ] Reglas: si un segmento recibe más de X valoraciones en Y minutos → alerta
-- [ ] Dashboard de administración para revisar alertas
-- [ ] Acción: cuarentena temporal de valoraciones sospechosas
-#### 4.2.2 — Score de confianza de usuario
-- [ ] Calcular un "trust score" interno por usuario basado en:
-  - Antigüedad de la cuenta
-  - Nº de valoraciones
-  - Variedad de puntuaciones (no siempre 1 o siempre 10)
-  - Email verificado
-- [ ] Las valoraciones de usuarios con bajo trust score se ponderan menos en los agregados
-- [ ] El trust score NO se muestra al usuario
-#### 4.2.3 — Rate limiting
-- [ ] Rate limiting en endpoints de creación (registros, valoraciones)
-- [ ] Protección contra bots: honeypot fields en formularios
-- [ ] Considerar CAPTCHA en registro si hay abuso detectado
-### 4.3 — Panel de administración (Semana 22)
-- [ ] Dashboard `/admin` protegido (solo admins):
-  - Estadísticas generales: usuarios, valoraciones, películas
-  - Gráficos de crecimiento
-  - Distribución de usuarios por segmento demográfico
-  - Reportes de reseñas pendientes de moderación
+### 6.4 — Antiabuso avanzado
+- [ ] Score de confianza interno por usuario: antigüedad, nº de valoraciones, varianza de sus notas, email verificado
+- [ ] Ponderación de los agregados según el score (nunca visible al usuario)
+- [ ] Cuarentena temporal de valoraciones sospechosas
+- [ ] Detección de patrones de creación coordinada de cuentas
+- [ ] CAPTCHA condicional solo ante abuso detectado
+### 6.5 — Panel de administración
+- [ ] Dashboard `/admin` protegido:
+  - Usuarios, valoraciones, películas y curvas de crecimiento
+  - Distribución demográfica y detección de segmentos infrarrepresentados
+  - % de valoraciones sintéticas por película y global
+  - Cola de moderación de reseñas
   - Alertas de review bombing
-  - Gestión de usuarios (ban, editar, eliminar)
+  - Gestión de usuarios (suspender, editar, eliminar)
 - [ ] Logs de actividad administrativa
-### 4.4 — PWA y experiencia móvil (Semanas 23-24)
-#### 4.4.1 — Progressive Web App
-- [ ] Manifest.json con iconos, colores, nombre
-- [ ] Service Worker para offline básico (shell de la app)
-- [ ] Prompt de "Añadir a pantalla de inicio"
-- [ ] Splash screen
+### 6.6 — PWA y experiencia móvil
+- [x] `manifest.json` con iconos, colores y nombre (`public/manifest.json` y `public/icon.svg`)
+- [ ] Service Worker para shell offline
+- [ ] Prompt de instalación y splash screen
 - [ ] Notificaciones push (opcional)
-#### 4.4.2 — Optimización móvil
-- [ ] Revisar TODOS los flujos en móvil
-- [ ] Gestos táctiles: swipe para valorar en onboarding
-- [ ] Bottom navigation bar en móvil
-- [ ] Optimización de tamaño de imágenes por dispositivo
-### 4.5 — Fortalecimiento de Seguridad (Semana 23)
-- [ ] Implementar cabeceras de seguridad HTTP (CSP, HSTS, X-Frame-Options) en proxy.ts
-- [ ] Integrar sanitización de entradas de texto libre (con librerías como dompurify/xss) en los endpoints de reseñas y edición de perfil para evitar ataques XSS
-- [ ] Endurecer la configuración de cookies de sesión (Secure, HttpOnly, SameSite strict)
-- [ ] Implementar protección de fuerza bruta y rate limiting por IP en los endpoints de autenticación (/api/auth/register y login)
-**📦 Entregable Fase 4:** Plataforma optimizada para escala. Caché en múltiples niveles. Sistema anti-abuso funcional. PWA instalable. Panel de administración y auditoría de ciberseguridad.
+- [ ] Revisar todos los flujos en móvil y gestos táctiles en el onboarding
+- [x] Bottom navigation en móvil (`components/BottomNav.tsx`)
+**Entregable Fase 6:** Plataforma optimizada para escala, con caché multinivel, antiabuso ponderado, panel de administración y app instalable.
 ---
-## FASE 5 — Expansión y Ecosistema (Semana 25+)
-> **Objetivo:** Ampliar el producto más allá del MVP original. Monetización, API, inteligencia artificial.
-### 5.1 — Sistema de recomendaciones
-#### 5.1.1 — Recomendaciones por afinidad demográfica
-- [ ] "Películas populares entre personas como tú que aún no has visto"
-- [ ] Algoritmo: películas con alta nota en el segmento del usuario + alto nº de valoraciones + que el usuario no haya valorado
-- [ ] Sección en la página principal personalizada
-- [ ] Página `/recommendations` dedicada
-#### 5.1.2 — "Usuarios afines"
-- [ ] Encontrar usuarios con perfil de valoraciones similar (collaborative filtering básico)
-- [ ] "Usuarios que valoran como tú también vieron…"
-- [ ] Mostrar afinidad: "Tus gustos coinciden un 78% con este grupo"
-### 5.2 — Features sociales avanzadas
-#### 5.2.1 — Perfiles públicos
-- [ ] Página pública `/user/[username]`
-- [ ] Mostrar: nombre, avatar, nº de valoraciones, nota media, géneros favoritos
-- [ ] Listado público de valoraciones (configurable por privacidad)
-- [ ] Listas públicas del usuario
-#### 5.2.2 — Seguir usuarios
-- [ ] Modelo: `Follow` (followerId, followedId)
-- [ ] Feed de actividad: "Usuarios que sigues han valorado…"
-- [ ] Notificaciones de actividad de seguidos
-#### 5.2.3 — Modo Pareja/Grupo
-- [ ] Feature "¿Qué vemos esta noche?"
-- [ ] Seleccionar 2+ perfiles demográficos
-- [ ] Buscar películas con nota alta en TODOS los segmentos seleccionados
-- [ ] Interfaz divertida: "Encuentra la película perfecta para tu grupo"
-### 5.3 — Analítica avanzada para el usuario
-#### 5.3.1 — "Tu Perfil Cinematográfico"
-- [ ] Página `/profile/stats` con infografía personal:
-  - Géneros más/menos valorados
-  - Década favorita
-  - Director más valorado
-  - Tu media vs. media global vs. media de tu segmento
-  - "Eres un X% más generoso/duro que la media"
-  - Distribución de tus notas (histograma)
-- [ ] Diseño compartible en redes (imagen generada)
-#### 5.3.2 — "Tu año en cine" (wrap anual tipo Spotify Wrapped)
-- [ ] Resumen anual personalizado: películas vistas, nota media, género más visto, etc.
-- [ ] Formato stories/carousel compartible
-- [ ] Lanzamiento en diciembre de cada año (evento de marketing)
-### 5.4 — API pública
-- [ ] API REST documentada para desarrolladores
-- [ ] Endpoints públicos: búsqueda de películas, notas demográficas
-- [ ] Autenticación por API key
-- [ ] Rate limiting por tier
-- [ ] Documentación con Swagger/OpenAPI
+## FASE 7 — Expansión y Monetización (Semana 29+)
+> **Objetivo:** Rentabilizar y ampliar el producto sobre una base sólida de datos reales.
+### 7.1 — Sistema de recomendaciones
+- [x] "Películas populares entre personas como tú que aún no has visto" (`/recommendations`)
+- [x] Algoritmo: nota alta en el segmento del usuario + volumen suficiente + no valorada por él (`lib/recommendations.ts`)
+- [x] Sección personalizada en la home y página `/recommendations` (`HomeRecommendationsSection.tsx`)
+- [ ] Filtrado colaborativo básico: "usuarios que valoran como tú también vieron…"
+- [x] Mostrar afinidad: "Tus gustos coinciden un 78% con este grupo" (`calculateAffinityScore`)
+### 7.2 — Series de televisión
+- [ ] Migrar el buscador al endpoint `/search/multi` de TMDB
+- [ ] Adaptar el modelo de datos al tipo de medio (película vs. serie)
+- [ ] Detalles específicos de series: creador, temporadas, año de inicio y fin
+- [ ] Extender el desglose demográfico y los rankings a series
+> El volumen de búsqueda de series es enorme; valorar adelantar esta tarea a la Fase 4 si el SEO de películas funciona bien.
+### 7.3 — Traducciones regionales
+- [ ] Modelo relacional `MovieTranslation` para separar títulos y sinopsis por región (es-ES vs es-MX)
+- [ ] Geolocalización por IP para servir el título regional correcto
+- [ ] Ampliar la interfaz a francés y portugués
+- [ ] Sincronización dinámica de traducciones desde TMDB
+### 7.4 — API pública
+> ⚠️ **Cuidado con regalar el foso.** El dataset demográfico es el único activo no replicable del proyecto (ver sección 1.4 del plan). La API debe dar acceso puntual, nunca masivo.
+- [ ] API REST documentada con OpenAPI/Swagger
+- [ ] Autenticación por API key y rate limiting por tier
+- [ ] Sin endpoints de volcado masivo de agregados
+- [ ] Términos que prohíban explícitamente la reconstrucción del dataset
 - [ ] Casos de uso: bots de Telegram, extensiones de navegador, apps de terceros
-### 5.5 — Monetización
-#### 5.5.1 — Modelo freemium
-- [ ] **Gratis:** Valorar, ver desglose demográfico básico (por género O por edad), rankings
-- [ ] **Premium:** Desglose cruzado completo (género × edad), recomendaciones avanzadas, perfil cinematográfico, exportar datos, sin ads
-- [ ] Integración de pagos (Stripe)
-- [ ] Gestión de suscripciones
-#### 5.5.2 — Widget embebible para medios
-- [ ] Widget HTML embebible que blogs/medios de cine puedan insertar
-- [ ] Muestra el desglose demográfico de una película
-- [ ] Genera backlinks y tráfico
-- [ ] Versión gratuita con branding CinePOV / premium sin branding
-#### 5.5.3 — Datos y reportes para la industria
-- [ ] Reportes anonimizados y agregados para estudios de cine/distribuidoras
-- [ ] Insight tipo: "Tu película tiene un 8.5 entre mujeres 18-24 pero un 5.0 entre hombres 45+. Tu campaña de marketing debería…"
-- [ ] Modelo B2B de alto valor
-### 5.6 — Internacionalización
-- [ ] Implementar el modelo de traducciones relacionales (`MovieTranslation`) en la base de datos para separar títulos y sinopsis por región (ej: es-ES para España vs es-MX para Latinoamérica)
-- [ ] Soporte multi-idioma (i18n) de la interfaz de usuario: español, inglés, francés, portugués
-- [ ] Integrar detección automática del idioma del navegador y geolocalización por IP en el servidor para servir los títulos regionales correctos
-- [ ] Contenido editorial localizado y sincronización dinámica de traducciones desde la API de TMDB
-### 5.7 — Soporte para series de televisión (TV Shows)
-- [ ] Modificar el buscador de TMDB para utilizar el endpoint `/search/multi` (películas + series)
-- [ ] Adaptar la base de datos para almacenar el tipo de medio (película vs serie)
-- [ ] Mostrar detalles específicos de series en la interfaz (creador, temporadas, año de inicio y fin)
-**📦 Entregable Fase 5:** Ecosistema completo con recomendaciones, features sociales, analítica personal, API pública, monetización, soporte multi-idioma y catálogo extendido de series.
+### 7.5 — Monetización
+> **Plan estratégico detallado:** [`estrategia_monetizacion.md`](./estrategia_monetizacion.md).
+> **Bloqueante previo:** revisar los ToS de TMDB y obtener licencia comercial si procede (ver riesgo 7.5 del plan).
+- [ ] **Gratis:** valorar, desglose por género o por edad, rankings
+- [ ] **Premium:** cruce completo género × edad, recomendaciones avanzadas, perfil cinematográfico ampliado, exportación, sin anuncios
+- [ ] Integración de pagos con Stripe y gestión de suscripciones
+- [ ] Widget sin branding en la versión premium para medios
+- [ ] Reportes B2B anonimizados para estudios y distribuidoras, construidos **solo con votos reales**
+  - Insight tipo: "Tu película tiene un 8.5 entre mujeres 18-24 y un 5.0 entre hombres 45+. Tu campaña debería…"
+- [ ] Definir el umbral de datos mínimo para que un reporte B2B sea vendible con honestidad
+**📦 Entregable Fase 7:** Ecosistema con recomendaciones, catálogo extendido a series, cobertura multi-idioma, API controlada y líneas de ingreso B2C y B2B.
 ---
 ## Resumen de dependencias entre fases
 ```mermaid
 graph TD
-    F0["Fase 0: Setup"] --> F1["Fase 1: MVP Core"]
-    F1 --> F2["Fase 2: Engagement"]
-    F1 --> F3["Fase 3: Social"]
-    F2 --> F3
-    F3 --> F4["Fase 4: Escala"]
-    F4 --> F5["Fase 5: Expansión"]
-    
-    F1 -->|"Deploy producción"| LAUNCH["🚀 Lanzamiento MVP"]
-    LAUNCH --> F2
-    LAUNCH --> FEEDBACK["📊 Feedback usuarios"]
-    FEEDBACK --> F2
-    FEEDBACK --> F3
+    F0["Fase 0: Setup ✅"] --> F1["Fase 1: MVP Core ✅"]
+    F1 --> F2["Fase 2: Engagement ✅"]
+    F2 --> F3["Fase 3: Preparación de lanzamiento 🔜"]
+    F3 --> LAUNCH["🚀 Lanzamiento público"]
+    LAUNCH --> F4["Fase 4: Motor viral y SEO"]
+    LAUNCH --> GTM["📣 Go-To-Market"]
+    F4 --> GTM
+    GTM --> DATA["📊 Datos reales + feedback"]
+    DATA --> F5["Fase 5: Social y comunidad"]
+    DATA --> F6["Fase 6: Escala"]
+    F5 --> F6
+    F6 --> F7["Fase 7: Expansión y monetización"]
+
+    F3 -.->|"bloquea"| LAUNCH
+    DATA -.->|"gobierna prioridades"| F5
 ```
+> **Lectura clave del diagrama:** la Fase 3 es el único cuello de botella real. La Fase 4 y el go-to-market se ejecutan en paralelo y se alimentan mutuamente. Las Fases 5, 6 y 7 se priorizan según lo que digan los datos reales, no según este orden.
 ---
 ## Estimación de esfuerzo por fase
-| Fase                | Duración  | Complejidad  | Prioridad          |
-| ------------------- | --------- | ------------ | ------------------ |
-| Fase 0 — Setup      | 2 semanas | 🟢 Baja       | Crítica            |
-| Fase 1 — MVP Core   | 6 semanas | 🟡 Media-Alta | Crítica            |
-| Fase 2 — Engagement | 4 semanas | 🟡 Media      | Alta               |
-| Fase 3 — Social     | 6 semanas | 🟡 Media-Alta | Media              |
-| Fase 4 — Escala     | 6 semanas | 🔴 Alta       | Media              |
-| Fase 5 — Expansión  | Continua  | 🔴 Alta       | Baja (largo plazo) |
-> **Total hasta MVP funcional (Fase 0 + Fase 1):** ~8 semanas  
-> **Total hasta producto competitivo (Fases 0-3):** ~18 semanas  
-> **Total hasta plataforma escalable (Fases 0-4):** ~24 semanas
+| Fase | Duración | Complejidad | Prioridad |
+| --- | --- | --- | --- |
+| Fase 0 — Setup | 2 semanas | 🟢 Baja | ✅ Completada |
+| Fase 1 — MVP Core | 6 semanas | 🟡 Media-Alta | ✅ Completada |
+| Fase 2 — Engagement | 4 semanas | 🟡 Media | ✅ Completada |
+| **Fase 3 — Preparación de lanzamiento** | **3 semanas** | 🟡 **Media** | 🔴 **Bloqueante** |
+| Fase 4 — Motor viral y SEO | 4 semanas | 🟡 Media-Alta | 🔴 Crítica (objetivo de notoriedad) |
+| Fase 5 — Social y comunidad | 4 semanas | 🟡 Media | 🟡 Media |
+| Fase 6 — Escala | 5 semanas | 🔴 Alta | 🟡 Según métricas |
+| Fase 7 — Expansión | Continua | 🔴 Alta | 🟢 Largo plazo |
+
+> **Hasta lanzamiento público (Fase 3):** ~3 semanas de trabajo desde hoy
+> **Hasta motor de crecimiento completo (Fases 3-4):** ~7 semanas
+> **Hasta producto competitivo (Fases 3-5):** ~11 semanas
 ---
-> **Siguiente paso:** Aprobar este roadmap y comenzar la ejecución de la **Fase 0.1 — Configuración del entorno de desarrollo**.
+> **Siguiente paso:** ejecutar la **Fase 3.1 (migración a PostgreSQL)** y la **Fase 3.2 (transparencia de los datos de arranque)**. Son los dos bloqueantes que hoy impiden que exista un lanzamiento real. En paralelo, la Fase 3.8 (dominio y handles) debe hacerse ya porque su coste es mínimo y su pérdida es irreversible.

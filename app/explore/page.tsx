@@ -1,10 +1,25 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { getTrendingMovies } from "@/lib/tmdb";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
 
 // Forzar renderizado dinámico para que los datos locales y las tendencias de TMDB se carguen frescas
 export const revalidate = 0;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const dict = getDictionary(locale);
+
+  return {
+    title: `${dict.explore.title} | CinePOV`,
+    description: dict.explore.subtitle,
+  };
+}
 
 interface MovieItem {
   tmdbId: number;
@@ -17,8 +32,12 @@ interface MovieItem {
 }
 
 export default async function ExplorePage() {
-  // 1. Obtener tendencias semanales de TMDB
-  const trendingData = await getTrendingMovies();
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const dict = getDictionary(locale);
+
+  // 1. Obtener tendencias semanales de TMDB en el idioma activo
+  const trendingData = await getTrendingMovies(locale === "en" ? "en-US" : "es-ES");
   const trendingMovies: MovieItem[] = trendingData.slice(0, 6).map((m) => ({
     tmdbId: m.tmdbId,
     title: m.title,
@@ -28,11 +47,17 @@ export default async function ExplorePage() {
     ratingSource: "TMDB",
   }));
 
+  // Las notas que se muestran en el catálogo son públicas: se calculan solo con
+  // valoraciones reales, excluyendo las estimaciones de arranque.
+  const realRatingsInclude = {
+    ratings: { where: { isArtificial: false }, select: { score: true } },
+  } as const;
+
   // 2. Obtener añadidas recientemente en la BD local (con su nota media)
   const recentlyAddedDb = await db.movie.findMany({
     take: 6,
     orderBy: { cachedAt: "desc" },
-    include: { ratings: true },
+    include: realRatingsInclude,
   });
 
   const recentlyAddedMovies: MovieItem[] = recentlyAddedDb.map((m) => {
@@ -52,10 +77,10 @@ export default async function ExplorePage() {
     };
   });
 
-  // 3. Obtener populares en CinePOV (con más votos)
+  // 3. Obtener populares en CinePOV (con más votos reales)
   const popularDb = await db.movie.findMany({
-    take: 20, // Pool inicial para poder ordenar por número de votos reales de la BD
-    include: { ratings: true },
+    take: 40, // Pool inicial para poder ordenar por número de votos reales de la BD
+    include: realRatingsInclude,
   });
 
   const popularMovies: MovieItem[] = popularDb
@@ -83,10 +108,10 @@ export default async function ExplorePage() {
       {/* Cabecera */}
       <div className="text-center md:text-left space-y-2">
         <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl text-gradient">
-          Explorar Catálogo
+          {dict.explore.title}
         </h1>
         <p className="text-sm text-muted-foreground max-w-xl">
-          Busca tus películas preferidas o navega entre las tendencias y el contenido valorado por la comunidad CinePOV.
+          {dict.explore.subtitle}
         </p>
       </div>
 
@@ -94,23 +119,23 @@ export default async function ExplorePage() {
       <section className="space-y-6">
         <div className="flex items-baseline justify-between border-b border-white/5 pb-3">
           <h2 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
-            🔥 Tendencias Semanales
+            {dict.explore.weeklyTrends}
             <span className="text-[10px] uppercase bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded font-semibold tracking-wider">
               TMDB
             </span>
           </h2>
-          <span className="text-xs text-muted-foreground">Actualizado hoy</span>
+          <span className="text-xs text-muted-foreground">{dict.explore.updatedToday}</span>
         </div>
         
         {trendingMovies.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {trendingMovies.map((movie) => (
-              <MovieCard key={movie.tmdbId} movie={movie} />
+              <MovieCard key={movie.tmdbId} movie={movie} votesLabel={dict.explore.votes} />
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/5 text-muted-foreground text-sm">
-            No se pudieron cargar las tendencias en este momento.
+            {dict.explore.noTrends}
           </div>
         )}
       </section>
@@ -119,23 +144,23 @@ export default async function ExplorePage() {
       <section className="space-y-6">
         <div className="flex items-baseline justify-between border-b border-white/5 pb-3">
           <h2 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
-            ⭐ Populares de la Comunidad
+            {dict.explore.communityPopular}
             <span className="text-[10px] uppercase bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 rounded font-semibold tracking-wider">
               CinePOV
             </span>
           </h2>
-          <span className="text-xs text-muted-foreground">Por volumen de votos</span>
+          <span className="text-xs text-muted-foreground">{dict.explore.byVoteVolume}</span>
         </div>
 
         {popularMovies.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {popularMovies.map((movie) => (
-              <MovieCard key={movie.tmdbId} movie={movie} />
+              <MovieCard key={movie.tmdbId} movie={movie} votesLabel={dict.explore.votes} />
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/5 text-muted-foreground text-sm">
-            Aún no hay películas populares en la comunidad. ¡Sé el primero en valorar una!
+            {dict.explore.noPopular}
           </div>
         )}
       </section>
@@ -144,20 +169,20 @@ export default async function ExplorePage() {
       <section className="space-y-6">
         <div className="flex items-baseline justify-between border-b border-white/5 pb-3">
           <h2 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
-            🆕 Añadidas Recientemente
+            {dict.explore.recentlyAdded}
           </h2>
-          <span className="text-xs text-muted-foreground">Últimas consultadas</span>
+          <span className="text-xs text-muted-foreground">{dict.explore.lastConsulted}</span>
         </div>
 
         {recentlyAddedMovies.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {recentlyAddedMovies.map((movie) => (
-              <MovieCard key={movie.tmdbId} movie={movie} />
+              <MovieCard key={movie.tmdbId} movie={movie} votesLabel={dict.explore.votes} />
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/5 text-muted-foreground text-sm">
-            No hay películas en el historial local todavía.
+            {dict.explore.noRecent}
           </div>
         )}
       </section>
@@ -166,7 +191,7 @@ export default async function ExplorePage() {
 }
 
 // Componente local interno MovieCard para renderizado limpio de tarjetas
-function MovieCard({ movie }: { movie: MovieItem }) {
+function MovieCard({ movie, votesLabel }: { movie: MovieItem; votesLabel: string }) {
   const isCinePOV = movie.ratingSource === "CinePOV";
 
   return (
@@ -182,7 +207,9 @@ function MovieCard({ movie }: { movie: MovieItem }) {
         />
         {/* Badge Flotante de Nota */}
         <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-[#0f111a]/85 backdrop-blur-md border border-white/10 rounded-full px-2.5 py-1">
-          <span className="text-[10px] text-yellow-400">★</span>
+          <svg className="w-2.5 h-2.5 text-yellow-400 fill-current" viewBox="0 0 24 24">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+          </svg>
           <span className="text-xs font-black text-white">{movie.rating}</span>
         </div>
       </div>
@@ -195,7 +222,7 @@ function MovieCard({ movie }: { movie: MovieItem }) {
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{movie.year || "—"}</span>
           <span className={`text-[9px] uppercase font-bold tracking-wider ${isCinePOV ? 'text-primary' : 'text-cyan-400'}`}>
-            {isCinePOV ? `${movie.votesCount} votos` : "TMDB"}
+            {isCinePOV ? `${movie.votesCount} ${votesLabel}` : "TMDB"}
           </span>
         </div>
       </div>

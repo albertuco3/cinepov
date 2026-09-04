@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/client";
 
 interface Genre {
   id: string;
@@ -40,6 +41,9 @@ export default function RankingsClient({
   currentUserSegment,
   initialGenreId = "all",
 }: RankingsClientProps) {
+  const { dict } = useI18n();
+  const t = dict.rankings;
+
   // 1. Determinar el segmento demográfico inicial del usuario
   const getInitialGender = () => {
     if (currentUserSegment?.gender) return currentUserSegment.gender;
@@ -129,26 +133,20 @@ export default function RankingsClient({
 
   // Retornar descripción amigable del segmento actual
   const getSegmentLabel = () => {
-    const genderLabels: Record<string, string> = {
-      all: "Todos los géneros",
-      male: "Hombres",
-      female: "Mujeres",
-      non_binary: "No Binarios",
-    };
-
+    const genderLabels = t.genderSegmentLabels;
     const ageLabels: Record<string, string> = {
-      all: "todas las edades",
-      "18_24": "de 18-24 años",
-      "25_34": "de 25-34 años",
-      "35_44": "de 35-44 años",
-      "45_54": "de 45-54 años",
-      "55_plus": "de 55+ años",
+      all: t.ageSegmentLabels.all,
+      "18_24": t.ageSegmentLabels.age18_24,
+      "25_34": t.ageSegmentLabels.age25_34,
+      "35_44": t.ageSegmentLabels.age35_44,
+      "45_54": t.ageSegmentLabels.age45_54,
+      "55_plus": t.ageSegmentLabels.age55_plus,
     };
 
-    const gText = genderLabels[gender];
-    const aText = ageLabels[ageRange];
+    const gText = genderLabels[gender as keyof typeof genderLabels] || genderLabels.all;
+    const aText = ageLabels[ageRange] || ageLabels.all;
     
-    if (gender === "all" && ageRange === "all") return "Público Global";
+    if (gender === "all" && ageRange === "all") return t.globalAudience;
     return `${gText} ${aText}`;
   };
 
@@ -157,10 +155,10 @@ export default function RankingsClient({
       {/* Cabecera */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight text-gradient">
-          Rankings Demográficos
+          {t.title}
         </h1>
         <p className="text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
-          Descubre las películas mejor valoradas. Rompe la tiranía de la nota media global filtrando por el segmento demográfico que desees.
+          {t.subtitle}
         </p>
       </div>
 
@@ -170,19 +168,19 @@ export default function RankingsClient({
         {/* Filtros Demográficos (Diferenciadores) */}
         <div className="space-y-4">
           <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-            Filtros Demográficos (Segmento de Opinión)
+            {t.demographicFilters}
           </h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Género del Segmento */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-white/70">Género del Votante</label>
+              <label className="text-xs font-bold text-white/70">{t.voterGender}</label>
               <div className="grid grid-cols-4 gap-1.5 bg-black/30 p-1 rounded-xl border border-white/5">
                 {[
-                  { value: "all", label: "Todos" },
-                  { value: "male", label: "Hombres" },
-                  { value: "female", label: "Mujeres" },
-                  { value: "non_binary", label: "N.B." }
+                  { value: "all", label: t.all },
+                  { value: "male", label: t.male },
+                  { value: "female", label: t.female },
+                  { value: "non_binary", label: t.nonBinary }
                 ].map((item) => (
                   <button
                     key={item.value}
@@ -201,18 +199,18 @@ export default function RankingsClient({
 
             {/* Rango de Edad del Segmento */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-white/70">Edad del Votante</label>
+              <label className="text-xs font-bold text-white/70">{t.voterAge}</label>
               <select
                 value={ageRange}
                 onChange={(e) => handleFilterChange(setAgeRange, e.target.value)}
                 className="w-full bg-[#0f111a] border border-white/10 text-white text-xs font-bold px-3 py-2 rounded-xl outline-none focus:border-primary/50 cursor-pointer h-[38px]"
               >
-                <option value="all">Todas las edades</option>
-                <option value="18_24">Menores y jóvenes (18-24 años)</option>
-                <option value="25_34">Adultos jóvenes (25-34 años)</option>
-                <option value="35_44">Adultos medios (35-44 años)</option>
-                <option value="45_54">Maduros (45-54 años)</option>
-                <option value="55_plus">Séniors (55+ años)</option>
+                <option value="all">{t.allAges}</option>
+                <option value="18_24">{t.age18_24}</option>
+                <option value="25_34">{t.age25_34}</option>
+                <option value="35_44">{t.age35_44}</option>
+                <option value="45_54">{t.age45_54}</option>
+                <option value="55_plus">{t.age55_plus}</option>
               </select>
             </div>
           </div>
@@ -226,14 +224,14 @@ export default function RankingsClient({
           {/* Géneros de la Película */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-              Género Cinematográfico
+              {t.movieGenre}
             </label>
             <select
               value={selectedGenreId}
               onChange={(e) => handleFilterChange(setSelectedGenreId, e.target.value)}
               className="w-full bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-primary/50 cursor-pointer"
             >
-              <option value="all">Todos los géneros de cine</option>
+              <option value="all">{t.allGenres}</option>
               {availableGenres.map((genre) => (
                 <option key={genre.id} value={genre.id}>
                   {genre.name}
@@ -245,19 +243,21 @@ export default function RankingsClient({
           {/* Década de Estreno */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-              Década de Lanzamiento
+              {t.releaseDecade}
             </label>
             <select
               value={selectedDecade}
               onChange={(e) => handleFilterChange(setSelectedDecade, e.target.value)}
               className="w-full bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-primary/50 cursor-pointer"
             >
-              <option value="all">Todas las décadas</option>
-              <option value="2020s">Años 2020s (Recientes)</option>
-              <option value="2010s">Años 2010s</option>
-              <option value="2000s">Años 2000s</option>
-              <option value="1990s">Años 90s</option>
-              <option value="1980s">Años 80s</option>
+              <option value="all">{t.allDecades}</option>
+              <option value="2020s">{t.decade2020s}</option>
+              <option value="2010s">{t.decade2010s}</option>
+              <option value="2000s">{t.decade2000s}</option>
+              <option value="1990s">{t.decade1990s}</option>
+              <option value="1980s">{t.decade1980s}</option>
+              <option value="1970s">{t.decade1970s}</option>
+              <option value="classic">{t.decadeClassic}</option>
             </select>
           </div>
         </div>
@@ -270,10 +270,10 @@ export default function RankingsClient({
         {/* Cabecera del Listado */}
         <div className="flex items-center justify-between px-2">
           <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-            Top para: <span className="text-white normal-case font-black">{getSegmentLabel()}</span>
+            {t.topFor}: <span className="text-white normal-case font-black">{getSegmentLabel()}</span>
           </h2>
           <span className="text-xs text-muted-foreground font-semibold">
-            {totalResults} {totalResults === 1 ? "película encontrada" : "películas encontradas"}
+            {totalResults} {totalResults === 1 ? t.singleMovieFound : t.moviesFound}
           </span>
         </div>
 
@@ -285,7 +285,7 @@ export default function RankingsClient({
               <div className="w-3.5 h-3.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
               <div className="w-3.5 h-3.5 bg-primary rounded-full animate-bounce"></div>
             </div>
-            <p className="text-xs text-muted-foreground">Calculando estadísticas demográficas...</p>
+            <p className="text-xs text-muted-foreground">{t.calculatingStats}</p>
           </div>
         ) : error ? (
           <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-6 rounded-3xl text-sm text-center">
@@ -296,9 +296,9 @@ export default function RankingsClient({
             <svg className="h-10 w-10 mx-auto text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 className="text-base font-bold text-white">Sin resultados</h3>
+            <h3 className="text-base font-bold text-white">{t.noMoviesFound}</h3>
             <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-              No hay películas suficientes en la base de datos que tengan un mínimo de 3 valoraciones hechas por el segmento de votantes seleccionado.
+              {t.noMoviesDesc}
             </p>
           </div>
         ) : (
@@ -348,7 +348,7 @@ export default function RankingsClient({
                       </Link>
                     </h3>
                     <p className="text-xs text-muted-foreground font-semibold">
-                      {movie.year} • Dirección: {movie.director}
+                      {movie.year} • {t.directorPrefix}{movie.director}
                     </p>
                     <div className="flex flex-wrap justify-center sm:justify-start gap-1">
                       {movie.genres.map((genreName, idx) => (
@@ -373,7 +373,7 @@ export default function RankingsClient({
                       <span className="text-xs text-muted-foreground">/10</span>
                     </div>
                     <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wide">
-                      {movie.ratingCount} {movie.ratingCount === 1 ? "voto" : "votos"} en segmento
+                      {movie.ratingCount} {movie.ratingCount === 1 ? t.singleVoteInSegment : t.votesInSegment}
                     </span>
                   </div>
 
@@ -389,16 +389,16 @@ export default function RankingsClient({
                           ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
                           : "bg-white/5 text-muted-foreground border border-white/5"
                       }`}>
-                        {movie.deviation > 0 ? `+${movie.deviation}` : movie.deviation} vs. global
+                        {movie.deviation > 0 ? `+${movie.deviation}` : movie.deviation} {t.vsGlobal}
                       </span>
 
                       {/* Tooltip/Texto descriptivo discreto */}
                       <span className="hidden lg:inline text-[9px] font-bold text-muted-foreground">
                         {movie.deviation > 0
-                          ? "Gusta más aquí"
+                          ? t.likedMore
                           : movie.deviation < 0
-                          ? "Gusta menos aquí"
-                          : "Nota idéntica"}
+                          ? t.likedLess
+                          : t.identicalScore}
                       </span>
                     </div>
                   )}
@@ -415,17 +415,17 @@ export default function RankingsClient({
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed interactive-transition"
                 >
-                  Anterior
+                  {t.previous}
                 </button>
                 <span className="text-xs text-muted-foreground font-semibold">
-                  Página {page} de {totalPages}
+                  {t.page} {page} {t.of} {totalPages}
                 </span>
                 <button
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed interactive-transition"
                 >
-                  Siguiente
+                  {t.next}
                 </button>
               </div>
             )}

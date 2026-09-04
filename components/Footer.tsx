@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import FeedbackModal from "@/components/FeedbackModal";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const { dict } = useI18n();
 
   return (
     <footer className="w-full border-t border-white/5 bg-background/50 py-8 mt-auto">
@@ -18,47 +20,64 @@ export default function Footer() {
               CinePOV
             </span>
             <p className="text-xs text-muted-foreground text-center md:text-left max-w-md">
-              Descubre cómo valoran tus películas favoritas las personas con tus mismos gustos y perfil demográfico. Rompiendo la tiranía de la nota media.
+              {dict.footer.tagline}
             </p>
           </div>
 
           {/* Links rápidos */}
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-6 gap-y-3 text-sm text-muted-foreground">
+            <Link href="/about" className="hover:text-foreground interactive-transition">
+              {dict.nav.about}
+            </Link>
             <Link href="/explore" className="hover:text-foreground interactive-transition">
-              Explorar
+              {dict.nav.explore}
             </Link>
             <Link href="/rankings" className="hover:text-foreground interactive-transition">
-              Rankings
+              {dict.nav.rankings}
+            </Link>
+            <Link href="/metodologia" className="hover:text-foreground interactive-transition">
+              {dict.nav.methodology}
             </Link>
             <button
               onClick={() => setIsFeedbackOpen(true)}
               className="hover:text-foreground interactive-transition cursor-pointer font-medium text-sm text-left bg-transparent border-none"
             >
-              Sugerencias
+              {dict.nav.feedback}
             </button>
-            <Link href="/terms" className="hover:text-foreground interactive-transition">
-              Términos
+            <Link href="/moderacion" className="hover:text-foreground interactive-transition">
+              {dict.nav.moderation}
             </Link>
-            <Link href="/privacy" className="hover:text-foreground interactive-transition">
-              Privacidad
+            <Link href="/terminos" className="hover:text-foreground interactive-transition">
+              {dict.nav.terms}
+            </Link>
+            <Link href="/privacidad" className="hover:text-foreground interactive-transition">
+              {dict.nav.privacy}
+            </Link>
+            <Link href="/aviso-legal" className="hover:text-foreground interactive-transition">
+              {dict.nav.legalNotice}
             </Link>
           </div>
         </div>
 
         {/* Atribuciones y Derechos */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 text-xs text-muted-foreground">
-          <p>© {currentYear} CinePOV. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-2">
-            <span>Datos provistos por</span>
-            <a 
-              href="https://www.themoviedb.org" 
-              target="_blank" 
-              rel="noreferrer"
-              className="text-foreground hover:underline font-semibold"
-            >
-              TMDB
-            </a>
+        <div className="flex flex-col gap-3 pt-6 text-xs text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© {currentYear} CinePOV. {dict.footer.rights}</p>
+            <div className="flex items-center gap-2">
+              <span>{dict.footer.dataProvidedBy}</span>
+              <a 
+                href="https://www.themoviedb.org" 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-foreground hover:underline font-semibold"
+              >
+                TMDB
+              </a>
+            </div>
           </div>
+          <p className="text-center sm:text-left">
+            {dict.footer.tmdbAttribution}
+          </p>
         </div>
       </div>
 

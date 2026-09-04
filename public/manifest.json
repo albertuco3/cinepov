@@ -1,0 +1,19 @@
+{
+  "name": "CinePOV — Tu Punto de Vista Cinematográfico",
+  "short_name": "CinePOV",
+  "description": "Descubre cómo valoran tus películas favoritas las personas con tus mismos gustos y perfil demográfico.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "movies"]
+}

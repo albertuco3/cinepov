@@ -1,10 +1,13 @@
 import "dotenv/config";
 import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL || "file:./dev.db",
-});
+const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL no está configurada para el seed.");
+}
+
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 interface BotProfile {
@@ -236,6 +239,7 @@ async function main() {
         birthYear: u.birthYear,
         gender: u.gender,
         passwordHash: "$2b$10$xyzFakeHashForDevelopmentTestingOnly", // password simulada
+        emailVerified: new Date(),
       },
     });
     users.push(user);

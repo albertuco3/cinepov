@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { searchMovieByTitleAndYear } from "@/lib/tmdb";
 import { getOrCreateMovie } from "@/lib/movies";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // Función auxiliar para parsear una línea de CSV de manera robusta (manejando comillas)
 function parseCSVLine(line: string): string[] {
@@ -35,6 +36,16 @@ export async function POST(request: Request) {
     }
 
     const userId = session.user.id;
+
+    // Cada importación puede disparar cientos de llamadas a TMDB: limitarla
+    // protege nuestra cuota de API antes que nuestro servidor.
+    const importLimit = await checkRateLimit("import", userId);
+    if (!importLimit.allowed) {
+      return rateLimitResponse(
+        importLimit,
+        "Has realizado varias importaciones seguidas. Espera un rato antes de volver a intentarlo."
+      );
+    }
 
     // 2. Extraer cuerpo de la petición
     const { csvText } = await responseToJSON(request);

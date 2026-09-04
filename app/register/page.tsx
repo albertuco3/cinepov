@@ -4,9 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { dict, locale } = useI18n();
   
   // Estados del formulario
   const [formData, setFormData] = useState({
@@ -15,6 +18,7 @@ export default function RegisterPage() {
     displayName: "",
     birthYear: "",
     gender: "",
+    website: "", // Campo trampa (honeypot) contra bots
   });
   
   const [loading, setLoading] = useState(false);
@@ -52,27 +56,34 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Ocurrió un error al registrar el usuario.");
+        track("signup_failed", {
+          reason: response.status === 429
+            ? "rate_limited"
+            : data.error?.includes("registrado")
+              ? "email_already_registered"
+              : "server_error",
+        });
+        throw new Error(data.error || (locale === "en" ? "Error registering user." : "Ocurrió un error al registrar el usuario."));
       }
 
+      track("signup_completed", { method: "credentials" });
       setSuccess(true);
       
       // Redirigir al login tras 2 segundos
+      toast.success(locale === "en" ? "Account created successfully!" : "¡Cuenta creada con éxito!");
       setTimeout(() => {
         router.push("/login");
       }, 2000);
 
     } catch (err: any) {
-      setError(err.message || "Error de conexión.");
+      setError(err.message || (locale === "en" ? "Error creating account." : "Error al crear la cuenta."));
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleMock = () => {
-    toast.info(
-      "El registro con Google está configurado en el backend, pero requiere configurar las credenciales GOOGLE_CLIENT_ID en producción."
-    );
+    toast.info(locale === "en" ? "Google registration not configured." : "Registro con Google no configurado.");
   };
 
   return (
@@ -81,10 +92,10 @@ export default function RegisterPage() {
         {/* Cabecera */}
         <div className="text-center">
           <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl text-gradient">
-            Crea tu cuenta
+            {dict.auth.registerTitle}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Únete a CinePOV y descubre el cine a tu manera
+            {dict.auth.registerSubtitle}
           </p>
         </div>
 
@@ -96,7 +107,7 @@ export default function RegisterPage() {
         )}
         {success && (
           <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm text-center font-medium">
-            ¡Registro completado con éxito! Redirigiendo al login...
+            {locale === "en" ? "Registration successful! Redirecting to sign in..." : "¡Registro completado con éxito! Redirigiendo al login..."}
           </div>
         )}
 
@@ -105,7 +116,7 @@ export default function RegisterPage() {
             {/* Nombre público */}
             <div>
               <label htmlFor="displayName" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Nombre de usuario público
+                {dict.auth.nameLabel}
               </label>
               <input
                 id="displayName"
@@ -122,7 +133,7 @@ export default function RegisterPage() {
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Correo electrónico
+                {dict.auth.emailLabel}
               </label>
               <input
                 id="email"
@@ -139,7 +150,7 @@ export default function RegisterPage() {
             {/* Contraseña */}
             <div>
               <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Contraseña
+                {dict.auth.passwordLabel}
               </label>
               <input
                 id="password"
@@ -148,7 +159,7 @@ export default function RegisterPage() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Mínimo 6 caracteres"
+                placeholder={locale === "en" ? "Minimum 6 characters" : "Mínimo 6 caracteres"}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition text-sm"
               />
             </div>
@@ -158,7 +169,7 @@ export default function RegisterPage() {
               {/* Año de nacimiento */}
               <div>
                 <label htmlFor="birthYear" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Año de nacimiento
+                  {dict.auth.birthYearLabel}
                 </label>
                 <select
                   id="birthYear"
@@ -168,7 +179,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   className="w-full bg-[#11121d] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition text-sm appearance-none cursor-pointer"
                 >
-                  <option value="" disabled>Selecciona</option>
+                  <option value="" disabled>{locale === "en" ? "Select" : "Selecciona"}</option>
                   {years.map((year) => (
                     <option key={year} value={year}>{year}</option>
                   ))}
@@ -178,7 +189,7 @@ export default function RegisterPage() {
               {/* Género */}
               <div>
                 <label htmlFor="gender" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Género
+                  {dict.auth.genderLabel}
                 </label>
                 <select
                   id="gender"
@@ -188,18 +199,35 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   className="w-full bg-[#11121d] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition text-sm appearance-none cursor-pointer"
                 >
-                  <option value="" disabled>Selecciona</option>
-                  <option value="male">Hombre</option>
-                  <option value="female">Mujer</option>
-                  <option value="non_binary">No binario</option>
+                  <option value="" disabled>{locale === "en" ? "Select" : "Selecciona"}</option>
+                  <option value="male">{dict.demographics.men}</option>
+                  <option value="female">{dict.demographics.women}</option>
+                  <option value="non_binary">{dict.demographics.nonBinary}</option>
                 </select>
               </div>
             </div>
           </div>
 
+          {/* Campo invisible trampa (honeypot) para bots */}
+          <div className="sr-only" aria-hidden="true">
+            <label htmlFor="website">Sitio web personal</label>
+            <input
+              id="website"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={formData.website}
+              onChange={handleChange}
+            />
+          </div>
+
           {/* Nota de privacidad demográfica */}
           <p className="text-[10px] text-muted-foreground leading-relaxed text-center">
-            ⚠️ <strong>Transparencia:</strong> Tu año de nacimiento y tu género nunca serán públicos. Se usan de forma 100% anonimizada exclusivamente para nutrir los gráficos de los filtros demográficos de las películas.
+            <strong>{locale === "en" ? "Transparency:" : "Transparencia:"}</strong>{" "}
+            {locale === "en"
+              ? "Your birth year and gender will never be public. They are used in a 100% anonymized way exclusively to feed demographic movie filter charts."
+              : "Tu año de nacimiento y tu género nunca serán públicos. Se usan de forma 100% anonimizada exclusivamente para nutrir los gráficos de los filtros demográficos de las películas."}
           </p>
 
           <div className="space-y-4">
@@ -208,7 +236,7 @@ export default function RegisterPage() {
               disabled={loading || success}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 shadow-lg hover:shadow-primary/25 disabled:opacity-50 interactive-transition cursor-pointer"
             >
-              {loading ? "Registrando..." : "Crear cuenta"}
+              {loading ? (locale === "en" ? "Creating account..." : "Registrando...") : dict.auth.submitRegister}
             </button>
 
             {/* Botón de Google OAuth */}
@@ -220,16 +248,15 @@ export default function RegisterPage() {
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18 8.79 18 6 15.21 6 11.76S8.79 5.52 12.24 5.52c1.614 0 3.02.5 4.094 1.483l2.455-2.455C17.323 3.1 14.977 2 12.24 2 6.83 2 2.5 6.33 2.5 11.76s4.33 9.76 9.74 9.76c5.637 0 9.372-3.957 9.372-9.53 0-.643-.075-1.265-.182-1.705H12.24z" />
               </svg>
-              Registrarse con Google
+              {locale === "en" ? "Sign up with Google" : "Registrarse con Google"}
             </button>
           </div>
         </form>
 
         {/* Link al Login */}
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          ¿Ya tienes cuenta?{" "}
           <Link href="/login" className="font-semibold text-primary hover:underline hover:text-violet-400">
-            Inicia sesión aquí
+            {dict.auth.alreadyHaveAccount}
           </Link>
         </p>
       </div>

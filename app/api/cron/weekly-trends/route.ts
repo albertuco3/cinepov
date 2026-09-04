@@ -66,10 +66,13 @@ export async function GET(request: Request) {
       else if (ageRange === "45_54") ageFilter.birthYear = { gte: currentYear - 54, lte: currentYear - 45 };
       else if (ageRange === "55_plus") ageFilter.birthYear = { lte: currentYear - 55 };
 
-      // Obtener valoraciones agregadas para este segmento demográfico
+      // Obtener valoraciones agregadas para este segmento demográfico.
+      // El boletín es contenido que enviamos al usuario: solo puede construirse
+      // con valoraciones reales, nunca con estimaciones de arranque.
       const segmentRatings = await db.rating.groupBy({
         by: ["movieId"],
         where: {
+          isArtificial: false,
           user: {
             gender,
             ...ageFilter,
@@ -80,6 +83,13 @@ export async function GET(request: Request) {
         },
         _count: {
           score: true,
+        },
+        having: {
+          score: {
+            _count: {
+              gte: 3,
+            },
+          },
         },
       });
 

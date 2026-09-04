@@ -1,12 +1,34 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcrypt";
-import { sendWelcomeEmail } from "@/lib/email";
+import { APP_URL, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
+import { createToken, TOKEN_EMAIL_VERIFICATION } from "@/lib/tokens";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { validateDisplayName } from "@/lib/sanitize";
+import { validateHoneypot } from "@/lib/anti-abuse";
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const limit = await checkRateLimit("register", clientIp);
+    if (!limit.allowed) {
+      return rateLimitResponse(
+        limit,
+        "Has alcanzado el límite de intentos de registro. Inténtalo de nuevo más tarde."
+      );
+    }
+
     const body = await request.json();
-    const { email, password, displayName, birthYear, gender } = body;
+    const { email, password, displayName, birthYear, gender, website } = body;
+
+    // Validación Honeypot contra bots automáticos (Fase 3.6)
+    if (!validateHoneypot(website)) {
+      console.warn(`[ANTIABUSO] Registro bloqueado por campo trampa (honeypot): IP ${clientIp}`);
+      return NextResponse.json(
+        { error: "Petición no permitida." },
+        { status: 400 }
+      );
+    }
 
     // 1. Validaciones básicas de campos vacíos
     if (!email || !password || !displayName || !birthYear || !gender) {
@@ -15,6 +37,16 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // 1.1 Validar y sanear el nombre público
+    const validatedName = validateDisplayName(displayName);
+    if (!validatedName.ok) {
+      return NextResponse.json(
+        { error: validatedName.error },
+        { status: 400 }
+      );
+    }
+    const cleanDisplayName = validatedName.value;
 
     // 2. Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -73,13 +105,13 @@ export async function POST(request: Request) {
       data: {
         email: email.toLowerCase().trim(),
         passwordHash,
-        displayName: displayName.trim(),
+        displayName: cleanDisplayName,
         birthYear: parsedBirthYear,
         gender,
       },
     });
 
-    // 8.1 Simular envío de email de bienvenida
+    // 8.1 Enviar el email de bienvenida
     try {
       await sendWelcomeEmail(user.email, user.displayName);
       await db.user.update({
@@ -87,7 +119,20 @@ export async function POST(request: Request) {
         data: { emailWelcomeSent: true },
       });
     } catch (emailErr) {
-      console.error("Error al simular envío de email de bienvenida:", emailErr);
+      console.error("Error al enviar el email de bienvenida:", emailErr);
+    }
+
+    // 8.2 Enviar el enlace de verificación del correo. Si algo falla, el registro
+    // se completa igualmente: el usuario puede pedir el reenvío desde su perfil.
+    try {
+      const verificationToken = await createToken(user.id, TOKEN_EMAIL_VERIFICATION);
+      await sendVerificationEmail(
+        user.email,
+        user.displayName,
+        `${APP_URL}/api/auth/verify-email?token=${verificationToken}`
+      );
+    } catch (verificationErr) {
+      console.error("Error al enviar el email de verificación:", verificationErr);
     }
 
     // 9. Devolver respuesta de éxito sin exponer la contraseña hasheada

@@ -14,6 +14,28 @@ CinePOV es una plataforma web de calificación y descubrimiento de películas cu
 **"Descubre cómo valoran las películas las personas como tú."** CinePOV no te dice qué nota tiene una película; te dice qué nota le dan las personas de tu perfil demográfico.
 ### 1.3 Nombre y significado
 **CinePOV** = Cine + POV (Point of View). El nombre comunica inmediatamente la propuesta: el cine desde tu punto de vista, no desde la media global.
+### 1.4 Activo defensible: el dataset demográfico
+El código de CinePOV es replicable en semanas por cualquier equipo competente. Lo que no es replicable es **el dataset de valoraciones vinculadas a perfiles demográficos**. Ni IMDb, ni Letterboxd, ni Filmaffinity lo tienen (o si lo tienen internamente, no lo exponen), y construirlo desde cero requiere años de acumulación de usuarios reales.
+
+Esto tiene consecuencias estratégicas que deben guiar las decisiones de producto:
+| Implicación | Consecuencia práctica |
+|---|---|
+| **El dato es el producto, no la web** | Cada decisión debe evaluarse por cuántas valoraciones demográficas genera. Una feature bonita que no aporta datos es una distracción. |
+| **El valor crece de forma superlineal** | Con 1.000 valoraciones el desglose cruzado género × edad es ruido estadístico. Con 1.000.000 es un producto B2B vendible a distribuidoras. La prioridad absoluta es el volumen. |
+| **Cuidado con regalar el foso** | La API pública gratuita (Fase 7) permitiría a un competidor construir su producto sobre nuestro dataset. Debe lanzarse con rate limits agresivos, sin acceso masivo a agregados y con términos que prohíban la reconstrucción del dataset. |
+| **Efecto de red por segmento** | El producto no necesita ser popular en general, necesita ser popular *dentro de cada segmento*. 10.000 usuarios concentrados en hombres 25-34 producen un producto peor que 4.000 bien distribuidos. Vigilar la distribución demográfica es tan importante como el total. |
+### 1.5 Mercado objetivo y estrategia de idioma
+**Decisión: producto bilingüe (inglés + español) desde el lanzamiento, con inglés como idioma por defecto y detección automática del idioma del navegador.**
+
+**Justificación:**
+- La comunidad cinéfila online que genera conversación viral (Reddit en r/movies y r/Letterboxd, Product Hunt, Hacker News, Twitter/X de cine, TikTok de cine) es mayoritariamente anglófona. El techo de alcance es de un orden de magnitud superior.
+- El contenido viral basado en contrastes demográficos ("Titanic: women 18-24 rate it 9.1, men 18-24 rate it 5.4") funciona mucho mejor en inglés y con títulos de películas reconocibles globalmente.
+- El coste técnico de la i18n es bajo si se asume **desde el principio**, y altísimo si se retrofitea después de tener cientos de textos hardcodeados en las vistas. Esta es la razón principal para no diferirlo.
+- El SEO de fichas de película es donde está el tráfico compuesto a largo plazo, y el volumen de búsqueda en inglés no tiene comparación.
+
+**Contrapartida asumida:** el esfuerzo de marketing (publicar en redes, hablar con medios y creadores) sí se duplica y no es automatizable. Se mitiga priorizando el contenido en inglés y reutilizando los mismos assets visuales con el texto traducido.
+
+**Implicación en el roadmap:** la internacionalización sube de la Fase 7 a la Fase 3 (preparación de lanzamiento). Ver `roadmap.md`.
 ---
 ## 2. Definición del MVP (Producto Mínimo Viable)
 ### 2.1 Hipótesis central a validar
@@ -145,6 +167,12 @@ Se propone una **arquitectura cliente-servidor clásica con API REST**, optimiza
 | **Vistas materializadas** | Para cachear las agregaciones demográficas pre-calculadas (nota media por segmento) y refrescarlas periódicamente, evitando recalcular en cada request. |
 | **Madurez y soporte** | Base de datos relacional probada, con soporte excelente en todos los clouds. |
 | **JSON nativo** | Si necesitamos flexibilidad en campos futuros. |
+> ### ⚠️ Aviso crítico: SQLite es solo para desarrollo local
+> Durante las Fases 0-2 se ha usado **SQLite con `better-sqlite3`** por comodidad de desarrollo. Esto **no es desplegable en producción sobre Vercel**: el sistema de ficheros de las funciones serverless es de solo lectura y efímero, por lo que la aplicación compilará y se verá correctamente, pero **toda escritura (registros, valoraciones, importaciones) se perderá en el siguiente arranque en frío o despliegue**.
+>
+> **La migración a PostgreSQL gestionado (Neon / Vercel Postgres) es un bloqueante absoluto de lanzamiento**, no una optimización futura. Debe ejecutarse antes de exponer la plataforma a un solo usuario real. Ver Fase 3.1 del roadmap.
+>
+> Consideraciones de la migración: cambiar el `provider` del datasource y el adaptador de Prisma, regenerar las migraciones (SQLite y PostgreSQL difieren en tipos y en el soporte de arrays y enums), configurar *connection pooling* para el entorno serverless, y adaptar el seed.
 #### ORM: **Prisma**
 | Aspecto | Justificación |
 |---|---|
@@ -285,12 +313,34 @@ El mayor riesgo del producto es el **problema del huevo y la gallina**: necesita
 ### 6.3 🎯 Estrategia 3: Campaña viral en redes — "La Guerra de Géneros Cinematográfica"
 **Concepto:** Crear contenido viral en TikTok, Twitter/X e Instagram basado en las diferencias demográficas en las valoraciones, generando curiosidad y debate.
 **Ejecución:**
-- Crear una página pública `/batalla/{movie_id}` que muestre el contraste de valoraciones entre segmentos de forma visual y compartible.
+- Crear una página pública `/vs/[movieId]` que muestre el contraste de valoraciones entre segmentos de forma visual y compartible (Fase 4.2 del roadmap).
 - Posts como: *"Titanic: Nota media 7.8... pero si miras por género: Mujeres 18-24: 9.1 vs Hombres 18-24: 5.4. ¿Por qué? Descúbrelo en CinePOV"*.
 - Publicar los contrastes más llamativos como carruseles de Instagram o TikToks cortos.
 - Incluir un CTA que lleve a la plataforma: *"¿Quieres saber qué piensan de TUS películas favoritas las personas de tu edad? Regístrate en CinePOV."*
 **Beneficio:** El formato "hombres vs. mujeres" o "Gen Z vs. Boomers" es inherentemente viral y genera debate. Cada debate = tráfico = registros = más datos.
-> **Nota importante:** En las primeras semanas, antes de tener suficientes datos propios, se podría usar data pública de estudios demográficos sobre cine como "seed data" de demostración, dejando claro que son datos de ejemplo hasta que la comunidad genere los suyos.
+> **⚠️ Dos condiciones vinculantes para esta estrategia:**
+> 1. **Solo se viralizan datos reales.** Ningún contenido compartible puede construirse sobre valoraciones sintéticas (ver 6.4). Viralizar una estimación es la vía más rápida a la crisis de credibilidad del riesgo 7.4.
+> 2. **El tono es curiosidad, nunca superioridad.** Mostrar que dos grupos valoran distinto es un dato; presentar a un grupo como equivocado o con mal gusto es otra cosa. Un producto que se hace famoso por ser divisivo atrae al público equivocado y contamina su propio dataset. Ver la sección 1.2 del [Go-To-Market](./go_to_market.md).
+### 6.4 🔒 Política de transparencia de los datos de arranque (VINCULANTE)
+Para resolver el cold start se ha implementado un sistema de simulación demográfica: un pool de 5.000 usuarios sintéticos y un algoritmo heurístico que inyecta entre 80 y 150 valoraciones coherentes (marcadas con `isArtificial: true`) cada vez que se importa una película desde TMDB. Estas valoraciones se sustituyen progresivamente por valoraciones reales mediante un mecanismo de decaimiento: cada voto real elimina un voto artificial.
+
+**El mecanismo es legítimo y necesario. La forma de presentarlo no es negociable.**
+
+#### Estado actual del problema
+El endpoint `GET /api/movies/[id]/demographics` **no filtra por el campo `isArtificial`**. Los votos sintéticos se agregan y se muestran al usuario de forma indistinguible de las opiniones de personas reales. En la práctica, la plataforma presenta datos generados por una heurística como si fueran opiniones humanas.
+
+#### Reglas vinculantes a implementar antes del lanzamiento
+| Regla | Detalle |
+|---|---|
+| **1. Separación en la API** | El endpoint de demografía debe devolver los agregados desglosados: `real` (votos de usuarios) y `estimated` (votos sintéticos), además del total. Nunca un único número que los mezcle sin distinción. |
+| **2. Distinción visual obligatoria** | En la interfaz, los valores que incluyan datos estimados se muestran con tratamiento visual diferenciado (color atenuado, icono, tipografía) y nunca con el mismo aspecto que un dato real consolidado. |
+| **3. Etiquetado explícito** | Toda vista con datos estimados incluye una etiqueta legible del tipo *"Estimación de arranque · X de Y valoraciones son proyecciones estadísticas, no votos de usuarios"*, con enlace a una página `/metodologia` que explique el algoritmo en detalle. |
+| **4. Prioridad del dato real** | Cuando un segmento alcanza el umbral mínimo de votos reales, se muestra **solo** el dato real y se descarta el estimado de la presentación. |
+| **5. Página de metodología pública** | Página `/metodologia` (`/methodology`) que explique con honestidad total: qué son los datos de arranque, cómo se generan, por qué existen, y cómo desaparecen. Escrita para ser citada, no para esconder nada. |
+| **6. Exclusión del contenido viral y comercial** | Las páginas compartibles (`/vs/[movie]`, imágenes OG, rankings de polarización) **solo** pueden usar datos con suficientes votos reales. Nunca se viraliza un dato sintético. |
+| **7. Exclusión de los datos B2B** | Cualquier reporte vendido a la industria (Fase 7) se construye exclusivamente con votos reales, sin excepción. |
+
+> **Alternativa aceptable:** excluir los votos sintéticos de todos los agregados públicos y usarlos únicamente para la demo de la landing page con datos claramente etiquetados como ficticios. Es más honesto y más simple, a cambio de fichas vacías al principio.
 ---
 ## 7. Riesgos y Mitigaciones
 ### 7.1 🔴 Riesgo 1: Privacidad y RGPD — "¿Por qué me pides mi edad y género?"
@@ -345,38 +395,65 @@ El mayor riesgo del producto es el **problema del huevo y la gallina**: necesita
 | **Gran escala** (10M+) | Desnormalización + CQRS | Almacenar los stats demográficos directamente en un documento por película. Separar las escrituras (nueva valoración) de las lecturas (consulta de stats). |
 **Decisión clave:** NO sobreingenierar desde el día 1. Empezar simple (queries directas), medir, y escalar cuando los datos lo justifiquen.
 ---
+### 7.4 🔴 Riesgo 4: Crisis de credibilidad de los datos — "CinePOV se inventa las notas"
+**Severidad:** CRÍTICA (riesgo de muerte del producto)
+**Probabilidad:** ALTA si no se mitiga
+**El problema:**
+- La propuesta de valor de CinePOV es *"estos son los datos reales de gente como tú"*. Si se descubre que parte de esos datos son generados por un algoritmo y se presentaban como opiniones humanas, no se pierde una feature: se pierde la razón de existir del producto.
+- **La viralidad es simétrica.** El mismo mecanismo que puede llevar a CinePOV a la portada de Reddit, Hacker News o Product Hunt lleva a alguien a auditar los datos con lupa. Un titular como *"la web de ratings demográficos se inventa los ratings demográficos"* es infinitamente más compartible que la propuesta de valor original.
+- Este riesgo **crece con el éxito**: cuanto más famosa sea la plataforma, más escrutinio recibe y más devastador es el hallazgo. Es el único riesgo del documento que se agrava precisamente cuando se cumple el objetivo de negocio.
+- Basta un usuario técnico curioso, un patrón estadístico demasiado limpio, o una filtración del repositorio para desencadenarlo.
+- La recuperación reputacional es prácticamente imposible: la confianza en datos es binaria.
+
+**Mitigaciones:**
+| Acción | Detalle |
+|---|---|
+| **Transparencia radical y proactiva** | Aplicar íntegramente la política de la sección 6.4. Los datos estimados se etiquetan siempre. |
+| **Contar la historia primero** | Convertir la debilidad en contenido: publicar la página `/metodologia` y hablar abiertamente del problema del cold start en el lanzamiento. Nadie puede "descubrir" algo que ya has explicado en portada. Esto además genera credibilidad técnica. |
+| **Nunca viralizar datos sintéticos** | Todo contenido compartible se construye solo con votos reales verificados. |
+| **Auditoría interna previa al lanzamiento** | Revisar exhaustivamente todos los endpoints y vistas que consumen agregados, verificando el tratamiento de `isArtificial`. |
+| **Plan de comunicación de crisis** | Tener redactada de antemano la respuesta pública en caso de acusación, con datos concretos sobre el porcentaje real vs. estimado. |
+| **Métrica de vigilancia** | Monitorizar el % de valoraciones sintéticas sobre el total y publicarlo. Objetivo: tendencia decreciente hacia cero. |
+---
+### 7.5 🟠 Riesgo 5: Dependencia total de TMDB
+**Severidad:** ALTA
+**Probabilidad:** BAJA-MEDIA
+**El problema:**
+- Todo el catálogo de películas proviene de una única API externa gratuita. Un cambio en sus términos, un cierre de la API, un cambio de precios o un bloqueo de la clave dejan la plataforma sin catálogo.
+- Los términos de TMDB son gratuitos para uso **no comercial**. La Fase 7 contempla monetización (freemium, API, reportes B2B), lo que **requiere revisar y probablemente negociar la licencia comercial**.
+- El rate limiting de TMDB puede convertirse en un cuello de botella si un pico de tráfico viral provoca cientos de importaciones simultáneas de películas nuevas.
+
+**Mitigaciones:**
+| Acción | Detalle |
+|---|---|
+| **Caché local agresiva** | Ya implementada: las películas se persisten en BD tras la primera consulta. Ampliar el TTL y no depender de TMDB para servir fichas ya conocidas. |
+| **Revisión legal previa a monetizar** | Antes de cobrar un solo euro, revisar los ToS de TMDB y solicitar licencia comercial si procede. Bloqueante de la Fase 7. |
+| **Atribución impecable** | Cumplir la atribución obligatoria desde el día 1 en el footer y en la página de metodología. |
+| **Plan B identificado** | Documentar alternativas (OMDb, Wikidata, JustWatch) y mantener el `tmdbId` como identificador desacoplado del proveedor. |
+| **Cola de importación** | Ante picos de tráfico, encolar las importaciones de películas nuevas en vez de golpear TMDB en paralelo. |
+---
 ## 8. Roadmap de Fases
-### Fase 0: Planificación y Setup (Semana 1-2)
-- [ ] Definir stack definitivo y crear repositorio
-- [ ] Configurar proyecto Next.js + PostgreSQL + Prisma
-- [ ] Obtener API key de TMDB y probar integración
-- [ ] Diseñar wireframes de las pantallas principales
-- [ ] Definir esquema de base de datos (Prisma schema)
-### Fase 1: MVP Core (Semana 3-6)
-- [ ] Sistema de autenticación con datos demográficos
-- [ ] Integración con TMDB (búsqueda, fichas)
-- [ ] Sistema de valoración (crear, editar, eliminar)
-- [ ] Ficha de película con desglose demográfico
-- [ ] Buscador de películas
-- [ ] Perfil de usuario con historial
-- [ ] Landing page
-### Fase 2: Engagement y Datos (Semana 7-9)
-- [ ] Onboarding "50 Esenciales"
-- [ ] Importador de CSV (Letterboxd/IMDb)
-- [ ] Rankings y tops (global + por segmento)
-- [ ] Página de exploración/descubrimiento
-- [ ] Mejoras de UX basadas en feedback
-### Fase 3: Social y Crecimiento (Semana 10-14)
-- [ ] Reseñas escritas con moderación básica
-- [ ] Listas personalizadas (watchlist, favoritos)
-- [ ] Página compartible "/batalla/{movie}" para viralización
-- [ ] SEO optimizado para fichas de películas
-- [ ] Sistema de recomendaciones básico ("personas como tú también vieron...")
-### Fase 4: Escala y Monetización (Semana 15+)
-- [ ] Optimización de rendimiento (vistas materializadas, cache)
-- [ ] PWA para experiencia móvil mejorada
-- [ ] API pública para desarrolladores
-- [ ] Explorar monetización: premium features, API, partnerships con plataformas de streaming
+> El detalle operativo vive en **[`roadmap.md`](./roadmap.md)**. Esta sección solo resume la secuenciación estratégica y el estado.
+
+| Fase | Contenido | Estado |
+|---|---|---|
+| **0 — Setup** | Entorno, Next.js, BD, TMDB, sistema de diseño | ✅ Completada |
+| **1 — MVP Core** | Auth demográfica, catálogo, valoraciones, filtro demográfico, perfil, landing | ✅ Completada |
+| **2 — Engagement** | Onboarding "50 Esenciales", importadores, rankings por segmento, gamificación | ✅ Completada |
+| **3 — Preparación de lanzamiento** | PostgreSQL, transparencia de datos, analítica, legal, i18n, seguridad | 🔜 **Siguiente — bloqueante** |
+| **4 — Motor viral y SEO** | Imágenes OG, `/vs/`, polarizantes, perfil cinematográfico, SEO técnico, blog de datos | ⏳ Pendiente |
+| **5 — Social y comunidad** | Reseñas con filtro demográfico, listas, watchlist | ⏳ Pendiente |
+| **6 — Escala** | Vistas materializadas, caché, antiabuso, panel admin, PWA | ⏳ Pendiente |
+| **7 — Expansión** | Recomendaciones, API pública, monetización, series de TV | ⏳ Pendiente |
+
+### 8.1 Principio de secuenciación: el crecimiento va antes que las features
+La versión inicial de este roadmap situaba las palancas de crecimiento (imágenes OG compartibles, páginas virales, SEO técnico, perfil cinematográfico) en las semanas 16-25, después de features sociales como reseñas y listas. **Esa ordenación está corregida** por tres razones:
+
+1. **El SEO es un activo que compone.** Cada semana que las fichas de película no están indexadas es tráfico orgánico perdido de forma permanente, no diferida. Debe empezar el día del lanzamiento.
+2. **Una ficha sin imagen OG es un enlace que nadie comparte.** El coste de implementarla es de días; el coste de no tenerla es todo el crecimiento orgánico del período.
+3. **Las reseñas y las listas son features de retención, no de adquisición.** Mejoran la experiencia de quien ya está dentro; no traen a nadie nuevo. Con una base de usuarios pequeña, su impacto es marginal, y además añaden carga de moderación.
+
+> **Regla de decisión ante cualquier duda de priorización:** entre dos tareas, gana la que produzca más valoraciones demográficas reales por unidad de esfuerzo.
 ---
 ## 9. Ideas de Enriquecimiento
 Más allá del MVP, estas funcionalidades podrían diferenciar aún más a CinePOV:
@@ -401,13 +478,28 @@ Premios anuales donde cada segmento demográfico vota por la mejor película del
 Un widget que blogs de cine y medios puedan embeber en sus reviews: "Mira cómo puntúan esta película en CinePOV por demografía". Genera backlinks y tráfico.
 ---
 ## 10. Consideraciones Legales y Éticas
+### 10.1 Postura general
 | Tema | Postura |
 |---|---|
 | **RGPD** | Cumplimiento obligatorio. Consentimiento explícito, derecho al olvido, DPA con proveedores. |
 | **Sesgo algorítmico** | Los filtros demográficos pueden reforzar estereotipos. Siempre mostrar la nota global junto a la segmentada. Nunca presentar un segmento como "correcto" o "mejor". |
 | **Inclusividad de género** | Ofrecer opciones no binarias. No hacer del género una dicotomía forzada. |
-| **Menores de edad** | Si se permite 13-17, evaluar COPPA/regulación de menores. Considerar si el MVP debería ser solo 18+. |
-| **Uso de datos de TMDB** | Atribución obligatoria según sus ToS. No cachear imágenes, usar sus URLs. |
+| **Menores de edad** | Si se permite 13-17, evaluar COPPA/regulación de menores. **Decisión recomendada: MVP solo 18+**, elimina la complejidad regulatoria de menores a coste casi nulo (el segmento 13-17 es minoritario y su consentimiento parental es un problema desproporcionado). |
+| **Uso de datos de TMDB** | Atribución obligatoria según sus ToS. No cachear imágenes, usar sus URLs. **Licencia comercial pendiente de revisar antes de monetizar** (ver riesgo 7.5). |
+| **Honestidad de los datos** | Los datos estimados de arranque se etiquetan siempre. Ver sección 6.4. No es solo una cuestión reputacional: presentar datos generados como opiniones reales puede constituir práctica comercial engañosa. |
+
+### 10.2 Documentos y mecanismos obligatorios antes del lanzamiento público
+Ninguno de estos existe todavía. Todos son bloqueantes con tráfico europeo:
+| Elemento | Detalle |
+|---|---|
+| **Política de privacidad** | Qué datos se recogen (email, año de nacimiento, género), con qué finalidad, base legal (consentimiento), plazo de conservación, encargados del tratamiento (Vercel, Neon, proveedor de email, analítica) y derechos del usuario. |
+| **Términos y condiciones** | Reglas de uso, propiedad del contenido generado, causas de suspensión de cuenta, limitación de responsabilidad, ley aplicable. |
+| **Aviso legal** | Identificación del titular del sitio. Obligatorio en España por la LSSI. |
+| **Banner de consentimiento de cookies** | Obligatorio si se usa analítica. Bloqueo de scripts no esenciales hasta el consentimiento. Se simplifica enormemente eligiendo una analítica sin cookies (Plausible, o PostHog en modo *cookieless*). |
+| **Derecho de supresión operativo** | Botón real de "eliminar mi cuenta" que borre o anonimice los datos personales. Decisión de diseño: al borrar la cuenta, ¿se eliminan las valoraciones (pérdida de dataset) o se anonimizan conservando los agregados? **Recomendado: anonimizar**, desvinculando la valoración del usuario y conservando solo los atributos demográficos agregados, documentándolo en la política de privacidad. |
+| **Exportación de datos** | Derecho de portabilidad: descarga de las valoraciones propias en CSV. Es además una buena feature de producto. |
+| **Registro de actividades de tratamiento** | Documento interno exigido por el RGPD. |
+| **Notificación de brechas** | Procedimiento documentado para notificar a la AEPD en 72 horas. |
 ---
 ## 11. Métricas Clave (KPIs)
 ### Métricas de producto
@@ -423,5 +515,20 @@ Un widget que blogs de cine y medios puedan embeber en sus reviews: "Mira cómo 
 - **Tiempo de carga de ficha de película** (target: < 1s incluyendo datos demográficos)
 - **Latencia P95 de API de ratings demográficos** (target: < 200ms)
 - **Uptime** (target: 99.5% para MVP)
+### Métricas de crecimiento
+> Estas métricas son las que gobiernan el objetivo de notoriedad. Ninguna es medible hoy: **no existe instrumentación analítica en el proyecto**, lo que convierte cualquier optimización de crecimiento en adivinación. Instrumentar es tarea de la Fase 3.
+
+| Métrica | Definición | Objetivo inicial |
+|---|---|---|
+| **K-factor (coeficiente viral)** | (invitaciones o compartidos por usuario) × (tasa de conversión de esas visitas). K > 1 significa crecimiento exponencial sin gastar en adquisición. | K > 0,4 en el primer trimestre. K > 1 es el objetivo aspiracional. |
+| **Tasa de compartición** | % de usuarios que comparten al menos un artefacto (ficha, `/vs/`, perfil cinematográfico). | > 15% |
+| **Visitas por compartición** | Cuántas visitas genera cada enlace compartido. Mide la calidad del artefacto, no solo su cantidad. | > 3 |
+| **Tráfico orgánico de búsqueda** | Sesiones desde buscadores. Es la métrica de salud del activo SEO a largo plazo. | Curva creciente sostenida; > 30% del tráfico total al sexto mes |
+| **Páginas indexadas** | Fichas de película presentes en el índice de Google. | > 5.000 al tercer mes |
+| **Tiempo hasta el momento "aha"** | Minutos desde el registro hasta que el usuario ve por primera vez el desglose demográfico de una película que ha valorado. Es el momento de activación del producto. | < 4 minutos |
+| **Tasa de activación** | % de registros que alcanzan el momento "aha". Es la métrica más importante del embudo. | > 60% |
+| **% de valoraciones sintéticas** | Proporción de votos `isArtificial` sobre el total. Métrica de honestidad y de madurez del dataset. | Tendencia decreciente hacia 0 |
+| **Cobertura de segmentos** | % de películas populares con al menos 10 votos **reales** en 4 o más segmentos. Mide cuándo el producto empieza a funcionar de verdad. | > 40% al sexto mes |
+| **Equilibrio demográfico** | Desviación de la distribución de usuarios respecto a una distribución equilibrada. Un producto con el 80% de usuarios en un único segmento no cumple su promesa. | Ningún segmento > 40% del total |
 ---
-> **Próximo paso:** Revisar este plan, resolver cualquier duda o ajuste, y una vez aprobado, comenzar con la Fase 0 (setup del proyecto y diseño de wireframes).
+> **Próximo paso:** ejecutar la **Fase 3 del roadmap (Preparación de lanzamiento)**, cuyos bloqueantes son la migración a PostgreSQL, la transparencia de los datos de arranque, la instrumentación analítica y los documentos legales. El plan de captación de usuarios vive en **[`go_to_market.md`](./go_to_market.md)**.

@@ -40,6 +40,14 @@ export interface FormattedMovie {
 }
 
 /**
+ * Mapea el locale de CinePOV al código de idioma aceptado por la API de TMDB.
+ */
+export function localeToTmdbLang(locale?: string | null): string {
+  if (locale === "en") return "en-US";
+  return "es-ES";
+}
+
+/**
  * Realiza peticiones a la API de TMDB con control de errores.
  */
 async function fetchFromTMDB<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
@@ -64,14 +72,15 @@ async function fetchFromTMDB<T>(endpoint: string, params: Record<string, string>
 }
 
 /**
- * Busca películas por título en TMDB.
+ * Busca películas por título en TMDB con soporte de idioma.
  */
-export async function searchMovies(query: string): Promise<TMDBMovieResult[]> {
+export async function searchMovies(query: string, language: string = "es-ES"): Promise<TMDBMovieResult[]> {
   if (!query.trim()) return [];
 
   try {
     const data = await fetchFromTMDB<{ results: TMDBMovieResult[] }>("/search/movie", {
       query: query.trim(),
+      language,
     });
     return data.results;
   } catch (error) {
@@ -83,12 +92,12 @@ export async function searchMovies(query: string): Promise<TMDBMovieResult[]> {
 /**
  * Obtiene los detalles y los créditos (director y reparto) de una película en TMDB y los formatea.
  */
-export async function getMovieWithCredits(tmdbId: number): Promise<FormattedMovie | null> {
+export async function getMovieWithCredits(tmdbId: number, language: string = "es-ES"): Promise<FormattedMovie | null> {
   try {
     // 1. Obtener detalles y créditos de forma concurrente
     const [details, credits] = await Promise.all([
-      fetchFromTMDB<any>(`/movie/${tmdbId}`),
-      fetchFromTMDB<any>(`/movie/${tmdbId}/credits`),
+      fetchFromTMDB<any>(`/movie/${tmdbId}`, { language }),
+      fetchFromTMDB<any>(`/movie/${tmdbId}/credits`, { language }),
     ]);
 
     // 2. Extraer el director
@@ -143,7 +152,7 @@ export async function getMovieWithCredits(tmdbId: number): Promise<FormattedMovi
 /**
  * Obtiene las películas en tendencias de TMDB de la semana.
  */
-export async function getTrendingMovies(): Promise<Array<{
+export async function getTrendingMovies(language: string = "es-ES"): Promise<Array<{
   tmdbId: number;
   title: string;
   posterUrl: string;
@@ -151,7 +160,7 @@ export async function getTrendingMovies(): Promise<Array<{
   tmdbRating: number;
 }>> {
   try {
-    const data = await fetchFromTMDB<{ results: TMDBMovieResult[] }>("/trending/movie/week");
+    const data = await fetchFromTMDB<{ results: TMDBMovieResult[] }>("/trending/movie/week", { language });
     
     if (!data.results) return [];
 
@@ -231,11 +240,11 @@ interface SimilarMovie {
 }
 
 /**
- * Obtiene las películas similares de TMDB para un id dado.
+ * Obtiene las películas similares de TMDB para un id dado con soporte de idioma.
  */
-export async function getSimilarMovies(tmdbId: number): Promise<SimilarMovie[]> {
+export async function getSimilarMovies(tmdbId: number, language: string = "es-ES"): Promise<SimilarMovie[]> {
   try {
-    const data = await fetchFromTMDB<{ results: any[] }>(`/movie/${tmdbId}/similar`);
+    const data = await fetchFromTMDB<{ results: any[] }>(`/movie/${tmdbId}/similar`, { language });
     if (!data.results) return [];
 
     return data.results.slice(0, 6).map((movie: any) => {

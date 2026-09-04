@@ -43,12 +43,15 @@ export default async function ProfilePage() {
     },
   });
 
-  // Obtener medias globales de las películas calificadas por el usuario para calcular desviaciones
+  // Obtener medias globales de las películas calificadas por el usuario para
+  // calcular desviaciones. Se comparan contra valoraciones reales: comparar la
+  // nota del usuario con una estimación estadística no significaría nada.
   const movieIds = ratings.map((r) => r.movieId);
   const globalAverages = await db.rating.groupBy({
     by: ["movieId"],
     where: {
       movieId: { in: movieIds },
+      isArtificial: false,
     },
     _avg: {
       score: true,
@@ -72,6 +75,7 @@ export default async function ProfilePage() {
       id: r.id,
       score: r.score,
       createdAt: r.createdAt.toISOString(),
+      watchedAt: r.watchedAt ? r.watchedAt.toISOString() : null,
       movie: {
         id: r.movie.id,
         tmdbId: r.movie.tmdbId,
@@ -83,11 +87,56 @@ export default async function ProfilePage() {
     };
   });
 
+  // 3. Consultar la watchlist del usuario
+  const watchlists = await db.watchlist.findMany({
+    where: { userId: user.id },
+    include: {
+      movie: {
+        select: {
+          id: true,
+          tmdbId: true,
+          title: true,
+          year: true,
+          posterUrl: true,
+          tmdbRating: true,
+        },
+      },
+    },
+    orderBy: { addedAt: "desc" },
+  });
+
+  const serializedWatchlist = watchlists.map((w) => ({
+    id: w.id,
+    addedAt: w.addedAt.toISOString(),
+    movie: w.movie,
+  }));
+
+  // 4. Consultar las listas personalizadas del usuario
+  const customLists = await db.customList.findMany({
+    where: { userId: user.id },
+    include: {
+      _count: { select: { items: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const serializedLists = customLists.map((l) => ({
+    id: l.id,
+    name: l.name,
+    description: l.description,
+    isPublic: l.isPublic,
+    itemCount: l._count.items,
+    updatedAt: l.updatedAt.toISOString(),
+  }));
+
   return (
     <div className="max-w-4xl w-full mx-auto px-4 py-8 sm:py-12 flex-1 flex flex-col justify-start">
       <UserProfileClient
         initialUser={serializedUser}
         initialRatings={serializedRatings}
+        initialWatchlist={serializedWatchlist}
+        initialLists={serializedLists}
+        hasPassword={Boolean(user.passwordHash)}
       />
     </div>
   );

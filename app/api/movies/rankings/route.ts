@@ -12,16 +12,23 @@ export async function GET(request: Request) {
 
     const pageSize = 20;
     const skip = (page - 1) * pageSize;
-    const minRatings = 3; // Mínimo de valoraciones para aparecer en el ranking
+    // Mínimo de valoraciones REALES para aparecer en el ranking. Un ranking es
+    // contenido público y compartible: solo puede construirse con votos de
+    // personas (ver sección 6.4 del plan de proyecto).
+    const minRatings = 5;
 
     const currentYear = new Date().getFullYear();
 
     // 1. Construir el filtro para la tabla Rating (Filtros Demográficos)
-    const ratingsFilter: any = {};
+    // Solo valoraciones reales de cuentas con email verificado:
+    const ratingsFilter: any = {
+      isArtificial: false,
+      user: {
+        emailVerified: { not: null },
+      },
+    };
     
     if (gender !== "all" || ageRange !== "all") {
-      ratingsFilter.user = {};
-      
       if (gender !== "all") {
         ratingsFilter.user.gender = gender;
       }
@@ -116,6 +123,7 @@ export async function GET(request: Request) {
       by: ["movieId"],
       where: {
         movieId: { in: movieIds },
+        isArtificial: false,
       },
       _avg: {
         score: true,

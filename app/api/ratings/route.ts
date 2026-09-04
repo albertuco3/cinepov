@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { sanitizeAndTruncate } from "@/lib/sanitize";
+import { checkContentModeration } from "@/lib/moderation";
+import { checkReviewBombingAnomaly } from "@/lib/anti-abuse";
 
 // POST: Crear o actualizar una valoración de película (y aplicar reemplazo 1-a-1 de bots)
 export async function POST(request: Request) {
@@ -16,8 +20,14 @@ export async function POST(request: Request) {
     }
 
     const userId = session.user.id;
+
+    const limit = await checkRateLimit("rating", userId);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit, "Estás valorando demasiado rápido. Espera unos segundos.");
+    }
+
     const body = await request.json();
-    const { movieId, score } = body;
+    const { movieId, score, watchedAt, reviewText } = body;
 
     // Validar puntuación entre 1 y 10
     const parsedScore = parseInt(score, 10);
@@ -26,6 +36,44 @@ export async function POST(request: Request) {
         { error: "La puntuación debe ser un número entero entre 1 y 10." },
         { status: 400 }
       );
+    }
+
+    // Fecha de visionado opcional. Convierte la valoración en un diario, que es
+    // el hábito recurrente que sostiene la retención.
+    let parsedWatchedAt: Date | null = null;
+    if (watchedAt) {
+      const candidate = new Date(watchedAt);
+      if (isNaN(candidate.getTime())) {
+        return NextResponse.json(
+          { error: "La fecha de visionado no es válida." },
+          { status: 400 }
+        );
+      }
+      if (candidate.getTime() > Date.now()) {
+        return NextResponse.json(
+          { error: "No puedes registrar el visionado de una película en el futuro." },
+          { status: 400 }
+        );
+      }
+      parsedWatchedAt = candidate;
+    }
+
+    // Reseña de texto libre opcional, saneada contra XSS y limitada a 2000 caracteres
+    let sanitizedReview: string | null = null;
+    if (typeof reviewText === "string" && reviewText.trim().length > 0) {
+      sanitizedReview = sanitizeAndTruncate(reviewText.trim(), 2000);
+      if (sanitizedReview.length === 0) {
+        sanitizedReview = null;
+      } else {
+        // Filtro automático de contenido ofensivo (Fase 5.1.3)
+        const moderation = checkContentModeration(sanitizedReview);
+        if (moderation.isOffensive) {
+          return NextResponse.json(
+            { error: "Tu reseña contiene términos que no cumplen las normas de la comunidad. Por favor, modifícala antes de publicarla." },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Verificar que la película existe físicamente
@@ -38,6 +86,12 @@ export async function POST(request: Request) {
         { error: "La película especificada no existe." },
         { status: 404 }
       );
+    }
+
+    // Comprobación de anomalías de review bombing (Fase 3.6)
+    const anomalyCheck = await checkReviewBombingAnomaly(movieId, parsedScore);
+    if (anomalyCheck.isAnomaly) {
+      console.warn(`[ANTIABUSO / REVIEW BOMBING] Pico detectado en película ${movie.title}: ${anomalyCheck.details}`);
     }
 
     // Comprobar si el usuario ya ha valorado esta película anteriormente
@@ -56,7 +110,12 @@ export async function POST(request: Request) {
       // 1. Si ya existe, actualizamos la nota de la valoración real
       rating = await db.rating.update({
         where: { id: existingRating.id },
-        data: { score: parsedScore },
+        data: {
+          score: parsedScore,
+          // Solo se sobrescribe la fecha si el cliente envía una nueva.
+          ...(parsedWatchedAt ? { watchedAt: parsedWatchedAt } : {}),
+          ...(typeof reviewText !== "undefined" ? { reviewText: sanitizedReview } : {}),
+        },
       });
       console.log(`[Valoración] Actualizada nota de usuario ${session.user.email} para película ${movie.title} a ${parsedScore}`);
     } else {
@@ -86,27 +145,33 @@ export async function POST(request: Request) {
           userId,
           movieId,
           isArtificial: false,
+          watchedAt: parsedWatchedAt,
+          reviewText: sanitizedReview,
         },
       });
       console.log(`[Valoración] Creado nuevo voto real de usuario ${session.user.email} para película ${movie.title} con nota ${parsedScore}`);
     }
 
-    // 3. Recalcular nota media en tiempo real para retornar al cliente
-    const allRatings = await db.rating.findMany({
-      where: { movieId },
+    // Auto-limpieza de Watchlist (Fase 5.2.1):
+    // Si la película estaba en la watchlist, se retira automáticamente porque ya ha sido vista.
+    await db.watchlist.deleteMany({
+      where: { userId, movieId },
     });
-    
-    const count = allRatings.length;
-    const avg = count > 0
-      ? (allRatings.reduce((sum, r) => sum + r.score, 0) / count).toFixed(1)
-      : null;
+
+    // 3. Recalcular la nota media de valoraciones REALES para retornar al cliente.
+    // Las estimaciones de arranque nunca entran en la nota que se presenta.
+    const realAgg = await db.rating.aggregate({
+      where: { movieId, isArtificial: false },
+      _avg: { score: true },
+      _count: { score: true },
+    });
 
     return NextResponse.json({
       message: "Valoración registrada con éxito.",
       rating,
       stats: {
-        avgRating: avg,
-        ratingCount: count,
+        avgRating: realAgg._avg.score !== null ? realAgg._avg.score.toFixed(1) : null,
+        ratingCount: realAgg._count.score,
       },
     });
 
@@ -165,21 +230,18 @@ export async function DELETE(request: Request) {
 
     console.log(`[Valoración] Eliminada valoración del usuario ${session.user.email} para película ID ${movieId}`);
 
-    // Recalcular estadísticas actualizadas
-    const allRatings = await db.rating.findMany({
-      where: { movieId },
+    // Recalcular estadísticas actualizadas sobre valoraciones reales
+    const realAgg = await db.rating.aggregate({
+      where: { movieId, isArtificial: false },
+      _avg: { score: true },
+      _count: { score: true },
     });
-    
-    const count = allRatings.length;
-    const avg = count > 0
-      ? (allRatings.reduce((sum, r) => sum + r.score, 0) / count).toFixed(1)
-      : null;
 
     return NextResponse.json({
       message: "Valoración eliminada correctamente.",
       stats: {
-        avgRating: avg,
-        ratingCount: count,
+        avgRating: realAgg._avg.score !== null ? realAgg._avg.score.toFixed(1) : null,
+        ratingCount: realAgg._count.score,
       },
     });
 

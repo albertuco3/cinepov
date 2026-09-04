@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useI18n } from "@/lib/i18n/client";
 
 interface SearchResult {
   id: number;
@@ -14,6 +15,7 @@ interface SearchResult {
 
 export default function SearchBar() {
   const router = useRouter();
+  const { locale, dict } = useI18n();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +47,8 @@ export default function SearchBar() {
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/movies/search?q=${encodeURIComponent(query)}`);
+        const lang = locale === "en" ? "en-US" : "es-ES";
+        const response = await fetch(`/api/movies/search?q=${encodeURIComponent(query)}&lang=${lang}`);
         const data = await response.json();
         
         if (data.results) {
@@ -62,7 +65,7 @@ export default function SearchBar() {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query]);
+  }, [query, locale]);
 
   const handleSelectMovie = (tmdbId: number) => {
     setQuery("");
@@ -99,7 +102,7 @@ export default function SearchBar() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Busca una película por título..."
+          placeholder={dict.search.placeholder}
           className="block w-full bg-white/5 border border-white/10 rounded-full pl-10 pr-10 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition"
         />
         
@@ -170,7 +173,7 @@ export default function SearchBar() {
             </ul>
           ) : (
             <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-              No se encontraron resultados para "{query}"
+              {dict.search.noResults}
             </div>
           )}
         </div>

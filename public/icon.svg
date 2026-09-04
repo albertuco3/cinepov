@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="cinepov-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="50%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141522" />
+      <stop offset="100%" stop-color="#0a0a0f" />
+    </linearGradient>
+  </defs>
+  <!-- Fondo redondeado -->
+  <rect width="512" height="512" rx="128" fill="url(#bg-grad)" stroke="#ffffff" stroke-opacity="0.1" stroke-width="8"/>
+  
+  <!-- Círculo exterior (Lente / Claqueta / Ojo) -->
+  <circle cx="256" cy="256" r="160" stroke="url(#cinepov-grad)" stroke-width="24" stroke-dasharray="8 8" opacity="0.6"/>
+  
+  <!-- Núcleo de contraste -->
+  <circle cx="256" cy="256" r="120" fill="url(#cinepov-grad)"/>
+  
+  <!-- Símbolo POV (punto focal estilizado) -->
+  <circle cx="256" cy="256" r="48" fill="#0a0a0f"/>
+  <circle cx="280" cy="232" r="16" fill="#ffffff" opacity="0.9"/>
+  
+  <!-- Rayos de segmentación demográfica -->
+  <path d="M256 64 V112" stroke="url(#cinepov-grad)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M256 400 V448" stroke="url(#cinepov-grad)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M64 256 H112" stroke="url(#cinepov-grad)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M400 256 H448" stroke="url(#cinepov-grad)" stroke-width="16" stroke-linecap="round"/>
+</svg>

@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { dict, locale } = useI18n();
   
   // Estados del formulario
   const [formData, setFormData] = useState({
@@ -35,7 +37,7 @@ export default function LoginPage() {
       });
 
       if (res?.error) {
-        throw new Error(res.error || "El email o la contraseña son incorrectos.");
+        throw new Error(res.error || (locale === "en" ? "Invalid email or password." : "El email o la contraseña son incorrectos."));
       }
 
       // Login exitoso, redirigir a la raíz y forzar refresco para Header
@@ -43,7 +45,7 @@ export default function LoginPage() {
       router.refresh();
 
     } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión.");
+      setError(err.message || (locale === "en" ? "Error signing in." : "Error al iniciar sesión."));
     } finally {
       setLoading(false);
     }
@@ -63,10 +65,10 @@ export default function LoginPage() {
         {/* Cabecera */}
         <div className="text-center">
           <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl text-gradient">
-            Iniciar sesión
+            {dict.auth.loginTitle}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Accede a tu cuenta de CinePOV
+            {dict.auth.loginSubtitle}
           </p>
         </div>
 
@@ -82,7 +84,7 @@ export default function LoginPage() {
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Correo electrónico
+                {dict.auth.emailLabel}
               </label>
               <input
                 id="email"
@@ -99,7 +101,7 @@ export default function LoginPage() {
             {/* Contraseña */}
             <div>
               <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Contraseña
+                {dict.auth.passwordLabel}
               </label>
               <input
                 id="password"
@@ -108,9 +110,17 @@ export default function LoginPage() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Introduce tu contraseña"
+                placeholder="••••••••"
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition text-sm"
               />
+              <div className="mt-2 text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-[11px] font-medium text-muted-foreground hover:text-primary interactive-transition"
+                >
+                  {locale === "en" ? "Forgot your password?" : "¿Has olvidado tu contraseña?"}
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -120,7 +130,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 shadow-lg hover:shadow-primary/25 disabled:opacity-50 interactive-transition cursor-pointer"
             >
-              {loading ? "Iniciando sesión..." : "Entrar"}
+              {loading ? (locale === "en" ? "Signing in..." : "Iniciando sesión...") : dict.auth.submitLogin}
             </button>
 
             {/* Botón de Google OAuth */}
@@ -132,16 +142,15 @@ export default function LoginPage() {
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18 8.79 18 6 15.21 6 11.76S8.79 5.52 12.24 5.52c1.614 0 3.02.5 4.094 1.483l2.455-2.455C17.323 3.1 14.977 2 12.24 2 6.83 2 2.5 6.33 2.5 11.76s4.33 9.76 9.74 9.76c5.637 0 9.372-3.957 9.372-9.53 0-.643-.075-1.265-.182-1.705H12.24z" />
               </svg>
-              Iniciar sesión con Google
+              {locale === "en" ? "Continue with Google" : "Continuar con Google"}
             </button>
           </div>
         </form>
 
         {/* Link al Registro */}
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          ¿No tienes cuenta?{" "}
           <Link href="/register" className="font-semibold text-primary hover:underline hover:text-violet-400">
-            Regístrate aquí
+            {dict.auth.dontHaveAccount}
           </Link>
         </p>
       </div>

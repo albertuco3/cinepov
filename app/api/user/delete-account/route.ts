@@ -1,0 +1,127 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+
+const CONFIRMATION_KEYWORD = "ELIMINAR";
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    let body: { confirmation?: unknown; password?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "La solicitud no incluye un cuerpo válido." },
+        { status: 400 }
+      );
+    }
+
+    const { confirmation, password } = body;
+
+    if (confirmation !== CONFIRMATION_KEYWORD) {
+      return NextResponse.json(
+        {
+          error: `Para eliminar la cuenta debes escribir exactamente la palabra ${CONFIRMATION_KEYWORD} en el campo de confirmación.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true, isAnonymized: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "La cuenta no existe." }, { status: 404 });
+    }
+
+    if (user.isAnonymized) {
+      return NextResponse.json(
+        { error: "Esta cuenta ya ha sido eliminada." },
+        { status: 400 }
+      );
+    }
+
+    // Las cuentas de proveedor externo (OAuth) no tienen contraseña local: en esos
+    // casos la sesión activa es la única prueba de identidad exigible.
+    if (user.passwordHash) {
+      if (typeof password !== "string" || password.length === 0) {
+        return NextResponse.json(
+          {
+            error: "Debes introducir tu contraseña actual para confirmar la eliminación.",
+            requiresPassword: true,
+          },
+          { status: 400 }
+        );
+      }
+
+      const isValid = await bcrypt.compare(password, user.passwordHash);
+
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "La contraseña no es correcta." },
+          { status: 401 }
+        );
+      }
+    }
+
+    // El derecho de supresión se satisface desvinculando los datos de la persona,
+    // no destruyendo el agregado estadístico: las valoraciones se conservan sin
+    // ningún identificador que permita volver a atribuirlas a nadie.
+    const preservedRatings = await db.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          email: `deleted-${crypto.randomUUID()}@anonimo.cinepov`,
+          passwordHash: null,
+          displayName: "Usuario eliminado",
+          avatarUrl: null,
+          emailWeeklyActive: false,
+          emailVerified: null,
+          isAnonymized: true,
+          // birthYear y gender se conservan a propósito: son los únicos atributos
+          // que sostienen los desgloses demográficos y, una vez roto el vínculo
+          // con el email y el nombre, no identifican a la persona.
+        },
+      });
+
+      await tx.verificationToken.deleteMany({ where: { userId } });
+
+      await tx.feedback.updateMany({
+        where: { userId },
+        data: { userId: null },
+      });
+
+      return tx.rating.count({ where: { userId } });
+    });
+
+    console.log(
+      `[RGPD] Cuenta ${userId} anonimizada. Valoraciones conservadas: ${preservedRatings}`
+    );
+
+    return NextResponse.json({
+      success: true,
+      message:
+        "Tu cuenta y tus datos personales se han eliminado. Tus valoraciones se conservan de forma anónima.",
+      preservedRatings,
+    });
+  } catch (error) {
+    console.error("Error al eliminar la cuenta del usuario:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor al procesar la eliminación de la cuenta." },
+      { status: 500 }
+    );
+  }
+}

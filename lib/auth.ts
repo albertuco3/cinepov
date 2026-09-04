@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { db } from "./db";
 import bcrypt from "bcrypt";
+import { checkRateLimit, resetRateLimit } from "./rate-limit";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -21,9 +22,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Por favor, introduce tu email y contraseña.");
         }
 
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+
+        // 1. Comprobar rate limit contra fuerza bruta
+        const limit = await checkRateLimit("login", normalizedEmail);
+        if (!limit.allowed) {
+          throw new Error(
+            `Demasiados intentos fallidos. Por favor, espera ${Math.ceil(limit.retryAfterSeconds / 60)} minutos antes de volver a intentarlo.`
+          );
+        }
+
         // Buscar el usuario en la BD local
         const user = await db.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: normalizedEmail },
         });
 
         if (!user || !user.passwordHash) {
@@ -36,6 +47,9 @@ export const authOptions: NextAuthOptions = {
         if (!isValid) {
           throw new Error("El email o la contraseña son incorrectos.");
         }
+
+        // Al iniciar sesión con éxito, se restablece el contador de intentos
+        await resetRateLimit("login", normalizedEmail);
 
         // Contar valoraciones en la BD
         const ratingsCount = await db.rating.count({

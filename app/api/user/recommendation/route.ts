@@ -79,12 +79,18 @@ export async function GET() {
     // 6. Para cada película no valorada, calcular el promedio de su segmento demográfico
     const unratedMovieIds = unratedMovies.map((m) => m.id);
 
-    // Obtener todas las valoraciones de estas películas junto a los datos demográficos de los votantes
+    // Obtener las valoraciones REALES de estas películas junto a los datos
+    // demográficos de los votantes. Las estimaciones de arranque no se usan
+    // para recomendar: si no hay datos de personas, se cae al fallback de TMDB.
     const ratings = await db.rating.findMany({
       where: {
         movieId: { in: unratedMovieIds },
+        isArtificial: false,
+        user: { emailVerified: { not: null } },
       },
-      include: {
+      select: {
+        movieId: true,
+        score: true,
         user: {
           select: {
             gender: true,
@@ -104,15 +110,15 @@ export async function GET() {
       if (!r.user) return;
       
       // Validar si pertenece al segmento del usuario (mismo género y mismo rango de edad)
-      const botAge = currentYear - r.user.birthYear;
-      let botAgeKey = "";
-      if (botAge >= 18 && botAge <= 24) botAgeKey = "18_24";
-      else if (botAge >= 25 && botAge <= 34) botAgeKey = "25_34";
-      else if (botAge >= 35 && botAge <= 44) botAgeKey = "35_44";
-      else if (botAge >= 45 && botAge <= 54) botAgeKey = "45_54";
-      else if (botAge >= 55) botAgeKey = "55_plus";
+      const voterAge = currentYear - r.user.birthYear;
+      let voterAgeKey = "";
+      if (voterAge >= 18 && voterAge <= 24) voterAgeKey = "18_24";
+      else if (voterAge >= 25 && voterAge <= 34) voterAgeKey = "25_34";
+      else if (voterAge >= 35 && voterAge <= 44) voterAgeKey = "35_44";
+      else if (voterAge >= 45 && voterAge <= 54) voterAgeKey = "45_54";
+      else if (voterAge >= 55) voterAgeKey = "55_plus";
 
-      if (r.user.gender === user.gender && botAgeKey === userAgeKey) {
+      if (r.user.gender === user.gender && voterAgeKey === userAgeKey) {
         movieRatingsMap[r.movieId].push(r.score);
       }
     });

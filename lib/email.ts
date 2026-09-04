@@ -1,8 +1,16 @@
 /**
- * Servicio simulador de correo electrónico para CinePOV.
- * En desarrollo local, este módulo formatea plantillas de email HTML premium
- * y las escribe detalladamente en la consola del servidor Next.js.
+ * Servicio de correo electrónico de CinePOV.
+ * Envía a través de Resend cuando hay credenciales configuradas. Si no las hay,
+ * cae al comportamiento de desarrollo: imprimir el email en la consola del
+ * servidor, para que el entorno local funcione sin cuenta de Resend.
  */
+
+import { Resend } from "resend";
+
+/** Base pública de la aplicación, usada para construir los enlaces de los emails. */
+export const APP_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+const EMAIL_FROM = process.env.EMAIL_FROM || "CinePOV <onboarding@resend.dev>";
 
 interface SimpleMovieData {
   title: string;
@@ -11,8 +19,94 @@ interface SimpleMovieData {
   votes: number;
 }
 
+let resendClient: Resend | null = null;
+
 /**
- * Simula el envío de un email de bienvenida post-registro.
+ * El cliente se instancia de forma perezosa porque el constructor de Resend
+ * lanza una excepción si la clave no existe, y aquí la ausencia de clave es un
+ * escenario válido (desarrollo local).
+ */
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+
+  if (!resendClient) {
+    resendClient = new Resend(apiKey);
+  }
+
+  return resendClient;
+}
+
+function printToConsole(label: string, to: string, subject: string, html: string): void {
+  console.log("\n" + "=".repeat(80));
+  console.log(`[EMAIL SIMULADOR] 📬 ${label}`);
+  console.log(`Para:       ${to}`);
+  console.log(`Asunto:     ${subject}`);
+  console.log("-".repeat(80));
+  console.log(html.trim());
+  console.log("=".repeat(80) + "\n");
+}
+
+/**
+ * Punto único de envío. Nunca propaga errores: un fallo de correo no debe
+ * tumbar un registro ni un restablecimiento de contraseña.
+ */
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  label: string
+): Promise<boolean> {
+  const client = getResendClient();
+
+  if (!client) {
+    console.warn(
+      `[EMAIL] RESEND_API_KEY no está configurada: el correo "${label}" NO se ha enviado de verdad, se simula por consola.`
+    );
+    printToConsole(label, to, subject, html);
+    return true;
+  }
+
+  try {
+    const { error } = await client.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error(`[EMAIL] Resend rechazó el envío de "${label}" a ${to}:`, error);
+      return false;
+    }
+
+    console.log(`[EMAIL] "${label}" enviado correctamente a ${to}.`);
+    return true;
+  } catch (err) {
+    console.error(`[EMAIL] Error inesperado al enviar "${label}" a ${to}:`, err);
+    return false;
+  }
+}
+
+/** Envoltorio común de todas las plantillas: contenedor oscuro y logotipo. */
+function renderLayout(innerHtml: string, footerHtml: string): string {
+  return `
+    <div style="background-color: #0b0c10; color: #c5c6c7; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; border-radius: 20px; border: 1px solid #1f2833;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <span style="font-size: 28px; font-weight: 900; letter-spacing: 2px; color: #66fcf1; text-transform: uppercase;">CinePOV</span>
+      </div>
+
+      ${innerHtml}
+
+      <div style="text-align: center; margin-top: 30px; border-top: 1px solid #1f2833; pt-20px;">
+        ${footerHtml}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Envía el email de bienvenida post-registro.
  */
 export async function sendWelcomeEmail(email: string, displayName: string): Promise<boolean> {
   const subject = `¡Te damos la bienvenida a CinePOV, ${displayName}! 🍿`;
@@ -40,25 +134,130 @@ export async function sendWelcomeEmail(email: string, displayName: string): Prom
       
       <div style="text-align: center; margin-top: 30px; border-top: 1px solid #1f2833; pt-20px;">
         <p style="font-size: 11px; color: #45f3ff; font-weight: bold; margin-bottom: 5px;">Tu Punto de Vista Cinematográfico</p>
-        <p style="font-size: 10px; color: #666; margin: 0;">Este es un email de simulación enviado de forma automática tras el registro.</p>
+        <p style="font-size: 10px; color: #666; margin: 0;">Este correo se ha enviado de forma automática tras el registro.</p>
       </div>
     </div>
   `;
 
-  // Imprimir un bloque muy visible en los logs del servidor
-  console.log("\n" + "=".repeat(80));
-  console.log(`[EMAIL SIMULADOR] 📬 Correo de Bienvenida Enviado`);
-  console.log(`Para:       ${email}`);
-  console.log(`Asunto:     ${subject}`);
-  console.log("-".repeat(80));
-  console.log(htmlBody.trim());
-  console.log("=".repeat(80) + "\n");
-
-  return true;
+  return sendEmail(email, subject, htmlBody, "Correo de Bienvenida");
 }
 
 /**
- * Simula el envío del boletín semanal de películas populares según el segmento.
+ * Envía el enlace de confirmación de la dirección de correo.
+ */
+export async function sendVerificationEmail(
+  email: string,
+  displayName: string,
+  verifyUrl: string
+): Promise<boolean> {
+  const subject = `Confirma tu correo en CinePOV 🎬`;
+
+  const htmlBody = renderLayout(
+    `
+      <div style="background-color: #1f2833; padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Solo falta un paso, ${displayName}</h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
+          Confirma que esta dirección de correo es tuya para activar tu cuenta de <strong>CinePOV</strong>. Verificar tu email es lo que permite que tus valoraciones cuenten en las estadísticas demográficas públicas.
+        </p>
+        <div style="text-align: center; margin: 30px 0 10px 0;">
+          <a href="${verifyUrl}" style="display: inline-block; background-color: #45f3ff; color: #0b0c10; font-weight: bold; font-size: 12px; text-decoration: none; padding: 12px 28px; border-radius: 30px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            Confirmar mi correo
+          </a>
+        </div>
+        <p style="font-size: 11px; line-height: 1.6; color: #666; text-align: center; margin-bottom: 0;">
+          El enlace caduca en 24 horas. Si el botón no funciona, copia y pega esta dirección en tu navegador:<br />
+          <span style="color: #66fcf1; word-break: break-all;">${verifyUrl}</span>
+        </p>
+      </div>
+    `,
+    `
+      <p style="font-size: 11px; color: #45f3ff; font-weight: bold; margin-bottom: 5px;">Tu Punto de Vista Cinematográfico</p>
+      <p style="font-size: 10px; color: #666; margin: 0;">Si no te has registrado en CinePOV, puedes ignorar este mensaje.</p>
+    `
+  );
+
+  return sendEmail(email, subject, htmlBody, "Verificación de Correo");
+}
+
+/**
+ * Envía el enlace para establecer una contraseña nueva.
+ */
+export async function sendPasswordResetEmail(
+  email: string,
+  displayName: string,
+  resetUrl: string
+): Promise<boolean> {
+  const subject = `Restablece tu contraseña de CinePOV 🔐`;
+
+  const htmlBody = renderLayout(
+    `
+      <div style="background-color: #1f2833; padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Hola, ${displayName}</h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
+          Hemos recibido una solicitud para restablecer la contraseña de tu cuenta de <strong>CinePOV</strong>. Pulsa el botón para elegir una contraseña nueva.
+        </p>
+        <div style="text-align: center; margin: 30px 0 10px 0;">
+          <a href="${resetUrl}" style="display: inline-block; background-color: #45f3ff; color: #0b0c10; font-weight: bold; font-size: 12px; text-decoration: none; padding: 12px 28px; border-radius: 30px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            Crear contraseña nueva
+          </a>
+        </div>
+        <p style="font-size: 12px; line-height: 1.6; color: #c5c6c7; text-align: center; margin-bottom: 15px;">
+          <strong style="color: #66fcf1;">Este enlace caduca en 1 hora</strong> y solo puede utilizarse una vez.
+        </p>
+        <p style="font-size: 11px; line-height: 1.6; color: #666; text-align: center; margin-bottom: 0;">
+          Si el botón no funciona, copia y pega esta dirección en tu navegador:<br />
+          <span style="color: #66fcf1; word-break: break-all;">${resetUrl}</span>
+        </p>
+      </div>
+    `,
+    `
+      <p style="font-size: 11px; color: #45f3ff; font-weight: bold; margin-bottom: 5px;">Tu Punto de Vista Cinematográfico</p>
+      <p style="font-size: 10px; color: #666; margin: 0;">Si no has solicitado este cambio, ignora este mensaje: tu contraseña actual seguirá siendo válida.</p>
+    `
+  );
+
+  return sendEmail(email, subject, htmlBody, "Restablecimiento de Contraseña");
+}
+
+/**
+ * Avisa de que la cuenta se creó con Google y por tanto no tiene contraseña que
+ * restablecer. Es la respuesta al "he olvidado mi contraseña" de una cuenta OAuth.
+ */
+export async function sendOAuthOnlyAccountEmail(
+  email: string,
+  displayName: string
+): Promise<boolean> {
+  const subject = `Tu cuenta de CinePOV usa acceso con Google 🔑`;
+  const loginUrl = `${APP_URL}/login`;
+
+  const htmlBody = renderLayout(
+    `
+      <div style="background-color: #1f2833; padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Hola, ${displayName}</h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
+          Has solicitado restablecer la contraseña de tu cuenta de <strong>CinePOV</strong>, pero esta cuenta no tiene contraseña: se creó accediendo con Google.
+        </p>
+        <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
+          Para entrar, usa el botón <strong>Iniciar sesión con Google</strong> de la pantalla de acceso.
+        </p>
+        <div style="text-align: center; margin: 30px 0 0 0;">
+          <a href="${loginUrl}" style="display: inline-block; background-color: #45f3ff; color: #0b0c10; font-weight: bold; font-size: 12px; text-decoration: none; padding: 12px 28px; border-radius: 30px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            Ir a iniciar sesión
+          </a>
+        </div>
+      </div>
+    `,
+    `
+      <p style="font-size: 11px; color: #45f3ff; font-weight: bold; margin-bottom: 5px;">Tu Punto de Vista Cinematográfico</p>
+      <p style="font-size: 10px; color: #666; margin: 0;">Si no has solicitado nada, puedes ignorar este mensaje.</p>
+    `
+  );
+
+  return sendEmail(email, subject, htmlBody, "Cuenta con Acceso de Google");
+}
+
+/**
+ * Envía el boletín semanal de películas populares según el segmento.
  */
 export async function sendWeeklyTrendsEmail(
   email: string,
@@ -109,7 +308,7 @@ export async function sendWeeklyTrendsEmail(
         ¿Quieres calificar más películas para afinar tu compatibilidad?
       </p>
       <div style="text-align: center;">
-        <a href="http://localhost:3000/explore" style="display: inline-block; background-color: #45f3ff; color: #0b0c10; font-weight: bold; font-size: 12px; text-decoration: none; padding: 10px 24px; border-radius: 30px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <a href="${APP_URL}/explore" style="display: inline-block; background-color: #45f3ff; color: #0b0c10; font-weight: bold; font-size: 12px; text-decoration: none; padding: 10px 24px; border-radius: 30px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           Explorar Catálogo
         </a>
       </div>
@@ -121,14 +320,5 @@ export async function sendWeeklyTrendsEmail(
     </div>
   `;
 
-  // Imprimir un bloque muy visible en los logs del servidor
-  console.log("\n" + "=".repeat(80));
-  console.log(`[EMAIL SIMULADOR] 📬 Boletín Semanal Enviado`);
-  console.log(`Para:       ${email}`);
-  console.log(`Asunto:     ${subject}`);
-  console.log("-".repeat(80));
-  console.log(htmlBody.trim());
-  console.log("=".repeat(80) + "\n");
-
-  return true;
+  return sendEmail(email, subject, htmlBody, "Boletín Semanal");
 }

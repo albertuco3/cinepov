@@ -1,55 +1,141 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getOrCreateMovie } from "@/lib/movies";
+import { cookies } from "next/headers";
+import { getMovieLocalized } from "@/lib/movies";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import MovieRatingSection from "@/components/MovieRatingSection";
 import MovieDemographics from "@/components/MovieDemographics";
+import MovieReviewsSection from "@/components/MovieReviewsSection";
+import WatchlistButton from "@/components/WatchlistButton";
+import MovieEmbedModal from "@/components/MovieEmbedModal";
+import AddToListButton from "@/components/AddToListButton";
 import { getSimilarMovies } from "@/lib/tmdb";
+import { parseMovieParam, buildCanonicalMoviePath } from "@/lib/slug";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
 
 interface MoviePageProps {
   params: Promise<{ id: string }>;
 }
 
+export async function generateMetadata({ params }: MoviePageProps): Promise<Metadata> {
+  const { id } = await params;
+  const { tmdbId } = parseMovieParam(id);
+  if (!tmdbId) {
+    return { title: "Pelicula no encontrada | CinePOV" };
+  }
+
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const movie = await getMovieLocalized(tmdbId, locale);
+  if (!movie) {
+    return { title: locale === "en" ? "Movie not found | CinePOV" : "Pelicula no encontrada | CinePOV" };
+  }
+
+  const title = locale === "en"
+    ? `${movie.title} (${movie.year}) | Ratings by Age & Gender - CinePOV`
+    : `${movie.title} (${movie.year}) | Notas por Edad y Género - CinePOV`;
+  const description = locale === "en"
+    ? `Discover how ${movie.title} is rated by men and women across different generations on CinePOV. Verified demographic breakdown and cohort comparisons.`
+    : `Descubre cómo valoran ${movie.title} mujeres y hombres de distintas generaciones en CinePOV. Desglose demográfico verificado y comparativa por segmento.`;
+  const baseUrl = process.env.NEXTAUTH_URL || "https://cinepov.com";
+  const canonicalUrl = `${baseUrl}${buildCanonicalMoviePath(movie.tmdbId, movie.title)}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      type: "video.movie",
+      siteName: "CinePOV",
+      locale: locale === "en" ? "en_US" : "es_ES",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
 export default async function MoviePage({ params }: MoviePageProps) {
   const { id } = await params;
-  const tmdbId = parseInt(id, 10);
+  const { tmdbId } = parseMovieParam(id);
 
-  if (isNaN(tmdbId)) {
+  if (!tmdbId) {
     return notFound();
   }
 
-  // 1. Obtener o crear la película en caché local
-  const movie = await getOrCreateMovie(tmdbId);
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const dict = getDictionary(locale);
+
+  // 1. Obtener la película localizada (español o inglés)
+  const movie = await getMovieLocalized(tmdbId, locale);
 
   if (!movie) {
     return notFound();
   }
 
-  // 2. Calcular la nota media y votos en CinePOV
-  const ratings = await db.rating.findMany({
-    where: { movieId: movie.id },
-  });
+  // 2. Calcular la nota media y votos en CinePOV.
+  // Las valoraciones reales y las estimaciones de arranque se agregan por
+  // separado: la "nota CinePOV" solo puede reflejar votos de personas.
+  const [realAgg, estimatedAgg] = await Promise.all([
+    db.rating.aggregate({
+      where: {
+        movieId: movie.id,
+        isArtificial: false,
+        user: { emailVerified: { not: null } },
+      },
+      _avg: { score: true },
+      _count: { score: true },
+    }),
+    db.rating.aggregate({
+      where: { movieId: movie.id, isArtificial: true },
+      _avg: { score: true },
+      _count: { score: true },
+    }),
+  ]);
 
-  const ratingCount = ratings.length;
-  const avgRating = ratingCount > 0
-    ? (ratings.reduce((sum, r) => sum + r.score, 0) / ratingCount).toFixed(1)
-    : null;
+  const ratingCount = realAgg._count.score;
+  const avgRating = realAgg._avg.score !== null ? realAgg._avg.score.toFixed(1) : null;
+  const estimatedCount = estimatedAgg._count.score;
+  const estimatedAvg = estimatedAgg._avg.score !== null ? estimatedAgg._avg.score.toFixed(1) : null;
 
-  // 3. Buscar la valoración previa del usuario logueado
+  // 3. Buscar la valoración previa del usuario logueado y estado de watchlist
   const session = await getServerSession(authOptions);
-  const userRating = session?.user?.id
-    ? await db.rating.findUnique({
-        where: {
-          userId_movieId: {
-            userId: session.user.id,
-            movieId: movie.id,
+  const [userRating, inWatchlist] = await Promise.all([
+    session?.user?.id
+      ? db.rating.findUnique({
+          where: {
+            userId_movieId: {
+              userId: session.user.id,
+              movieId: movie.id,
+            },
           },
-        },
-      })
-    : null;
+        })
+      : null,
+    session?.user?.id
+      ? db.watchlist
+          .findUnique({
+            where: {
+              userId_movieId: {
+                userId: session.user.id,
+                movieId: movie.id,
+              },
+            },
+          })
+          .then((res) => !!res)
+      : false,
+  ]);
 
   // 4. Calcular compatibilidad con el segmento del usuario (Fase 2.4.2)
   let compatibilityScore: number | null = null;
@@ -66,20 +152,21 @@ export default async function MoviePage({ params }: MoviePageProps) {
       let ageRange = "all";
       let ageLabel = "";
 
-      if (age >= 18 && age <= 24) { ageRange = "18_24"; ageLabel = "18-24 años"; }
-      else if (age >= 25 && age <= 34) { ageRange = "25_34"; ageLabel = "25-34 años"; }
-      else if (age >= 35 && age <= 44) { ageRange = "35_44"; ageLabel = "35-44 años"; }
-      else if (age >= 45 && age <= 54) { ageRange = "45_54"; ageLabel = "45-54 años"; }
-      else if (age >= 55) { ageRange = "55_plus"; ageLabel = "55+ años"; }
+      const yearsSuffix = locale === "en" ? "years old" : "años";
+      if (age >= 18 && age <= 24) { ageRange = "18_24"; ageLabel = `18-24 ${yearsSuffix}`; }
+      else if (age >= 25 && age <= 34) { ageRange = "25_34"; ageLabel = `25-34 ${yearsSuffix}`; }
+      else if (age >= 35 && age <= 44) { ageRange = "35_44"; ageLabel = `35-44 ${yearsSuffix}`; }
+      else if (age >= 45 && age <= 54) { ageRange = "45_54"; ageLabel = `45-54 ${yearsSuffix}`; }
+      else if (age >= 55) { ageRange = "55_plus"; ageLabel = `55+ ${yearsSuffix}`; }
 
       const genderLabels: Record<string, string> = {
-        male: "Hombres",
-        female: "Mujeres",
-        non_binary: "No Binarios",
-        prefer_not_to_say: "Otros",
+        male: locale === "en" ? "Men" : "Hombres",
+        female: locale === "en" ? "Women" : "Mujeres",
+        non_binary: locale === "en" ? "Non-Binary" : "No Binarios",
+        prefer_not_to_say: locale === "en" ? "Others" : "Otros",
       };
 
-      const genderLabel = genderLabels[gender] || "Usuarios";
+      const genderLabel = genderLabels[gender] || (locale === "en" ? "Users" : "Usuarios");
       userSegmentLabel = `${genderLabel} ${ageLabel}`;
 
       // Configurar el filtro de edad de nacimiento
@@ -93,8 +180,10 @@ export default async function MoviePage({ params }: MoviePageProps) {
       const segmentRatings = await db.rating.findMany({
         where: {
           movieId: movie.id,
+          isArtificial: false,
           user: {
             gender,
+            emailVerified: { not: null },
             ...ageFilter,
           },
         },
@@ -111,19 +200,44 @@ export default async function MoviePage({ params }: MoviePageProps) {
     }
   }
 
-  // 5. Obtener películas similares de la API de TMDB (Fase 2.4.2)
-  const similarMovies = await getSimilarMovies(movie.tmdbId);
+  // 5. Obtener películas similares de la API de TMDB en el idioma actual
+  const similarMovies = await getSimilarMovies(movie.tmdbId, locale === "en" ? "en-US" : "es-ES");
 
   // Formatear duración a formato legible (ej. 148 min -> 2h 28m)
   const formatRuntime = (minutes: number) => {
-    if (!minutes) return "Duración desconocida";
+    if (!minutes) return locale === "en" ? "Unknown runtime" : "Duración desconocida";
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Movie",
+    name: movie.title,
+    dateCreated: `${movie.year}`,
+    image: movie.posterUrl,
+    description: movie.synopsis || undefined,
+    director: movie.director ? { "@type": "Person", name: movie.director } : undefined,
+    ...(ratingCount > 0 && avgRating
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: avgRating,
+            bestRating: "10",
+            worstRating: "1",
+            ratingCount: ratingCount,
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="relative min-h-screen pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* 1. Backdrop Hero Background */}
       {movie.backdropUrl && (
         <div className="absolute top-0 left-0 w-full h-[60vh] -z-10 overflow-hidden">
@@ -140,14 +254,14 @@ export default async function MoviePage({ params }: MoviePageProps) {
       )}
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 md:pt-10">
-        {/* Breadcrumbs de navegación (Fase 2.4.2) */}
+        {/* Breadcrumbs de navegación */}
         <nav className="flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-8 overflow-x-auto whitespace-nowrap pb-2 scrollbar-none">
           <Link href="/" className="hover:text-white transition-colors cursor-pointer">
-            Inicio
+            {dict.nav.home}
           </Link>
           <span>/</span>
           <Link href="/explore" className="hover:text-white transition-colors cursor-pointer">
-            Catálogo
+            {dict.movie.catalog}
           </Link>
           {movie.genres.length > 0 && (
             <>
@@ -191,8 +305,8 @@ export default async function MoviePage({ params }: MoviePageProps) {
               </p>
             </div>
 
-            {/* Géneros */}
-            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+            {/* Géneros y enlace a Batalla */}
+            <div className="flex flex-wrap items-center gap-2 justify-center md:justify-start">
               {movie.genres.map((genre) => (
                 <Link
                   key={genre.id}
@@ -202,6 +316,29 @@ export default async function MoviePage({ params }: MoviePageProps) {
                   {genre.name}
                 </Link>
               ))}
+              <Link
+                href={`/vs/${movie.tmdbId}`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/30 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-primary-light hover:text-white hover:bg-primary transition-all ml-1"
+              >
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {dict.movie.demographicBattle}
+              </Link>
+              <WatchlistButton
+                movieId={movie.id}
+                initialInWatchlist={inWatchlist}
+                isLoggedIn={!!session?.user}
+              />
+              <MovieEmbedModal
+                tmdbId={movie.tmdbId}
+                movieTitle={movie.title}
+              />
+              <AddToListButton
+                movieId={movie.id}
+                movieTitle={movie.title}
+                isLoggedIn={!!session?.user}
+              />
             </div>
 
             {/* Sección de calificaciones y votación reactiva */}
@@ -209,8 +346,11 @@ export default async function MoviePage({ params }: MoviePageProps) {
               movieId={movie.id}
               initialAvgRating={avgRating}
               initialRatingCount={ratingCount}
+              initialEstimatedAvg={estimatedAvg}
+              initialEstimatedCount={estimatedCount}
               tmdbRating={movie.tmdbRating}
               userScore={userRating ? userRating.score : null}
+              initialWatchedAt={userRating?.watchedAt ? userRating.watchedAt.toISOString() : null}
             />
 
             {/* Indicador de compatibilidad demográfica (Fase 2.4.2) */}
@@ -218,25 +358,51 @@ export default async function MoviePage({ params }: MoviePageProps) {
               <div className="glass-panel p-5 rounded-2xl border border-white/5 bg-white/1 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Afinidad con tu Segmento
+                    {dict.movie.affinityWithYourCohort}
                   </span>
                   {compatibilityScore !== null && (
                     <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary-light border border-primary/20 text-[9px] font-black uppercase tracking-wider">
-                      ¡Alta Afinidad!
+                      {dict.movie.highAffinity}
                     </span>
                   )}
                 </div>
                 {compatibilityScore !== null ? (
                   <p className="text-xs sm:text-sm text-white/95 leading-normal font-semibold">
-                    Según personas como tú (<span className="text-primary-light font-black">{userSegmentLabel}</span>), esta película es un{" "}
+                    {dict.movie.affinityAccordingTo} (<span className="text-primary-light font-black">{userSegmentLabel}</span>), {locale === "en" ? "this movie is rated" : "esta película es un"}{" "}
                     <span className="text-white font-black text-sm bg-black/40 border border-white/5 px-2 py-0.5 rounded-lg inline-block mx-1">
-                      {compatibilityScore} / 10 ⭐
+                      {compatibilityScore} / 10
                     </span>{" "}
-                    ({compatibilityCount} {compatibilityCount === 1 ? "voto" : "votos"})
+                    ({compatibilityCount} {compatibilityCount === 1 ? (locale === "en" ? "vote" : "voto") : (locale === "en" ? "votes" : "votos")})
+                  </p>
+                ) : compatibilityCount === 0 ? (
+                  <p className="text-xs text-muted-foreground leading-relaxed font-semibold">
+                    {locale === "en" ? (
+                      <>
+                        No one from your cohort (<span className="text-white font-medium">{userSegmentLabel}</span>) has rated this movie yet.{" "}
+                        <span className="text-primary-light font-bold">Your vote will create this insight from scratch.</span>
+                      </>
+                    ) : (
+                      <>
+                        Nadie de tu segmento (<span className="text-white font-medium">{userSegmentLabel}</span>) ha valorado todavía esta película.{" "}
+                        <span className="text-primary-light font-bold">Tu voto crearía este dato desde cero.</span>
+                      </>
+                    )}
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground leading-relaxed font-semibold">
-                    Aún no hay suficientes votos de tu segmento (<span className="text-white font-medium">{userSegmentLabel}</span>) para calcular la afinidad (mínimo 3 valoraciones).
+                    {locale === "en" ? (
+                      <>
+                        <span className="text-white font-black">{3 - compatibilityCount}</span>{" "}
+                        {3 - compatibilityCount === 1 ? "more rating" : "more ratings"} from your cohort (
+                        <span className="text-white font-medium">{userSegmentLabel}</span>) {dict.movie.votesMissingForAffinity}
+                      </>
+                    ) : (
+                      <>
+                        Faltan <span className="text-white font-black">{3 - compatibilityCount}</span>{" "}
+                        {3 - compatibilityCount === 1 ? "valoración" : "valoraciones"} de tu segmento (
+                        <span className="text-white font-medium">{userSegmentLabel}</span>) {dict.movie.votesMissingForAffinity}
+                      </>
+                    )}
                   </p>
                 )}
               </div>
@@ -244,7 +410,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
 
             {/* Sinopsis */}
             <div className="space-y-2">
-              <h2 className="text-lg font-bold text-white tracking-wide">Sinopsis</h2>
+              <h2 className="text-lg font-bold text-white tracking-wide">{dict.movie.synopsis}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {movie.synopsis}
               </p>
@@ -253,12 +419,12 @@ export default async function MoviePage({ params }: MoviePageProps) {
             {/* Ficha Técnica Básica */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5 text-sm">
               <div>
-                <span className="text-muted-foreground font-medium block">Dirección</span>
+                <span className="text-muted-foreground font-medium block">{dict.movie.director}</span>
                 <span className="text-white font-semibold">{movie.director}</span>
               </div>
               {movie.cast && (
                 <div>
-                  <span className="text-muted-foreground font-medium block">Reparto principal</span>
+                  <span className="text-muted-foreground font-medium block">{dict.movie.cast}</span>
                   <span className="text-white font-medium block leading-normal">
                     {movie.cast}
                   </span>
@@ -271,7 +437,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
         {/* 3. Bloque del Filtro Demográfico interactivo real */}
         <div className="mt-12 pt-8 border-t border-white/5 space-y-6">
           <h2 className="text-2xl font-bold text-white tracking-wide">
-            Estadísticas y Desglose Demográfico
+            {dict.movie.statsAndBreakdown}
           </h2>
           <MovieDemographics
             movieId={movie.id}
@@ -280,11 +446,17 @@ export default async function MoviePage({ params }: MoviePageProps) {
           />
         </div>
 
-        {/* 4. Sección de Películas Similares (Fase 2.4.2) */}
+        {/* 4. Sección de Reseñas de la Comunidad con filtro demográfico (Fase 5.1) */}
+        <MovieReviewsSection
+          movieId={movie.id}
+          hasUserSegment={Boolean(session?.user?.gender || session?.user?.birthYear)}
+        />
+
+        {/* 5. Sección de Películas Similares (Fase 2.4.2) */}
         {similarMovies.length > 0 && (
           <div className="mt-16 pt-8 border-t border-white/5 space-y-6">
             <h2 className="text-2xl font-black text-white tracking-tight">
-              Películas Similares
+              {dict.movie.similarMovies}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
               {similarMovies.map((similar) => (
