@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/client";
 
@@ -35,15 +35,26 @@ export function getStoredConsent(): CookieConsent | null {
   }
 }
 
+/** Valor durante el render en servidor: todavía no se sabe si hay decisión. */
+const UNKNOWN = "unknown" as const;
+
+function subscribeToConsent(onChange: () => void) {
+  window.addEventListener(CONSENT_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(CONSENT_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
 export default function CookieBanner() {
   const { dict } = useI18n();
-  const [mounted, setMounted] = useState(false);
-  const [needsDecision, setNeedsDecision] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    setNeedsDecision(getStoredConsent() === null);
-  }, []);
+  // En el servidor no hay localStorage: se pinta oculto y se decide al hidratar,
+  // sin un efecto que vuelva a renderizar.
+  const stored = useSyncExternalStore(subscribeToConsent, getStoredConsent, () => UNKNOWN);
+  // Si el almacenamiento está bloqueado, la decisión de esta sesión se recuerda aquí.
+  const [decidedThisSession, setDecidedThisSession] = useState(false);
+  const needsDecision = stored === null && !decidedThisSession;
 
   const decide = useCallback((consent: CookieConsent) => {
     try {
@@ -52,11 +63,11 @@ export default function CookieBanner() {
       // Sin almacenamiento persistente el aviso reaparecerá, pero la decisión de esta
       // sesión sí se propaga por el evento.
     }
+    setDecidedThisSession(true);
     window.dispatchEvent(new CustomEvent<CookieConsent>(CONSENT_EVENT, { detail: consent }));
-    setNeedsDecision(false);
   }, []);
 
-  if (!mounted || !needsDecision) return null;
+  if (!needsDecision) return null;
 
   return (
     <div

@@ -19,7 +19,7 @@ export interface ImdbMovieRow {
  * diferentes delimitadores y caracteres especiales.
  */
 export function parseLetterboxdCsv(
-  csvText: string
+  csvText: unknown
 ): { ok: true; movies: LetterboxdMovieRow[] } | { ok: false; error: string } {
   if (!csvText || typeof csvText !== "string" || !csvText.trim()) {
     return { ok: false, error: "El contenido del archivo CSV está vacío." };
@@ -81,7 +81,7 @@ export function parseLetterboxdCsv(
  * Parsea el contenido CSV de un archivo exportado de IMDb (ratings.csv) con PapaParse.
  */
 export function parseImdbCsv(
-  csvText: string
+  csvText: unknown
 ): { ok: true; movies: ImdbMovieRow[] } | { ok: false; error: string } {
   if (!csvText || typeof csvText !== "string" || !csvText.trim()) {
     return { ok: false, error: "El contenido del archivo CSV está vacío." };

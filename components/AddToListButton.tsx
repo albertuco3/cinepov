@@ -27,7 +27,6 @@ export default function AddToListButton({ movieId, movieTitle, isLoggedIn }: Pro
 
   useEffect(() => {
     if (open && isLoggedIn) {
-      setLoading(true);
       fetch("/api/lists?scope=user")
         .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => {
@@ -76,6 +75,7 @@ export default function AddToListButton({ movieId, movieTitle, isLoggedIn }: Pro
       toast.info(locale === "en" ? "Sign in to save movies to custom lists" : "Inicia sesión para guardar películas en tus listas");
       return;
     }
+    setLoading(true);
     setOpen(true);
   };
 

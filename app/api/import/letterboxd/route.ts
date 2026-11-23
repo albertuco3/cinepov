@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     // 2. Extraer y parsear cuerpo CSV mediante PapaParse
-    const { csvText } = await responseToJSON(request);
+    const { csvText } = await readCsvBody(request);
     const parseResult = parseLetterboxdCsv(csvText);
     if (!parseResult.ok) {
       return NextResponse.json({ error: parseResult.error }, { status: 400 });
@@ -90,9 +91,9 @@ export async function POST(request: Request) {
 
         // Pequeña pausa para no saturar las llamadas a la API de TMDB
         await new Promise((resolve) => setTimeout(resolve, 100));
-      } catch (itemErr: any) {
+      } catch (itemErr) {
         console.error(`Error procesando película "${item.title}":`, itemErr);
-        failed.push({ title: item.title, reason: itemErr.message || "Error desconocido" });
+        failed.push({ title: item.title, reason: errorMessage(itemErr) || "Error desconocido" });
       }
     }
 
@@ -107,19 +108,22 @@ export async function POST(request: Request) {
       limitApplied: rawMoviesToImport.length > limit,
       limit,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error crítico en importación de Letterboxd:", error);
     return NextResponse.json(
-      { error: error.message || "Error interno del servidor al procesar la importación." },
+      { error: errorMessage(error) || "Error interno del servidor al procesar la importación." },
       { status: 500 }
     );
   }
 }
 
 // Función auxiliar para leer JSON de la petición
-async function responseToJSON(request: Request): Promise<any> {
+// Lee el cuerpo JSON sin romper si llega mal formado: `csvText` queda indefinido
+// y la validación de más arriba devuelve el error adecuado.
+async function readCsvBody(request: Request): Promise<{ csvText?: unknown }> {
   try {
-    return await request.json();
+    const body: unknown = await request.json();
+    return typeof body === "object" && body !== null ? (body as { csvText?: unknown }) : {};
   } catch {
     return {};
   }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useJson } from "@/lib/hooks/use-json";
 import Image from "next/image";
 import Link from "next/link";
 import { type DemographicContrast } from "@/lib/viral";
@@ -20,17 +21,8 @@ interface PolarizingMovie {
 
 export default function PolarizingClient() {
   const [filter, setFilter] = useState<"all" | "gender" | "age">("all");
-  const [movies, setMovies] = useState<PolarizingMovie[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/movies/polarizing?type=${filter}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setMovies(data.movies || []))
-      .catch((err) => console.error("Error al cargar polarizantes:", err))
-      .finally(() => setLoading(false));
-  }, [filter]);
+  const { data, loading } = useJson<{ movies: PolarizingMovie[] }>(`/api/movies/polarizing?type=${filter}`);
+  const movies = data?.movies ?? [];
 
   return (
     <div className="space-y-6">

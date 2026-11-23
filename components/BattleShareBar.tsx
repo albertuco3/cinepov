@@ -1,5 +1,6 @@
 "use client";
 
+import { isAbortError } from "@/lib/errors";
 import { useState } from "react";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
@@ -12,7 +13,6 @@ interface BattleShareBarProps {
 }
 
 export default function BattleShareBar({
-  movieId,
   tmdbId,
   movieTitle,
   contrastText,
@@ -55,8 +55,8 @@ export default function BattleShareBar({
           url: getShareUrl(),
         });
         track("share_clicked", { channel: "native", artifact_type: "movie_gap" });
-      } catch (err: any) {
-        if (err?.name !== "AbortError") {
+      } catch (err) {
+        if (!isAbortError(err)) {
           handleCopy();
         }
       }

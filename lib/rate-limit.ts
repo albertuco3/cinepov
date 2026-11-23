@@ -162,7 +162,7 @@ export async function resetRateLimit(action: RateLimitAction, identifier: string
   const key = `${action}:${identifier}`;
   try {
     await db.rateLimit.deleteMany({ where: { key } });
-  } catch (error) {
+  } catch {
     // Silencio si falla el borrado
   }
 }

@@ -1,4 +1,6 @@
-import NextAuth from "next-auth";
+// Importaciones de solo efecto: convierten el fichero en módulo para poder ampliar los tipos.
+import "next-auth";
+import "next-auth/jwt";
 
 declare module "next-auth" {
   interface User {

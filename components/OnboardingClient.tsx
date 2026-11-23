@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -46,18 +47,19 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
   const totalMovies = movies.length;
 
   // Cargar sinopsis localizada en inglés si el usuario navega en EN
+  const currentTmdbId = currentMovie?.tmdbId;
   useEffect(() => {
-    if (locale === "en" && currentMovie && !localizedSynopses[currentMovie.tmdbId]) {
-      fetch(`/api/movies/${currentMovie.tmdbId}/localized?locale=en`)
+    if (locale === "en" && currentTmdbId && !localizedSynopses[currentTmdbId]) {
+      fetch(`/api/movies/${currentTmdbId}/localized?locale=en`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.synopsis) {
-            setLocalizedSynopses((prev) => ({ ...prev, [currentMovie.tmdbId]: data.synopsis }));
+            setLocalizedSynopses((prev) => ({ ...prev, [currentTmdbId]: data.synopsis }));
           }
         })
         .catch(() => {});
     }
-  }, [locale, currentMovie?.tmdbId, localizedSynopses]);
+  }, [locale, currentTmdbId, localizedSynopses]);
 
   // Formatear duración (ej: 148 min -> 2h 28m)
   const formatRuntime = (minutes: number) => {
@@ -124,8 +126,8 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
       } else {
         setCurrentIndex((prev) => prev + 1);
       }
-    } catch (err: any) {
-      setError(err.message || t.rateError);
+    } catch (err) {
+      setError(errorMessage(err) || t.rateError);
     } finally {
       setLoading(false);
     }
@@ -160,8 +162,8 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
         const data = await res.json();
         throw new Error(data.error || t.skipError);
       }
-    } catch (err: any) {
-      setError(err.message || t.skipError);
+    } catch (err) {
+      setError(errorMessage(err) || t.skipError);
     } finally {
       setLoading(false);
     }
@@ -220,7 +222,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
           ) : recommendation ? (
             <div className="space-y-3">
               <p className="text-base font-bold text-white leading-normal">
-                "{recommendation.title}"
+                &ldquo;{recommendation.title}&rdquo;
               </p>
               <p className="text-xs text-muted-foreground">
                 {t.recommendationDesc}

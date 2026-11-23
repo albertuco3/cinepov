@@ -3,7 +3,16 @@ import { es } from "./dictionaries/es";
 import { en } from "./dictionaries/en";
 import { getDictionary } from "./get-dictionary";
 
-function getKeysRecursively(obj: Record<string, any>, prefix = ""): string[] {
+type Tree = { [key: string]: unknown };
+
+/** Valor de una clave con puntos ("common.loading") dentro de un diccionario. */
+function valueAt(dict: object, key: string): unknown {
+  let curr: unknown = dict;
+  for (const p of key.split(".")) curr = (curr as Tree)[p];
+  return curr;
+}
+
+function getKeysRecursively(obj: object, prefix = ""): string[] {
   let keys: string[] = [];
   for (const [key, value] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}.${key}` : key;
@@ -25,14 +34,12 @@ describe("Sistema de Internacionalización i18n (lib/i18n)", () => {
   });
 
   it("no tiene valores vacíos ni textos sin definir", () => {
-    const checkNoEmptyValues = (dict: Record<string, any>, lang: string) => {
+    const checkNoEmptyValues = (dict: object, lang: string) => {
       const keys = getKeysRecursively(dict);
       for (const key of keys) {
-        const parts = key.split(".");
-        let curr: any = dict;
-        for (const p of parts) curr = curr[p];
+        const curr = valueAt(dict, key);
         expect(typeof curr, `La clave ${key} en ${lang} debe ser un string`).toBe("string");
-        expect(curr.trim().length, `La clave ${key} en ${lang} no debe estar vacía`).toBeGreaterThan(0);
+        expect(String(curr).trim().length, `La clave ${key} en ${lang} no debe estar vacía`).toBeGreaterThan(0);
       }
     };
 
@@ -56,13 +63,8 @@ describe("Sistema de Internacionalización i18n (lib/i18n)", () => {
     const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
     const esKeys = getKeysRecursively(es);
     for (const key of esKeys) {
-      const parts = key.split(".");
-      let currEs: any = es;
-      let currEn: any = en;
-      for (const p of parts) {
-        currEs = currEs[p];
-        currEn = currEn[p];
-      }
+      const currEs = valueAt(es, key);
+      const currEn = valueAt(en, key);
       expect(currEs, `Texto con emoji encontrado en es: ${key}`).not.toMatch(emojiRegex);
       expect(currEn, `Texto con emoji encontrado en en: ${key}`).not.toMatch(emojiRegex);
     }

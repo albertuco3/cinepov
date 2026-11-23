@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -27,8 +28,8 @@ export default function ForgotPasswordPage() {
       }
 
       setSubmitted(true);
-    } catch (err: any) {
-      toast.error(err.message || "Error de conexión.");
+    } catch (err) {
+      toast.error(errorMessage(err) || "Error de conexión.");
     } finally {
       setLoading(false);
     }

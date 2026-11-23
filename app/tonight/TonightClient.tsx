@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useJson } from "@/lib/hooks/use-json";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -41,25 +42,15 @@ export default function TonightClient({ genres }: Props) {
   const [ageB, setAgeB] = useState("young");
 
   const [genreId, setGenreId] = useState("");
-  const [movies, setMovies] = useState<ConsensusMovie[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      genderA,
-      ageA,
-      genderB,
-      ageB,
-      ...(genreId ? { genreId } : {}),
-    });
-
-    fetch(`/api/movies/consensus?${params.toString()}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setMovies(data.movies || []))
-      .catch((err) => console.error("Error al cargar consenso:", err))
-      .finally(() => setLoading(false));
-  }, [genderA, ageA, genderB, ageB, genreId]);
+  const params = new URLSearchParams({
+    genderA,
+    ageA,
+    genderB,
+    ageB,
+    ...(genreId ? { genreId } : {}),
+  });
+  const { data, loading } = useJson<{ movies: ConsensusMovie[] }>(`/api/movies/consensus?${params.toString()}`);
+  const movies = data?.movies ?? [];
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "";

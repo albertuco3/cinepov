@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -60,8 +61,8 @@ function ResetPasswordForm() {
 
       toast.success("Contraseña actualizada. Ya puedes iniciar sesión.");
       router.push("/login");
-    } catch (err: any) {
-      setError(err.message || "Error de conexión.");
+    } catch (err) {
+      setError(errorMessage(err) || "Error de conexión.");
       setLoading(false);
     }
   };

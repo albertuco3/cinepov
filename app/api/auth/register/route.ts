@@ -4,7 +4,6 @@ import bcrypt from "bcrypt";
 import { APP_URL, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
 import { createToken, TOKEN_EMAIL_VERIFICATION } from "@/lib/tokens";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
-import { validateDisplayName } from "@/lib/sanitize";
 import { validateHoneypot } from "@/lib/anti-abuse";
 import { registerSchema, getFirstZodError } from "@/lib/schemas";
 

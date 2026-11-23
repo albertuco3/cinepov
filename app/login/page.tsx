@@ -1,13 +1,12 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useI18n } from "@/lib/i18n/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const { dict, locale } = useI18n();
   
   // Estados del formulario
@@ -61,8 +60,8 @@ export default function LoginPage() {
       }
 
       window.location.href = "/";
-    } catch (err: any) {
-      setError(err.message || (locale === "en" ? "Error signing in." : "Error al iniciar sesión."));
+    } catch (err) {
+      setError(errorMessage(err) || (locale === "en" ? "Error signing in." : "Error al iniciar sesión."));
     } finally {
       setLoading(false);
     }

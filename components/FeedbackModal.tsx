@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -39,8 +40,8 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       toast.success("¡Sugerencia enviada! Muchas gracias por ayudarnos a mejorar.");
       setMessage("");
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Error al enviar la sugerencia.");
+    } catch (err) {
+      toast.error(errorMessage(err) || "Error al enviar la sugerencia.");
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -113,8 +114,8 @@ export default function RankingsClient({
         setMovies(data.results);
         setTotalResults(data.totalResults);
         setTotalPages(Math.ceil(data.totalResults / data.pageSize));
-      } catch (err: any) {
-        setError(err.message || "Error al recuperar datos.");
+      } catch (err) {
+        setError(errorMessage(err) || "Error al recuperar datos.");
       } finally {
         setLoading(false);
       }
@@ -124,7 +125,7 @@ export default function RankingsClient({
   }, [gender, ageRange, selectedGenreId, selectedDecade, page]);
 
   // Resetear página a 1 si cambia cualquier filtro
-  const handleFilterChange = (setter: Function, value: string) => {
+  const handleFilterChange = (setter: (value: string) => void, value: string) => {
     setter(value);
     setPage(1);
   };

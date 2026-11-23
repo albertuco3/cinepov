@@ -35,37 +35,43 @@ export default function SearchBar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Implementar Debounce de 300ms para la búsqueda
-  useEffect(() => {
-    if (!query.trim()) {
+  // El estado inmediato (abrir, cargando, vaciar) se fija al escribir; el efecto
+  // solo lanza la búsqueda con retardo de 300 ms.
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    if (!value.trim()) {
       setResults([]);
       setIsOpen(false);
-      return;
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setIsOpen(true);
     }
+  };
 
-    setLoading(true);
-    setIsOpen(true);
+  useEffect(() => {
+    if (!query.trim()) return;
+    // Si se escribe deprisa, una respuesta que llega tarde no pisa a la nueva.
+    let cancelled = false;
 
     const delayDebounceFn = setTimeout(async () => {
       try {
         const lang = locale === "en" ? "en-US" : "es-ES";
         const response = await fetch(`/api/movies/search?q=${encodeURIComponent(query)}&lang=${lang}`);
         const data = await response.json();
-        
-        if (data.results) {
-          setResults(data.results);
-        } else {
-          setResults([]);
-        }
+        if (!cancelled) setResults(data.results ?? []);
       } catch (error) {
         console.error("Error al buscar películas:", error);
-        setResults([]);
+        if (!cancelled) setResults([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 300);
 
-    return () => clearTimeout(delayDebounceFn);
+    return () => {
+      cancelled = true;
+      clearTimeout(delayDebounceFn);
+    };
   }, [query, locale]);
 
   const handleSelectMovie = (tmdbId: number) => {
@@ -90,7 +96,7 @@ export default function SearchBar() {
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => handleQueryChange(e.target.value)}
           placeholder={dict.search.placeholder}
           className="block w-full bg-white/5 border border-white/10 rounded-full pl-10 pr-10 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition"
         />

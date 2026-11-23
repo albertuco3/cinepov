@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -59,8 +60,8 @@ function VerifyEmailResult() {
       }
 
       toast.success(data.message);
-    } catch (err: any) {
-      toast.error(err.message || "Error de conexión.");
+    } catch (err) {
+      toast.error(errorMessage(err) || "Error de conexión.");
     } finally {
       setResending(false);
     }

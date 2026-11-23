@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import type { WrappedStats } from "@/lib/wrapped";
-import { buildCanonicalMoviePath } from "@/lib/slug";
 
 interface Props {
   stats: WrappedStats;
