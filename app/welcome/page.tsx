@@ -3,10 +3,13 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function WelcomePage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const { dict } = useI18n();
+  const t = dict.welcome;
   
   const [formData, setFormData] = useState({
     birthYear: "",
@@ -59,7 +62,7 @@ export default function WelcomePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Ocurrió un error al guardar tu perfil.");
+        throw new Error(data.error || t.errorSave);
       }
 
       setSuccess(true);
@@ -74,7 +77,7 @@ export default function WelcomePage() {
       }, 1500);
 
     } catch (err: any) {
-      setError(err.message || "Error al conectar con el servidor.");
+      setError(err.message || t.errorNetwork);
     } finally {
       setLoading(false);
     }
@@ -83,7 +86,7 @@ export default function WelcomePage() {
   if (status === "loading") {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">Cargando perfil...</div>
+        <div className="text-muted-foreground text-sm">{t.loadingProfile}</div>
       </div>
     );
   }
@@ -94,10 +97,10 @@ export default function WelcomePage() {
         {/* Cabecera de bienvenida */}
         <div className="text-center">
           <h2 className="text-3xl font-extrabold tracking-tight text-white text-gradient">
-            ¡Te damos la bienvenida!
+            {t.title}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Hola, <strong className="text-white">{session?.user?.name || "Usuario"}</strong>. Un último paso para activar tu cuenta.
+            {t.subtitle.replace("{name}", session?.user?.name || t.userFallback)}
           </p>
         </div>
 
@@ -109,21 +112,21 @@ export default function WelcomePage() {
         )}
         {success && (
           <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm text-center font-medium">
-            ¡Perfil completado! Activando CinePOV...
+            {t.successMsg}
           </div>
         )}
 
         <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground leading-relaxed text-center bg-white/5 p-4 rounded-2xl border border-white/5">
-              💡 <strong>¿Por qué pedimos esto?</strong> El pilar fundamental de CinePOV es permitir filtrar valoraciones por edad y género. Necesitamos estos datos (que mantendremos 100% privados y anónimos) para compararte con personas de tu mismo perfil cinematográfico.
+              <strong className="text-white">{t.whyTitle}</strong> {t.whyDesc}
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Año de nacimiento */}
               <div>
                 <label htmlFor="birthYear" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Año de nacimiento
+                  {t.birthYearLabel}
                 </label>
                 <select
                   id="birthYear"
@@ -133,7 +136,7 @@ export default function WelcomePage() {
                   onChange={handleChange}
                   className="w-full bg-[#11121d] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition text-sm appearance-none cursor-pointer"
                 >
-                  <option value="" disabled>Selecciona</option>
+                  <option value="" disabled>{t.selectPlaceholder}</option>
                   {years.map((year) => (
                     <option key={year} value={year}>{year}</option>
                   ))}
@@ -143,7 +146,7 @@ export default function WelcomePage() {
               {/* Género */}
               <div>
                 <label htmlFor="gender" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Género
+                  {t.genderLabel}
                 </label>
                 <select
                   id="gender"
@@ -153,10 +156,10 @@ export default function WelcomePage() {
                   onChange={handleChange}
                   className="w-full bg-[#11121d] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 interactive-transition text-sm appearance-none cursor-pointer"
                 >
-                  <option value="" disabled>Selecciona</option>
-                  <option value="male">Hombre</option>
-                  <option value="female">Mujer</option>
-                  <option value="non_binary">No binario</option>
+                  <option value="" disabled>{t.selectPlaceholder}</option>
+                  <option value="male">{t.genderMale}</option>
+                  <option value="female">{t.genderFemale}</option>
+                  <option value="non_binary">{t.genderNonBinary}</option>
                 </select>
               </div>
             </div>
@@ -167,7 +170,7 @@ export default function WelcomePage() {
             disabled={loading || success}
             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 shadow-lg hover:shadow-primary/25 disabled:opacity-50 interactive-transition cursor-pointer"
           >
-            {loading ? "Guardando..." : "Comenzar en CinePOV"}
+            {loading ? t.savingBtn : t.submitBtn}
           </button>
         </form>
       </div>

@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
 
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+
     // 1. Obtener la sesión del usuario
     const session = await getServerSession(authOptions);
     if (!session || !session.user || !session.user.id) {
@@ -47,7 +52,7 @@ export async function GET() {
     // 4. Obtener las películas esenciales (isFeatured: true)
     const featuredMovies = await db.movie.findMany({
       where: { isFeatured: true },
-      select: { id: true, tmdbId: true, title: true, tmdbRating: true },
+      select: { id: true, tmdbId: true, title: true, originalTitle: true, tmdbRating: true },
     });
 
     if (featuredMovies.length === 0) {
@@ -145,9 +150,13 @@ export async function GET() {
       }
     }
 
+    const recommendedTitle = locale === "en"
+      ? (bestMovie.originalTitle || bestMovie.title)
+      : bestMovie.title;
+
     return NextResponse.json({
       recommendedMovieId: bestMovie.tmdbId,
-      title: bestMovie.title,
+      title: recommendedTitle,
       score: parseFloat(highestScore.toFixed(1)),
     });
 

@@ -1,15 +1,29 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import OnboardingClient from "@/components/OnboardingClient";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { getMovieLocalized } from "@/lib/movies";
 
-export const metadata = {
-  title: "Onboarding — CinePOV",
-  description: "Valora rápidamente las películas esenciales para personalizar tus gráficos demográficos y recomendaciones.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const dict = getDictionary(locale);
+
+  return {
+    title: `${dict.onboarding.pageTitle} — CinePOV`,
+    description: dict.onboarding.pageSubtitle,
+  };
+}
 
 export default async function OnboardingPage() {
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user || !session.user.id) {
@@ -72,10 +86,44 @@ export default async function OnboardingPage() {
   // 4. Filtrar para pasar únicamente las películas esenciales que el usuario AÚN no ha calificado
   const unratedMovies = featuredMovies.filter((movie) => !ratedMovieIds.has(movie.id));
 
+  // 5. Localizar películas si el usuario navega en inglés
+  let localizedMovies = unratedMovies;
+  if (locale === "en" && unratedMovies.length > 0) {
+    const toPreload = unratedMovies.slice(0, 3);
+    const preloaded = await Promise.all(
+      toPreload.map(async (m) => {
+        try {
+          const loc = await getMovieLocalized(m.tmdbId, "en");
+          if (loc) {
+            return {
+              ...m,
+              title: loc.title || m.originalTitle || m.title,
+              synopsis: loc.synopsis || m.synopsis,
+            };
+          }
+        } catch {
+          // Fallback seguro
+        }
+        return {
+          ...m,
+          title: m.originalTitle || m.title,
+        };
+      })
+    );
+
+    localizedMovies = [
+      ...preloaded,
+      ...unratedMovies.slice(3).map((m) => ({
+        ...m,
+        title: m.originalTitle || m.title,
+      })),
+    ];
+  }
+
   return (
     <div className="flex-1 flex flex-col justify-start py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
       <OnboardingClient 
-        initialMovies={unratedMovies}
+        initialMovies={localizedMovies}
         userDisplayName={user.displayName}
       />
     </div>

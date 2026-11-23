@@ -50,4 +50,21 @@ describe("Sistema de Internacionalización i18n (lib/i18n)", () => {
     const fallback = getDictionary("fr");
     expect(fallback.common.loading).toBe("Cargando...");
   });
+
+  it("no contiene emoticonos en ningún texto de los diccionarios", () => {
+    // Regex para detectar emojis y símbolos gráficos
+    const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+    const esKeys = getKeysRecursively(es);
+    for (const key of esKeys) {
+      const parts = key.split(".");
+      let currEs: any = es;
+      let currEn: any = en;
+      for (const p of parts) {
+        currEs = currEs[p];
+        currEn = currEn[p];
+      }
+      expect(currEs, `Texto con emoji encontrado en es: ${key}`).not.toMatch(emojiRegex);
+      expect(currEn, `Texto con emoji encontrado en en: ${key}`).not.toMatch(emojiRegex);
+    }
+  });
 });

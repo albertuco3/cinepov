@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Check } from "lucide-react";
+import { useI18n } from "@/lib/i18n/client";
 
 interface Movie {
   id: string;
@@ -27,6 +29,9 @@ interface OnboardingClientProps {
 export default function OnboardingClient({ initialMovies, userDisplayName }: OnboardingClientProps) {
   const router = useRouter();
   const { update } = useSession();
+  const { dict, locale } = useI18n();
+  const t = dict.onboarding;
+
   const [movies] = useState<Movie[]>(initialMovies);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [ratingsCount, setRatingsCount] = useState(0);
@@ -35,13 +40,28 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
   const [finished, setFinished] = useState(initialMovies.length === 0);
   const [recommendation, setRecommendation] = useState<{ tmdbId: number; title: string } | null>(null);
   const [recLoading, setRecLoading] = useState(false);
+  const [localizedSynopses, setLocalizedSynopses] = useState<Record<number, string>>({});
 
   const currentMovie = movies[currentIndex];
   const totalMovies = movies.length;
-  
+
+  // Cargar sinopsis localizada en inglés si el usuario navega en EN
+  useEffect(() => {
+    if (locale === "en" && currentMovie && !localizedSynopses[currentMovie.tmdbId]) {
+      fetch(`/api/movies/${currentMovie.tmdbId}/localized?locale=en`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.synopsis) {
+            setLocalizedSynopses((prev) => ({ ...prev, [currentMovie.tmdbId]: data.synopsis }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [locale, currentMovie?.tmdbId, localizedSynopses]);
+
   // Formatear duración (ej: 148 min -> 2h 28m)
   const formatRuntime = (minutes: number) => {
-    if (!minutes) return "Duración desconocida";
+    if (!minutes) return t.unknownRuntime;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
@@ -60,7 +80,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
             if (data.recommendedMovieId) {
               setRecommendation({
                 tmdbId: data.recommendedMovieId,
-                title: data.title || "Película recomendada",
+                title: data.title || t.defaultRecTitle,
               });
             }
           }
@@ -72,7 +92,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
       };
       loadRecommendation();
     }
-  }, [finished]);
+  }, [finished, t.defaultRecTitle]);
 
   // Manejar el voto de 1 a 10
   const handleRate = async (score: number) => {
@@ -93,11 +113,11 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "No se pudo registrar la valoración.");
+        throw new Error(data.error || t.rateError);
       }
 
       setRatingsCount((prev) => prev + 1);
-      
+
       // Avanzar al siguiente index
       if (currentIndex + 1 >= totalMovies) {
         setFinished(true);
@@ -105,7 +125,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
         setCurrentIndex((prev) => prev + 1);
       }
     } catch (err: any) {
-      setError(err.message || "Error al enviar la valoración.");
+      setError(err.message || t.rateError);
     } finally {
       setLoading(false);
     }
@@ -115,7 +135,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
   const handleSkip = () => {
     if (loading) return;
     setError(null);
-    
+
     if (currentIndex + 1 >= totalMovies) {
       setFinished(true);
     } else {
@@ -138,10 +158,10 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
         setFinished(true);
       } else {
         const data = await res.json();
-        throw new Error(data.error || "No se pudo omitir el onboarding.");
+        throw new Error(data.error || t.skipError);
       }
     } catch (err: any) {
-      setError(err.message || "Error al omitir el onboarding.");
+      setError(err.message || t.skipError);
     } finally {
       setLoading(false);
     }
@@ -168,24 +188,28 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
 
   // Si no hay películas de onboarding disponibles o ya finalizó
   if (finished) {
+    const subtitleParts = t.completedSubtitle.split("{count}");
+
     return (
       <div className="max-w-md w-full mx-auto glass-panel p-8 sm:p-10 rounded-3xl shadow-2xl text-center space-y-6">
         <div className="inline-flex items-center justify-center p-4 rounded-3xl bg-primary/10 border border-primary/20 text-primary animate-bounce">
-          <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </svg>
+          <Check className="h-10 w-10" strokeWidth={2.5} />
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-3xl font-black text-white text-gradient">¡Excelente, {userDisplayName}!</h2>
+          <h2 className="text-3xl font-black text-white text-gradient">
+            {t.completedTitle.replace("{name}", userDisplayName)}
+          </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Has valorado <strong className="text-white font-bold">{ratingsCount}</strong> películas esenciales. Tu perfil de gustos ya está configurado.
+            {subtitleParts[0]}
+            <strong className="text-white font-bold">{ratingsCount}</strong>
+            {subtitleParts[1]}
           </p>
         </div>
 
         <div className="bg-white/5 border border-white/5 p-5 rounded-2xl space-y-4">
           <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Recomendación para tu segmento
+            {t.recommendationHeader}
           </h3>
           {recLoading ? (
             <div className="flex items-center justify-center py-4 space-x-2">
@@ -199,25 +223,25 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
                 "{recommendation.title}"
               </p>
               <p className="text-xs text-muted-foreground">
-                Las personas de tu mismo grupo de edad y género le dan una nota muy alta. ¡Comienza por aquí!
+                {t.recommendationDesc}
               </p>
               <button
                 disabled={loading}
                 onClick={() => handleExitOnboarding(`/movie/${recommendation.tmdbId}`)}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-hover shadow-lg hover:shadow-primary/25 interactive-transition cursor-pointer disabled:opacity-50"
               >
-                {loading ? "Cargando..." : "Ver ficha y estadísticas de la película"}
+                {loading ? t.loadingBtn : t.viewMovieBtn}
               </button>
             </div>
           ) : (
             <div className="space-y-2 py-2">
-              <p className="text-sm text-white font-medium">¡Todo listo para explorar!</p>
+              <p className="text-sm text-white font-medium">{t.readyToExplore}</p>
               <button
                 disabled={loading}
                 onClick={() => handleExitOnboarding("/explore")}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-hover shadow-lg hover:shadow-primary/25 interactive-transition cursor-pointer disabled:opacity-50"
               >
-                {loading ? "Cargando..." : "Explorar catálogo completo"}
+                {loading ? t.loadingBtn : t.exploreFullCatalog}
               </button>
             </div>
           )}
@@ -229,7 +253,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
             onClick={() => handleExitOnboarding("/explore")}
             className="text-muted-foreground hover:text-white transition-colors cursor-pointer disabled:opacity-50 bg-transparent border-none p-0 font-semibold"
           >
-            Explorar catálogo
+            {t.exploreCatalogLink}
           </button>
           <span className="text-white/10">•</span>
           <button
@@ -237,7 +261,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
             onClick={() => handleExitOnboarding("/profile")}
             className="text-muted-foreground hover:text-white transition-colors cursor-pointer disabled:opacity-50 bg-transparent border-none p-0 font-semibold"
           >
-            Ver mi perfil
+            {t.viewProfileLink}
           </button>
         </div>
       </div>
@@ -247,15 +271,15 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
   if (totalMovies === 0) {
     return (
       <div className="max-w-md w-full mx-auto glass-panel p-8 sm:p-10 rounded-3xl shadow-2xl text-center space-y-4">
-        <h2 className="text-2xl font-black text-white">No hay películas pendientes</h2>
+        <h2 className="text-2xl font-black text-white">{t.noPendingTitle}</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Ya has calificado todas las películas esenciales del onboarding. Puedes ir al catálogo principal a calificar más títulos.
+          {t.noPendingDesc}
         </p>
         <Link
           href="/explore"
           className="w-full inline-block py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-hover shadow-lg hover:shadow-primary/25 interactive-transition cursor-pointer"
         >
-          Ir a Explorar
+          {t.goToExplore}
         </Link>
       </div>
     );
@@ -264,23 +288,26 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
   // Porcentaje de progreso
   const progressPercent = Math.round((currentIndex / totalMovies) * 100);
 
+  const activeTitle = locale === "en" && currentMovie.originalTitle ? currentMovie.originalTitle : currentMovie.title;
+  const activeSynopsis = (locale === "en" && localizedSynopses[currentMovie.tmdbId]) || currentMovie.synopsis;
+
   return (
     <div className="max-w-xl w-full mx-auto space-y-6">
       {/* Barra de progreso superior */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-wider">
           <div className="flex items-center gap-2">
-            <span>Valoración Rápida</span>
+            <span>{t.quickRating}</span>
             <button
               onClick={handleSkipAll}
               disabled={loading}
               className="text-[10px] lowercase text-muted-foreground hover:text-white transition-colors cursor-pointer border border-white/10 px-2 py-0.5 rounded-md hover:border-white/20 bg-white/5 disabled:opacity-50"
             >
-              (saltar todo)
+              {t.skipAll}
             </button>
           </div>
           <span className="text-white font-black">
-            Película {currentIndex + 1} de {totalMovies}
+            {t.movieOf.replace("{current}", String(currentIndex + 1)).replace("{total}", String(totalMovies))}
           </span>
         </div>
         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -304,7 +331,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
           <div className="relative h-48 w-32 sm:h-56 sm:w-36 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-lg flex-shrink-0">
             <Image
               src={currentMovie.posterUrl}
-              alt={currentMovie.title}
+              alt={activeTitle}
               fill
               sizes="(max-w-768px) 128px, 144px"
               priority
@@ -317,20 +344,23 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
           <div className="space-y-3 text-center sm:text-left flex-1">
             <div className="space-y-1">
               <h3 className="text-2xl font-black text-white leading-tight tracking-tight">
-                {currentMovie.title}
+                {activeTitle}
               </h3>
               <p className="text-xs text-muted-foreground font-medium">
-                {currentMovie.originalTitle !== currentMovie.title && `${currentMovie.originalTitle} • `}
-                {currentMovie.year} • {formatRuntime(currentMovie.runtime)}
+                {locale === "en" ? (
+                  `${currentMovie.originalTitle !== activeTitle ? `${currentMovie.originalTitle} • ` : ""}${currentMovie.year} • ${formatRuntime(currentMovie.runtime)}`
+                ) : (
+                  `${currentMovie.originalTitle !== currentMovie.title ? `${currentMovie.originalTitle} • ` : ""}${currentMovie.year} • ${formatRuntime(currentMovie.runtime)}`
+                )}
               </p>
             </div>
 
             <div className="text-xs text-muted-foreground leading-relaxed line-clamp-4">
-              {currentMovie.synopsis}
+              {activeSynopsis}
             </div>
 
             <div className="pt-2 text-xs font-semibold">
-              <span className="text-muted-foreground block sm:inline">Dirección:</span>{" "}
+              <span className="text-muted-foreground block sm:inline">{t.director}</span>{" "}
               <span className="text-white">{currentMovie.director}</span>
             </div>
           </div>
@@ -339,9 +369,9 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
         {/* Sección de Selección de Nota */}
         <div className="pt-6 border-t border-white/5 space-y-4">
           <div className="text-center">
-            <p className="text-sm font-bold text-white">¿Qué nota le das a esta película?</p>
+            <p className="text-sm font-bold text-white">{t.rateTitle}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              Haz clic en una puntuación para guardarla y avanzar
+              {t.rateSubtitle}
             </p>
           </div>
 
@@ -366,7 +396,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
               disabled={loading}
               className="text-xs text-muted-foreground hover:text-white font-semibold interactive-transition cursor-pointer disabled:opacity-50"
             >
-              No la he visto / Omitir
+              {t.skipMovie}
             </button>
           </div>
         </div>
@@ -375,12 +405,12 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
       {/* Invitación a importar desde Letterboxd/IMDb */}
       <div className="text-center pt-2">
         <p className="text-xs text-muted-foreground">
-          ¿Ya tienes valoraciones en otras plataformas?{" "}
+          {t.importPrompt}{" "}
           <Link
             href="/import"
             className="text-primary hover:underline font-bold transition-colors cursor-pointer"
           >
-            Importar desde Letterboxd o IMDb
+            {t.importLink}
           </Link>
         </p>
       </div>
