@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { countedRatingWhere } from "@/lib/rating-filters";
 import {
   getGenreNameFromSlug,
   ALL_GENRE_SLUGS,
@@ -53,10 +54,7 @@ export default async function GenrePage({ params }: PageProps) {
         orderBy: { cachedAt: "desc" },
         include: {
           ratings: {
-            where: {
-              isArtificial: false,
-              user: { emailVerified: { not: null } },
-            },
+            where: countedRatingWhere(),
             select: { score: true },
           },
         },

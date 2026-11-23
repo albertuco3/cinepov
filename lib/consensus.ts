@@ -1,6 +1,9 @@
 /**
  * Algoritmo y utilidades para el "Modo Pareja / ¿Qué vemos esta noche?" (Fase 4.9).
  */
+import type { Prisma } from "@/app/generated/prisma/client";
+import { isAgeBroadKey } from "./demographics";
+import { COUNTED_USER_WHERE, segmentUserWhere } from "./rating-filters";
 
 export interface DemographicProfileQuery {
   gender: string; // "all" | "female" | "male" | "non_binary"
@@ -26,42 +29,22 @@ export function computeConsensusScore(scoreA: number, scoreB: number): number {
 }
 
 /**
- * Construye la cláusula Prisma para filtrar un perfil demográfico.
+ * Filtro de usuarios de un perfil demográfico ("all" desactiva cada eje),
+ * restringido a los usuarios cuyas valoraciones cuentan.
  */
 export function buildDemographicWhereClause(
   gender: string,
   ageBroad: string,
   currentYear: number
-): any {
-  const where: any = {
-    emailVerified: { not: null },
-    isAnonymized: false,
+): Prisma.UserWhereInput {
+  return {
+    ...COUNTED_USER_WHERE,
+    ...segmentUserWhere(
+      {
+        gender: gender && gender !== "all" ? gender : undefined,
+        ageBroad: isAgeBroadKey(ageBroad) ? ageBroad : undefined,
+      },
+      currentYear
+    ),
   };
-
-  if (gender && gender !== "all") {
-    where.gender = gender;
-  }
-
-  if (ageBroad && ageBroad !== "all") {
-    if (ageBroad === "young") {
-      // 18 a 34 años
-      where.birthYear = {
-        gte: currentYear - 34,
-        lte: currentYear - 18,
-      };
-    } else if (ageBroad === "adult") {
-      // 35 a 54 años
-      where.birthYear = {
-        gte: currentYear - 54,
-        lte: currentYear - 35,
-      };
-    } else if (ageBroad === "senior") {
-      // 55+ años
-      where.birthYear = {
-        lte: currentYear - 55,
-      };
-    }
-  }
-
-  return where;
 }

@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { buildDemographicsPayload, type RatingRow } from "./demographics";
+import { buildDemographicsPayload, ratingCell, type RatingCell } from "./demographics";
 import { getTopDemographicContrast } from "./viral";
 
 const YEAR = 2026;
 
-function row(score: number, gender: string, birthYear: number, isArtificial = false): RatingRow {
-  return { score, gender, birthYear, isArtificial };
+function row(score: number, gender: string, birthYear: number): RatingCell {
+  return ratingCell(score, gender, birthYear);
 }
 
-function rows(n: number, score: number, gender: string, birthYear: number): RatingRow[] {
-  return Array.from({ length: n }, () => row(score, gender, birthYear, false));
+function rows(n: number, score: number, gender: string, birthYear: number): RatingCell[] {
+  return Array.from({ length: n }, () => row(score, gender, birthYear));
 }
 
 describe("getTopDemographicContrast", () => {

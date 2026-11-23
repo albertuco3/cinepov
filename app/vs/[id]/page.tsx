@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { db } from "@/lib/db";
 import { getOrCreateMovie } from "@/lib/movies";
-import { buildDemographicsPayload, type RatingRow } from "@/lib/demographics";
+import { getMovieDemographics } from "@/lib/movie-demographics";
+import { parseMovieParam } from "@/lib/slug";
 import { getTopDemographicContrast } from "@/lib/viral";
 import BattleShareBar from "@/components/BattleShareBar";
 
@@ -14,8 +14,8 @@ interface BattlePageProps {
 
 export async function generateMetadata({ params }: BattlePageProps): Promise<Metadata> {
   const { id } = await params;
-  const tmdbId = parseInt(id, 10);
-  if (isNaN(tmdbId)) {
+  const { tmdbId } = parseMovieParam(id);
+  if (!tmdbId) {
     return { title: "Batalla no encontrada | CinePOV" };
   }
 
@@ -54,9 +54,9 @@ export async function generateMetadata({ params }: BattlePageProps): Promise<Met
 
 export default async function BattlePage({ params }: BattlePageProps) {
   const { id } = await params;
-  const tmdbId = parseInt(id, 10);
+  const { tmdbId } = parseMovieParam(id);
 
-  if (isNaN(tmdbId)) {
+  if (!tmdbId) {
     return notFound();
   }
 
@@ -65,40 +65,10 @@ export default async function BattlePage({ params }: BattlePageProps) {
     return notFound();
   }
 
-  // Cargar votos verificados
-  const ratings = await db.rating.findMany({
-    where: {
-      movieId: movie.id,
-      isArtificial: false,
-      user: { emailVerified: { not: null } },
-    },
-    select: {
-      score: true,
-      user: {
-        select: {
-          gender: true,
-          birthYear: true,
-        },
-      },
-    },
-  });
-
-  const rows: RatingRow[] = ratings
-    .filter((r) => r.user.gender && r.user.birthYear)
-    .map((r) => ({
-      score: r.score,
-      isArtificial: false,
-      gender: r.user.gender!,
-      birthYear: r.user.birthYear!,
-    }));
-
-  const payload = buildDemographicsPayload(movie.id, rows);
+  const payload = await getMovieDemographics(movie.id);
   const contrast = getTopDemographicContrast(payload);
 
-  const globalAvg =
-    rows.length > 0
-      ? (rows.reduce((sum, r) => sum + r.score, 0) / rows.length).toFixed(1)
-      : null;
+  const globalAvg = payload.real.global.avg !== null ? payload.real.global.avg.toFixed(1) : null;
 
   const contrastSummaryText = contrast
     ? `${contrast.labelA}: ${contrast.scoreA}/10 frente a ${contrast.labelB}: ${contrast.scoreB}/10 (Brecha de ${contrast.difference} puntos)`
@@ -142,7 +112,7 @@ export default async function BattlePage({ params }: BattlePageProps) {
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {globalAvg
-                ? `Nota media global en CinePOV: ${globalAvg}/10 basada en ${rows.length} votos verificados.`
+                ? `Nota media global en CinePOV: ${globalAvg}/10 basada en ${payload.counts.real} votos verificados.`
                 : "Acumulando votos verificados en la comunidad."}
             </p>
           </div>

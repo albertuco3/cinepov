@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useJson } from "@/lib/hooks/use-json";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -16,7 +16,8 @@ interface RecommendedMovie {
   genres: string[];
   cohortRating: number;
   cohortVotes: number;
-  affinityScore: number;
+  affinityScore: number | null;
+  source: "segment" | "tmdb";
   inWatchlist: boolean;
   taglineReason: string;
 }
@@ -26,40 +27,17 @@ interface RecommendationsData {
   gender: string;
   ageRange: string;
   userRatingsCount: number;
-  averageAffinity: number;
+  averageAffinity: number | null;
   recommendations: RecommendedMovie[];
 }
 
 export default function RecommendationsPage() {
   const { dict } = useI18n();
   const t = dict.recommendations;
-  const { data: session, status } = useSession();
-  const [data, setData] = useState<RecommendationsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      setLoading(false);
-      return;
-    }
-
-    if (status === "authenticated") {
-      fetch("/api/recommendations?limit=18")
-        .then((res) => {
-          if (!res.ok) throw new Error(t.errorTitle);
-          return res.json();
-        })
-        .then((json) => {
-          setData(json);
-          setLoading(false);
-        })
-        .catch((err) => {
-          setError(err.message);
-          setLoading(false);
-        });
-    }
-  }, [status, t.errorTitle]);
+  const { status } = useSession();
+  const { data, loading, error } = useJson<RecommendationsData>(
+    status === "authenticated" ? "/api/recommendations?limit=18" : null
+  );
 
   if (status === "loading" || loading) {
     return (
@@ -151,7 +129,7 @@ export default function RecommendationsPage() {
               {t.cohortAffinity}
             </span>
             <span className="text-2xl font-black text-white">
-              {data.averageAffinity}%
+              {data.averageAffinity !== null ? `${data.averageAffinity}%` : "—"}
             </span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
@@ -180,7 +158,7 @@ export default function RecommendationsPage() {
             >
               {/* Poster */}
               <div className="relative aspect-[2/3] w-full bg-white/5 overflow-hidden">
-                <Link href={`/movie/${movie.id}`}>
+                <Link href={`/movie/${movie.tmdbId}`}>
                   {movie.posterUrl ? (
                     <Image
                       src={movie.posterUrl}
@@ -197,9 +175,11 @@ export default function RecommendationsPage() {
                 </Link>
 
                 {/* Badge de afinidad en esquina superior */}
-                <div className="absolute top-2 left-2 bg-[#0a0a0f]/90 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 text-[10px] font-bold text-white">
-                  {movie.affinityScore}% {t.affinityBadge}
-                </div>
+                {movie.affinityScore !== null && (
+                  <div className="absolute top-2 left-2 bg-[#0a0a0f]/90 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 text-[10px] font-bold text-white">
+                    {movie.affinityScore}% {t.affinityBadge}
+                  </div>
+                )}
 
                 {/* Botón rápido de Watchlist en esquina superior derecha */}
                 <div className="absolute top-2 right-2">
@@ -211,7 +191,12 @@ export default function RecommendationsPage() {
                 </div>
 
                 {/* Calificación de cohorte en esquina inferior */}
-                <div className="absolute bottom-2 right-2 bg-primary/95 text-white px-2 py-0.5 rounded-md text-xs font-black shadow-md">
+                <div
+                  className={`absolute bottom-2 right-2 px-2 py-0.5 rounded-md text-xs font-black shadow-md ${
+                    movie.source === "tmdb" ? "bg-cyan-600/90 text-white" : "bg-primary/95 text-white"
+                  }`}
+                >
+                  {movie.source === "tmdb" && <span className="mr-1 text-[9px] font-bold opacity-80">TMDB</span>}
                   {movie.cohortRating.toFixed(1)}
                 </div>
               </div>
@@ -219,7 +204,7 @@ export default function RecommendationsPage() {
               {/* Información de la película */}
               <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
                 <div>
-                  <Link href={`/movie/${movie.id}`}>
+                  <Link href={`/movie/${movie.tmdbId}`}>
                     <h3 className="font-bold text-xs sm:text-sm text-white line-clamp-1 hover:text-primary transition-colors">
                       {movie.title}
                     </h3>

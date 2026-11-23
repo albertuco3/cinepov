@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { getMovieLocalized } from "@/lib/movies";
 import { db } from "@/lib/db";
+import { AGE_RANGE_LABELS, ageKeyFromBirthYear } from "@/lib/demographics";
+import { countedRatingWhere, segmentUserWhere } from "@/lib/rating-filters";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import MovieRatingSection from "@/components/MovieRatingSection";
@@ -16,7 +17,8 @@ import AddToListButton from "@/components/AddToListButton";
 import { getSimilarMovies } from "@/lib/tmdb";
 import { parseMovieParam, buildCanonicalMoviePath } from "@/lib/slug";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
 interface MoviePageProps {
   params: Promise<{ id: string }>;
@@ -29,8 +31,7 @@ export async function generateMetadata({ params }: MoviePageProps): Promise<Meta
     return { title: "Pelicula no encontrada | CinePOV" };
   }
 
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
   const movie = await getMovieLocalized(tmdbId, locale);
   if (!movie) {
     return { title: locale === "en" ? "Movie not found | CinePOV" : "Pelicula no encontrada | CinePOV" };
@@ -74,8 +75,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
     return notFound();
   }
 
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
   const dict = getDictionary(locale);
 
   // 1. Obtener la película localizada (español o inglés)
@@ -85,30 +85,15 @@ export default async function MoviePage({ params }: MoviePageProps) {
     return notFound();
   }
 
-  // 2. Calcular la nota media y votos en CinePOV.
-  // Las valoraciones reales y las estimaciones de arranque se agregan por
-  // separado: la "nota CinePOV" solo puede reflejar votos de personas.
-  const [realAgg, estimatedAgg] = await Promise.all([
-    db.rating.aggregate({
-      where: {
-        movieId: movie.id,
-        isArtificial: false,
-        user: { emailVerified: { not: null } },
-      },
-      _avg: { score: true },
-      _count: { score: true },
-    }),
-    db.rating.aggregate({
-      where: { movieId: movie.id, isArtificial: true },
-      _avg: { score: true },
-      _count: { score: true },
-    }),
-  ]);
+  // 2. Nota CinePOV: solo valoraciones que cuentan (personas reales verificadas).
+  const realAgg = await db.rating.aggregate({
+    where: { ...countedRatingWhere(), movieId: movie.id },
+    _avg: { score: true },
+    _count: { score: true },
+  });
 
   const ratingCount = realAgg._count.score;
   const avgRating = realAgg._avg.score !== null ? realAgg._avg.score.toFixed(1) : null;
-  const estimatedCount = estimatedAgg._count.score;
-  const estimatedAvg = estimatedAgg._avg.score !== null ? estimatedAgg._avg.score.toFixed(1) : null;
 
   // 3. Buscar la valoración previa del usuario logueado y estado de watchlist
   const session = await getServerSession(authOptions);
@@ -145,57 +130,28 @@ export default async function MoviePage({ params }: MoviePageProps) {
   if (session?.user) {
     const gender = session.user.gender;
     const birthYear = session.user.birthYear;
+    const currentYear = new Date().getFullYear();
+    const ageKey = birthYear ? ageKeyFromBirthYear(birthYear, currentYear) : null;
 
-    if (gender && birthYear) {
-      const currentYear = new Date().getFullYear();
-      const age = currentYear - birthYear;
-      let ageRange = "all";
-      let ageLabel = "";
-
+    if (gender && ageKey) {
       const yearsSuffix = locale === "en" ? "years old" : "años";
-      if (age >= 18 && age <= 24) { ageRange = "18_24"; ageLabel = `18-24 ${yearsSuffix}`; }
-      else if (age >= 25 && age <= 34) { ageRange = "25_34"; ageLabel = `25-34 ${yearsSuffix}`; }
-      else if (age >= 35 && age <= 44) { ageRange = "35_44"; ageLabel = `35-44 ${yearsSuffix}`; }
-      else if (age >= 45 && age <= 54) { ageRange = "45_54"; ageLabel = `45-54 ${yearsSuffix}`; }
-      else if (age >= 55) { ageRange = "55_plus"; ageLabel = `55+ ${yearsSuffix}`; }
-
       const genderLabels: Record<string, string> = {
         male: locale === "en" ? "Men" : "Hombres",
         female: locale === "en" ? "Women" : "Mujeres",
-        non_binary: locale === "en" ? "Non-Binary" : "No Binarios",
-        prefer_not_to_say: locale === "en" ? "Others" : "Otros",
+        non_binary: locale === "en" ? "Non-Binary" : "No binarios",
       };
-
       const genderLabel = genderLabels[gender] || (locale === "en" ? "Users" : "Usuarios");
-      userSegmentLabel = `${genderLabel} ${ageLabel}`;
+      userSegmentLabel = `${genderLabel} ${AGE_RANGE_LABELS[ageKey]} ${yearsSuffix}`;
 
-      // Configurar el filtro de edad de nacimiento
-      const ageFilter: any = {};
-      if (ageRange === "18_24") ageFilter.birthYear = { gte: currentYear - 24, lte: currentYear - 18 };
-      else if (ageRange === "25_34") ageFilter.birthYear = { gte: currentYear - 34, lte: currentYear - 25 };
-      else if (ageRange === "35_44") ageFilter.birthYear = { gte: currentYear - 44, lte: currentYear - 35 };
-      else if (ageRange === "45_54") ageFilter.birthYear = { gte: currentYear - 54, lte: currentYear - 45 };
-      else if (ageRange === "55_plus") ageFilter.birthYear = { lte: currentYear - 55 };
-
-      const segmentRatings = await db.rating.findMany({
-        where: {
-          movieId: movie.id,
-          isArtificial: false,
-          user: {
-            gender,
-            emailVerified: { not: null },
-            ...ageFilter,
-          },
-        },
-        select: {
-          score: true,
-        },
+      const segmentAgg = await db.rating.aggregate({
+        where: { ...countedRatingWhere(segmentUserWhere({ gender, ageKey }, currentYear)), movieId: movie.id },
+        _avg: { score: true },
+        _count: { score: true },
       });
 
-      compatibilityCount = segmentRatings.length;
-      if (compatibilityCount >= 3) {
-        const sum = segmentRatings.reduce((s, r) => s + r.score, 0);
-        compatibilityScore = parseFloat((sum / compatibilityCount).toFixed(1));
+      compatibilityCount = segmentAgg._count.score;
+      if (compatibilityCount >= 3 && segmentAgg._avg.score !== null) {
+        compatibilityScore = parseFloat(segmentAgg._avg.score.toFixed(1));
       }
     }
   }
@@ -346,8 +302,6 @@ export default async function MoviePage({ params }: MoviePageProps) {
               movieId={movie.id}
               initialAvgRating={avgRating}
               initialRatingCount={ratingCount}
-              initialEstimatedAvg={estimatedAvg}
-              initialEstimatedCount={estimatedCount}
               tmdbRating={movie.tmdbRating}
               userScore={userRating ? userRating.score : null}
               initialWatchedAt={userRating?.watchedAt ? userRating.watchedAt.toISOString() : null}
@@ -447,10 +401,13 @@ export default async function MoviePage({ params }: MoviePageProps) {
         </div>
 
         {/* 4. Sección de Reseñas de la Comunidad con filtro demográfico (Fase 5.1) */}
-        <MovieReviewsSection
-          movieId={movie.id}
-          hasUserSegment={Boolean(session?.user?.gender || session?.user?.birthYear)}
-        />
+        {SOCIAL_ENABLED && (
+          <MovieReviewsSection
+            key={movie.id}
+            movieId={movie.id}
+            hasUserSegment={Boolean(session?.user?.gender || session?.user?.birthYear)}
+          />
+        )}
 
         {/* 5. Sección de Películas Similares (Fase 2.4.2) */}
         {similarMovies.length > 0 && (

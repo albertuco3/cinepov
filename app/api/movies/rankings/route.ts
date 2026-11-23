@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/app/generated/prisma/client";
+import { isAgeKey } from "@/lib/demographics";
+import { countedRatingWhere, segmentUserWhere } from "@/lib/rating-filters";
 
 export async function GET(request: Request) {
   try {
@@ -8,7 +11,7 @@ export async function GET(request: Request) {
     const ageRange = searchParams.get("ageRange") || "all";
     const genreId = searchParams.get("genreId") || "all";
     const decade = searchParams.get("decade") || "all";
-    const page = parseInt(searchParams.get("page") || "1", 10);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
 
     const pageSize = 20;
     const skip = (page - 1) * pageSize;
@@ -17,53 +20,24 @@ export async function GET(request: Request) {
     // personas (ver sección 6.4 del plan de proyecto).
     const minRatings = 5;
 
-    const currentYear = new Date().getFullYear();
-
-    // 1. Construir el filtro para la tabla Rating (Filtros Demográficos)
-    // Solo valoraciones reales de cuentas con email verificado:
-    const ratingsFilter: any = {
-      isArtificial: false,
-      user: {
-        emailVerified: { not: null },
-      },
+    // 1. Filtro de valoraciones: solo las que cuentan, del segmento pedido y,
+    // opcionalmente, de un género cinematográfico o una década.
+    const segment = {
+      gender: gender !== "all" ? gender : undefined,
+      ageKey: isAgeKey(ageRange) ? ageRange : undefined,
     };
-    
-    if (gender !== "all" || ageRange !== "all") {
-      if (gender !== "all") {
-        ratingsFilter.user.gender = gender;
-      }
-      
-      if (ageRange !== "all") {
-        if (ageRange === "18_24") {
-          ratingsFilter.user.birthYear = { gte: currentYear - 24, lte: currentYear - 18 };
-        } else if (ageRange === "25_34") {
-          ratingsFilter.user.birthYear = { gte: currentYear - 34, lte: currentYear - 25 };
-        } else if (ageRange === "35_44") {
-          ratingsFilter.user.birthYear = { gte: currentYear - 44, lte: currentYear - 35 };
-        } else if (ageRange === "45_54") {
-          ratingsFilter.user.birthYear = { gte: currentYear - 54, lte: currentYear - 45 };
-        } else if (ageRange === "55_plus") {
-          ratingsFilter.user.birthYear = { lte: currentYear - 55 };
-        }
-      }
+    const movieFilter: Prisma.MovieWhereInput = {};
+    if (genreId !== "all") {
+      movieFilter.genres = { some: { id: genreId } };
     }
-
-    // Filtros sobre la Película (Género y Década)
-    if (genreId !== "all" || decade !== "all") {
-      ratingsFilter.movie = {};
-      
-      if (genreId !== "all") {
-        ratingsFilter.movie.genres = {
-          some: { id: genreId },
-        };
-      }
-      
-      if (decade !== "all") {
-        const startYear = parseInt(decade.substring(0, 4), 10);
-        const endYear = startYear + 9;
-        ratingsFilter.movie.year = { gte: startYear, lte: endYear };
-      }
+    const startYear = parseInt(decade.substring(0, 4), 10);
+    if (decade !== "all" && !isNaN(startYear)) {
+      movieFilter.year = { gte: startYear, lte: startYear + 9 };
     }
+    const ratingsFilter: Prisma.RatingWhereInput = {
+      ...countedRatingWhere(segmentUserWhere(segment)),
+      ...(Object.keys(movieFilter).length > 0 ? { movie: movieFilter } : {}),
+    };
 
     // 2. Agrupar ratings por película en la base de datos
     // Obtenemos los promedios en base al filtro demográfico y de película
@@ -122,8 +96,8 @@ export async function GET(request: Request) {
     const globalAverages = await db.rating.groupBy({
       by: ["movieId"],
       where: {
+        ...countedRatingWhere(),
         movieId: { in: movieIds },
-        isArtificial: false,
       },
       _avg: {
         score: true,
@@ -167,7 +141,6 @@ export async function GET(request: Request) {
       .filter((r) => r !== null);
 
     // Calcular el total de elementos que cumplen la condición para la paginación
-    // Para simplificar y no sobrecargar SQLite, calculamos el total de grupos agregados de forma global
     const totalGrouped = await db.rating.groupBy({
       by: ["movieId"],
       where: ratingsFilter,
@@ -187,10 +160,10 @@ export async function GET(request: Request) {
       totalResults: totalGrouped.length,
       results,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error al calcular rankings:", error);
     return NextResponse.json(
-      { error: error.message || "Error interno del servidor al obtener el ranking." },
+      { error: "Error interno del servidor al obtener el ranking." },
       { status: 500 }
     );
   }

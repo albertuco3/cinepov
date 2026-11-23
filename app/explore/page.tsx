@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { countedRatingWhere } from "@/lib/rating-filters";
 import { getTrendingMovies } from "@/lib/tmdb";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 // Forzar renderizado dinámico para que los datos locales y las tendencias de TMDB se carguen frescas
 export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
   const dict = getDictionary(locale);
 
   return {
@@ -32,8 +31,7 @@ interface MovieItem {
 }
 
 export default async function ExplorePage() {
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
   const dict = getDictionary(locale);
 
   // 1. Obtener tendencias semanales de TMDB en el idioma activo
@@ -47,10 +45,9 @@ export default async function ExplorePage() {
     ratingSource: "TMDB",
   }));
 
-  // Las notas que se muestran en el catálogo son públicas: se calculan solo con
-  // valoraciones reales, excluyendo las estimaciones de arranque.
+  // Las notas que se muestran en el catálogo son públicas: solo votos que cuentan.
   const realRatingsInclude = {
-    ratings: { where: { isArtificial: false }, select: { score: true } },
+    ratings: { where: countedRatingWhere(), select: { score: true } },
   } as const;
 
   // 2. Obtener añadidas recientemente en la BD local (con su nota media)

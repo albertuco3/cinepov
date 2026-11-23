@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { countedRatingWhere } from "@/lib/rating-filters";
 import {
   getDecadeConfig,
   ALL_DECADE_SLUGS,
@@ -58,10 +59,7 @@ export default async function DecadePage({ params }: PageProps) {
         select: { name: true },
       },
       ratings: {
-        where: {
-          isArtificial: false,
-          user: { emailVerified: { not: null } },
-        },
+        where: countedRatingWhere(),
         select: { score: true },
       },
     },

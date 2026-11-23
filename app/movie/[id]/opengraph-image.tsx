@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
-import { buildDemographicsPayload, type RatingRow } from "@/lib/demographics";
+import { getMovieDemographics } from "@/lib/movie-demographics";
 import { getTopDemographicContrast } from "@/lib/viral";
 import { parseMovieParam } from "@/lib/slug";
 
@@ -69,40 +69,10 @@ export default async function OpengraphImage({ params }: Props) {
     );
   }
 
-  // Obtener votos reales verificados
-  const ratings = await db.rating.findMany({
-    where: {
-      movieId: movie.id,
-      isArtificial: false,
-      user: { emailVerified: { not: null } },
-    },
-    select: {
-      score: true,
-      user: {
-        select: {
-          gender: true,
-          birthYear: true,
-        },
-      },
-    },
-  });
-
-  const rows: RatingRow[] = ratings
-    .filter((r) => r.user.gender && r.user.birthYear)
-    .map((r) => ({
-      score: r.score,
-      isArtificial: false,
-      gender: r.user.gender!,
-      birthYear: r.user.birthYear!,
-    }));
-
-  const payload = buildDemographicsPayload(movie.id, rows);
+  const payload = await getMovieDemographics(movie.id);
   const contrast = getTopDemographicContrast(payload);
 
-  const globalAvg =
-    rows.length > 0
-      ? (rows.reduce((sum, r) => sum + r.score, 0) / rows.length).toFixed(1)
-      : null;
+  const globalAvg = payload.real.global.avg !== null ? payload.real.global.avg.toFixed(1) : null;
 
   return new ImageResponse(
     (

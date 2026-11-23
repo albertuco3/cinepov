@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/app/generated/prisma/client";
+import { countedRatingWhere } from "@/lib/rating-filters";
 import {
   computeConsensusScore,
   buildDemographicWhereClause,
@@ -19,20 +21,31 @@ export async function GET(request: NextRequest) {
 
     const currentYear = new Date().getFullYear();
 
-    const userWhereA = buildDemographicWhereClause(genderA, ageA, currentYear);
-    const userWhereB = buildDemographicWhereClause(genderB, ageB, currentYear);
+    const movieFilter: Prisma.RatingWhereInput = genreId ? { movie: { genres: { some: { id: genreId } } } } : {};
 
-    // Buscar películas con votos reales verificados
-    const candidateMovies = await db.movie.findMany({
-      where: {
-        ...(genreId ? { genres: { some: { id: genreId } } } : {}),
-        ratings: {
-          some: {
-            isArtificial: false,
-            user: { emailVerified: { not: null } },
-          },
+    // Media de cada perfil por película, calculada en la base de datos sobre
+    // todas las películas (no sobre un subconjunto arbitrario).
+    const segmentAverages = (gender: string, ageBroad: string) =>
+      db.rating.groupBy({
+        by: ["movieId"],
+        where: {
+          ...countedRatingWhere(buildDemographicWhereClause(gender, ageBroad, currentYear)),
+          ...movieFilter,
         },
-      },
+        _avg: { score: true },
+        _count: { score: true },
+      });
+
+    const [groupsA, groupsB] = await Promise.all([
+      segmentAverages(genderA, ageA),
+      segmentAverages(genderB, ageB),
+    ]);
+
+    const byMovieB = new Map(groupsB.map((g) => [g.movieId, g]));
+    const shared = groupsA.filter((g) => byMovieB.has(g.movieId));
+
+    const movies = await db.movie.findMany({
+      where: { id: { in: shared.map((g) => g.movieId) } },
       select: {
         id: true,
         tmdbId: true,
@@ -40,63 +53,21 @@ export async function GET(request: NextRequest) {
         year: true,
         posterUrl: true,
         tmdbRating: true,
-        genres: {
-          select: { id: true, name: true },
-        },
-        ratings: {
-          where: {
-            isArtificial: false,
-            user: { emailVerified: { not: null }, isAnonymized: false },
-          },
-          select: {
-            score: true,
-            user: {
-              select: {
-                gender: true,
-                birthYear: true,
-              },
-            },
-          },
-        },
+        genres: { select: { name: true } },
       },
-      take: 100,
     });
+    const movieById = new Map(movies.map((m) => [m.id, m]));
 
-    const matches = [];
+    const matches = shared.flatMap((groupA) => {
+      const groupB = byMovieB.get(groupA.movieId);
+      const movie = movieById.get(groupA.movieId);
+      if (!groupB || !movie || groupA._avg.score === null || groupB._avg.score === null) return [];
 
-    for (const movie of candidateMovies) {
-      // Filtrar votos para Perfil A
-      const votesA = movie.ratings.filter((r) => {
-        if (!r.user.gender || !r.user.birthYear) return false;
-        if (genderA !== "all" && r.user.gender !== genderA) return false;
-        if (ageA === "young" && (r.user.birthYear < currentYear - 34 || r.user.birthYear > currentYear - 18)) return false;
-        if (ageA === "adult" && (r.user.birthYear < currentYear - 54 || r.user.birthYear > currentYear - 35)) return false;
-        if (ageA === "senior" && r.user.birthYear > currentYear - 55) return false;
-        return true;
-      });
+      const avgA = parseFloat(groupA._avg.score.toFixed(1));
+      const avgB = parseFloat(groupB._avg.score.toFixed(1));
 
-      // Filtrar votos para Perfil B
-      const votesB = movie.ratings.filter((r) => {
-        if (!r.user.gender || !r.user.birthYear) return false;
-        if (genderB !== "all" && r.user.gender !== genderB) return false;
-        if (ageB === "young" && (r.user.birthYear < currentYear - 34 || r.user.birthYear > currentYear - 18)) return false;
-        if (ageB === "adult" && (r.user.birthYear < currentYear - 54 || r.user.birthYear > currentYear - 35)) return false;
-        if (ageB === "senior" && r.user.birthYear > currentYear - 55) return false;
-        return true;
-      });
-
-      // Si ambos segmentos tienen votos
-      if (votesA.length > 0 && votesB.length > 0) {
-        const avgA = parseFloat(
-          (votesA.reduce((sum, v) => sum + v.score, 0) / votesA.length).toFixed(1)
-        );
-        const avgB = parseFloat(
-          (votesB.reduce((sum, v) => sum + v.score, 0) / votesB.length).toFixed(1)
-        );
-
-        const consensusScore = computeConsensusScore(avgA, avgB);
-
-        matches.push({
+      return [
+        {
           id: movie.id,
           tmdbId: movie.tmdbId,
           title: movie.title,
@@ -105,13 +76,13 @@ export async function GET(request: NextRequest) {
           tmdbRating: movie.tmdbRating,
           genres: movie.genres.map((g) => g.name),
           scoreA: avgA,
-          votesA: votesA.length,
+          votesA: groupA._count.score,
           scoreB: avgB,
-          votesB: votesB.length,
-          consensusScore,
-        });
-      }
-    }
+          votesB: groupB._count.score,
+          consensusScore: computeConsensusScore(avgA, avgB),
+        },
+      ];
+    });
 
     // Ordenar por nota de consenso descendente
     matches.sort((a, b) => b.consensusScore - a.consensusScore);

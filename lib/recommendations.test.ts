@@ -1,21 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
-  getAgeKeyFromBirthYear,
   getAgeRangeLabel,
   getGenderLabel,
   calculateAffinityScore,
 } from "./recommendations";
 
 describe("Motor de recomendaciones demográficas (lib/recommendations.ts)", () => {
-  it("determina el rango de edad correcto a partir del año de nacimiento", () => {
-    const currentYear = 2026;
-    expect(getAgeKeyFromBirthYear(2004, currentYear)).toBe("18_24");
-    expect(getAgeKeyFromBirthYear(1996, currentYear)).toBe("25_34");
-    expect(getAgeKeyFromBirthYear(1986, currentYear)).toBe("35_44");
-    expect(getAgeKeyFromBirthYear(1976, currentYear)).toBe("45_54");
-    expect(getAgeKeyFromBirthYear(1960, currentYear)).toBe("55_plus");
-  });
-
   it("devuelve etiquetas legibles para la cohorte demográfica", () => {
     expect(getGenderLabel("female")).toBe("Mujeres");
     expect(getGenderLabel("male")).toBe("Hombres");

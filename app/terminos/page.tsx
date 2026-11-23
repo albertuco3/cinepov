@@ -63,8 +63,7 @@ export default function TerminosPage() {
           </p>
           <p>
             Los desgloses son datos estadísticos descriptivos, no recomendaciones ni juicios de valor sobre ninguna
-            película o colectivo. La forma en que se calculan, los umbrales mínimos y la naturaleza de las
-            estimaciones de arranque están explicados en la{" "}
+            película o colectivo. La forma en que se calculan y los umbrales mínimos están explicados en la{" "}
             <Link href="/metodologia" className="text-primary-light font-semibold hover:underline">
               página de metodología
             </Link>
@@ -211,11 +210,9 @@ export default function TerminosPage() {
             como una afirmación sobre lo que piensa un colectivo en su conjunto.
           </p>
           <p>
-            La plataforma incluye además estimaciones de arranque: valoraciones simuladas, generadas mediante un
-            modelo estadístico para que las fichas no estuvieran vacías el primer día. Nunca se presentan como
-            opiniones reales, están siempre etiquetadas y diferenciadas visualmente, están ocultas por defecto, no
-            se suman a las notas reales, no desbloquean niveles de desglose y no aparecen en rankings ni en
-            contenido compartible. La explicación completa está en la{" "}
+            Todas las notas se calculan exclusivamente con valoraciones de personas reales con el email
+            verificado. La plataforma no genera valoraciones simuladas ni estimaciones. La explicación completa
+            está en la{" "}
             <Link href="/metodologia" className="text-primary-light font-semibold hover:underline">
               metodología
             </Link>

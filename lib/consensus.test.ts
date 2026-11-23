@@ -19,8 +19,7 @@ describe("lib/consensus", () => {
   it("buildDemographicWhereClause genera los filtros de edad y género adecuados", () => {
     const clause = buildDemographicWhereClause("female", "young", 2026);
     expect(clause.gender).toBe("female");
-    expect(clause.birthYear.gte).toBe(1992);
-    expect(clause.birthYear.lte).toBe(2008);
+    expect(clause.birthYear).toEqual({ gte: 1992, lte: 2008 });
   });
 
   it("buildDemographicWhereClause maneja valores 'all'", () => {

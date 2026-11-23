@@ -33,7 +33,6 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Exclude<GranularityLevel, "global"> | null>(null);
-  const [showEstimates, setShowEstimates] = useState(false);
 
   const tabs: { level: Exclude<GranularityLevel, "global">; label: string; short: string }[] = useMemo(() => [
     { level: "age_broad", label: dict.movie.byGeneration, short: locale === "en" ? "Generation" : "Generación" },
@@ -93,10 +92,10 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
     );
   }
 
-  const { counts, progress, real, estimated } = data;
+  const { counts, progress, real } = data;
 
-  // Estado vacío absoluto: no hay ni un voto real ni una estimación.
-  if (counts.total === 0) {
+  // Estado vacío absoluto: nadie ha valorado todavía la película.
+  if (counts.real === 0) {
     return (
       <div className="glass-panel p-8 sm:p-10 rounded-3xl text-center space-y-4">
         <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-white/5 border border-white/10 text-muted-foreground">
@@ -131,13 +130,8 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
 
   return (
     <div className="space-y-8">
-      {/* 1. Barra de honestidad: qué parte de los datos es real */}
-      <DataProvenanceBar
-        realCount={counts.real}
-        estimatedCount={counts.estimated}
-        showEstimates={showEstimates}
-        onToggleEstimates={() => setShowEstimates((v) => !v)}
-      />
+      {/* 1. Origen de los datos: cuántas personas reales hay detrás */}
+      <DataProvenanceBar realCount={counts.real} />
 
       {/* 2. Tarjeta destacada del segmento del usuario */}
       {userSegment && (
@@ -200,10 +194,8 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
             key: k,
             label: `${AGE_BROAD_LABELS[k]} ${locale === "en" ? "years old" : "años"}`,
             segment: real.byAgeBroad[k],
-            estimatedSegment: estimated?.byAgeBroad[k],
           }))}
           gradient="bg-gradient-to-r from-violet-500 to-cyan-500"
-          showEstimates={showEstimates}
         />
       )}
 
@@ -217,7 +209,6 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
               ? ({ male: "Men", female: "Women", non_binary: "Non-Binary", prefer_not_to_say: "Other" }[k] || k)
               : GENDER_LABELS[k],
             segment: real.byGender[k],
-            estimatedSegment: estimated?.byGender[k],
             gradient:
               k === "male"
                 ? "bg-gradient-to-r from-cyan-500 to-blue-500"
@@ -225,7 +216,6 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
                   ? "bg-gradient-to-r from-pink-500 to-violet-500"
                   : "bg-gradient-to-r from-violet-500 to-fuchsia-500",
           }))}
-          showEstimates={showEstimates}
         />
       )}
 
@@ -237,18 +227,14 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
             key: k,
             label: `${AGE_RANGE_LABELS[k]} ${locale === "en" ? "years old" : "años"}`,
             segment: real.byAgeRange[k],
-            estimatedSegment: estimated?.byAgeRange[k],
           }))}
           gradient="bg-gradient-to-r from-violet-500 to-cyan-500"
-          showEstimates={showEstimates}
         />
       )}
 
       {activeTab === "cross" && (
         <CrossMatrix
           real={real.cross}
-          estimated={estimated?.cross}
-          showEstimates={showEstimates}
           segmentMinVotes={data.segmentMinVotes}
           highlight={userSegment ? { gender: userSegment.gender, ageKey: userSegment.ageKey } : null}
         />
@@ -271,64 +257,18 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
 
 /* ------------------------------------------------------------------ */
 
-function DataProvenanceBar({
-  realCount,
-  estimatedCount,
-  showEstimates,
-  onToggleEstimates,
-}: {
-  realCount: number;
-  estimatedCount: number;
-  showEstimates: boolean;
-  onToggleEstimates: () => void;
-}) {
-  const { dict, locale } = useI18n();
-  const total = realCount + estimatedCount;
-  const realPct = total > 0 ? Math.round((realCount / total) * 100) : 0;
+function DataProvenanceBar({ realCount }: { realCount: number }) {
+  const { dict } = useI18n();
 
   return (
-    <div className="glass-panel rounded-2xl border border-white/5 p-4 sm:p-5 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-            {dict.movie.dataProvenance}
-          </p>
-          <p className="text-sm font-semibold text-white">
-            <span className="text-emerald-400">{realCount}</span>{" "}
-            {realCount === 1 ? dict.movie.realVote : dict.movie.realVotes}
-            {estimatedCount > 0 && (
-              <>
-                {" · "}
-                <span className="text-amber-400/90">{estimatedCount}</span>{" "}
-                {locale === "en" ? "initial estimates" : "estimaciones de arranque"}
-              </>
-            )}
-          </p>
-        </div>
-        {estimatedCount > 0 && (
-          <button
-            onClick={onToggleEstimates}
-            className="text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-full border border-dashed border-amber-500/30 bg-amber-500/5 text-amber-300/80 hover:bg-amber-500/10 hover:text-amber-200 interactive-transition cursor-pointer"
-          >
-            {showEstimates ? dict.movie.hideEstimates : dict.movie.viewEstimates}
-          </button>
-        )}
-      </div>
-
-      {estimatedCount > 0 && (
-        <>
-          <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden flex">
-            <div className="h-full bg-emerald-500/70" style={{ width: `${realPct}%` }} />
-            <div className="h-full bg-amber-500/30 border-l border-dashed border-amber-500/50" style={{ width: `${100 - realPct}%` }} />
-          </div>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            {dict.movie.onlyRealDataNotice}{" "}
-            <Link href="/metodologia" className="text-primary-light font-semibold hover:underline">
-              {locale === "en" ? "Methodology" : "Metodología"}
-            </Link>
-          </p>
-        </>
-      )}
+    <div className="glass-panel rounded-2xl border border-white/5 p-4 sm:p-5 space-y-1">
+      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+        {dict.movie.dataProvenance}
+      </p>
+      <p className="text-sm font-semibold text-white">
+        <span className="text-emerald-400">{realCount}</span>{" "}
+        {realCount === 1 ? dict.movie.realVote : dict.movie.realVotes}
+      </p>
     </div>
   );
 }
@@ -439,7 +379,6 @@ interface BarRow {
   key: string;
   label: string;
   segment: Segment;
-  estimatedSegment?: Segment;
   gradient?: string;
 }
 
@@ -448,13 +387,11 @@ function BarChartPanel({
   subtitle,
   rows,
   gradient = "bg-gradient-to-r from-violet-500 to-cyan-500",
-  showEstimates,
 }: {
   title: string;
   subtitle: string;
   rows: BarRow[];
   gradient?: string;
-  showEstimates: boolean;
 }) {
   const { locale } = useI18n();
   return (
@@ -467,9 +404,6 @@ function BarChartPanel({
         {rows.map((row) => {
           const hasData = row.segment.avg !== null;
           const pct = hasData ? (row.segment.avg! / 10) * 100 : 0;
-          const est = row.estimatedSegment;
-          const showEst = showEstimates && est && est.avg !== null;
-          const estPct = showEst ? (est.avg! / 10) * 100 : 0;
 
           return (
             <div key={row.key} className="space-y-1.5">
@@ -503,19 +437,7 @@ function BarChartPanel({
                     style={{ width: `${pct}%` }}
                   />
                 )}
-                {showEst && (
-                  <div
-                    className="absolute top-0 h-full border-r-2 border-dashed border-amber-400/60"
-                    style={{ width: `${estPct}%` }}
-                    title={locale === "en" ? `Initial estimate: ${est!.avg}` : `Estimación de arranque: ${est!.avg}`}
-                  />
-                )}
               </div>
-              {showEst && (
-                <p className="text-[10px] text-amber-400/60 font-medium">
-                  {locale === "en" ? `Initial estimate: ${est!.avg} (${est!.count} projections)` : `Estimación de arranque: ${est!.avg} (${est!.count} proyecciones)`}
-                </p>
-              )}
             </div>
           );
         })}
@@ -526,14 +448,10 @@ function BarChartPanel({
 
 function CrossMatrix({
   real,
-  estimated,
-  showEstimates,
   segmentMinVotes,
   highlight,
 }: {
   real: Record<GenderKey, Record<AgeKey, Segment>>;
-  estimated?: Record<GenderKey, Record<AgeKey, Segment>>;
-  showEstimates: boolean;
   segmentMinVotes: number;
   highlight: { gender: GenderKey; ageKey: AgeKey } | null;
 }) {
@@ -590,7 +508,6 @@ function CrossMatrix({
               </div>
               {AGE_KEYS.map((ageKey) => {
                 const segment = real[gender][ageKey];
-                const est = estimated?.[gender]?.[ageKey];
                 const isHighlight = highlight?.gender === gender && highlight?.ageKey === ageKey;
 
                 return (
@@ -618,9 +535,6 @@ function CrossMatrix({
                             : `faltan ${segment.missing} ${segment.missing === 1 ? "voto" : "votos"}`}
                         </span>
                       </>
-                    )}
-                    {showEstimates && est && est.avg !== null && segment.avg === null && (
-                      <span className="text-[8px] text-amber-400/70 font-bold pt-0.5">est. {est.avg}</span>
                     )}
                   </div>
                 );

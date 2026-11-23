@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { countedRatingWhere } from "@/lib/rating-filters";
 import {
   getSegmentConfig,
   ALL_SEGMENT_SLUGS,
@@ -56,10 +57,7 @@ export default async function SegmentPage({ params }: PageProps) {
   const candidateMovies = await db.movie.findMany({
     where: {
       ratings: {
-        some: {
-          isArtificial: false,
-          user: userWhere,
-        },
+        some: countedRatingWhere(userWhere),
       },
     },
     include: {
@@ -67,10 +65,7 @@ export default async function SegmentPage({ params }: PageProps) {
         select: { name: true },
       },
       ratings: {
-        where: {
-          isArtificial: false,
-          user: userWhere,
-        },
+        where: countedRatingWhere(userWhere),
         select: { score: true },
       },
     },

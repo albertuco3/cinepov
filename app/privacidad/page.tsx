@@ -190,10 +190,7 @@ export default function PrivacidadPage() {
             integrante.
           </p>
           <p>
-            El detalle completo del cálculo, los umbrales de cada nivel de desglose y la explicación de las
-            estimaciones de arranque (valoraciones simuladas, siempre etiquetadas como tales y generadas
-            estadísticamente para resolver el arranque en frío, que nunca se presentan como opiniones reales de
-            personas) están en la{" "}
+            El detalle completo del cálculo y los umbrales de cada nivel de desglose están en la{" "}
             <Link href="/metodologia" className="text-primary-light font-semibold hover:underline">
               página de metodología
             </Link>

@@ -64,7 +64,7 @@ export default function AboutPage() {
             <div className="bg-white/5 p-5 rounded-xl border border-white/5 space-y-2">
               <h3 className="font-bold text-white text-base">Transparencia Algorítmica</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Explicamos abiertamente de dónde procede cada dato, diferenciando con honestidad las valoraciones reales verificadas de las estimaciones estadísticas de arranque.
+                Explicamos abiertamente de dónde procede cada dato. Todas las notas salen de valoraciones de personas reales verificadas: donde todavía no hay datos, mostramos cuántos faltan en lugar de inventarlos.
               </p>
             </div>
           </div>

@@ -20,6 +20,8 @@ describe("lib/slug", () => {
       slug: "parasitos-2019",
     });
     expect(parseMovieParam("invalido")).toEqual({ tmdbId: null });
+    expect(parseMovieParam("07bb15f0-0000-4000-8000-000000000000")).toEqual({ tmdbId: null });
+    expect(parseMovieParam("12abc")).toEqual({ tmdbId: null });
   });
 
   it("buildCanonicalMoviePath construye la URL canónica formateada", () => {

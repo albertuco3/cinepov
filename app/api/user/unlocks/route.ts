@@ -2,14 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  buildDemographicsPayload,
-  GENDER_LABELS,
-  AGE_RANGE_LABELS,
-  ageKeyFromBirthYear,
-  isGenderKey,
-  type RatingRow,
-} from "@/lib/demographics";
+import { GENDER_LABELS, AGE_RANGE_LABELS, ageKeyFromBirthYear, isGenderKey } from "@/lib/demographics";
+import { getManyMovieDemographics } from "@/lib/movie-demographics";
 
 /**
  * Desbloqueos de granularidad en las películas que el usuario ha valorado.
@@ -51,48 +45,21 @@ export async function GET() {
     const movieIds = userRatings.map((r) => r.movieId);
     const userScoreByMovie = new Map(userRatings.map((r) => [r.movieId, r.score]));
 
-    const [ratings, movies] = await Promise.all([
-      db.rating.findMany({
-        where: {
-          movieId: { in: movieIds },
-          OR: [
-            { isArtificial: true },
-            { user: { emailVerified: { not: null } } },
-          ],
-        },
-        select: {
-          movieId: true,
-          score: true,
-          isArtificial: true,
-          user: { select: { gender: true, birthYear: true } },
-        },
-      }),
+    const [payloads, movies] = await Promise.all([
+      getManyMovieDemographics(movieIds),
       db.movie.findMany({
         where: { id: { in: movieIds } },
         select: { id: true, tmdbId: true, title: true, year: true, posterUrl: true },
       }),
     ]);
 
-    const rowsByMovie = new Map<string, RatingRow[]>();
-    for (const r of ratings) {
-      if (!r.user) continue;
-      const list = rowsByMovie.get(r.movieId) ?? [];
-      list.push({
-        score: r.score,
-        isArtificial: r.isArtificial,
-        gender: r.user.gender,
-        birthYear: r.user.birthYear,
-      });
-      rowsByMovie.set(r.movieId, list);
-    }
-
     const userAgeKey = ageKeyFromBirthYear(user.birthYear);
     const userGender = isGenderKey(user.gender) ? user.gender : null;
 
     const unlocks = movies
       .map((movie) => {
-        const payload = buildDemographicsPayload(movie.id, rowsByMovie.get(movie.id) ?? []);
-        if (payload.maxLevel === "global") return null;
+        const payload = payloads.get(movie.id);
+        if (!payload || payload.maxLevel === "global") return null;
 
         // El dato con gancho es el del segmento del usuario, si ya existe.
         let segmentAvg: number | null = null;

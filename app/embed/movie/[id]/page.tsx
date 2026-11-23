@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { db } from "@/lib/db";
 import { getOrCreateMovie } from "@/lib/movies";
-import { buildDemographicsPayload, type RatingRow } from "@/lib/demographics";
+import { getMovieDemographics } from "@/lib/movie-demographics";
 import { parseMovieParam } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
@@ -25,42 +24,10 @@ export default async function MovieEmbedPage({ params }: Props) {
     return notFound();
   }
 
-  // Obtener votos verificados
-  const verifiedRatings = await db.rating.findMany({
-    where: {
-      movieId: movie.id,
-      isArtificial: false,
-      user: { emailVerified: { not: null } },
-    },
-    select: {
-      score: true,
-      user: {
-        select: {
-          gender: true,
-          birthYear: true,
-        },
-      },
-    },
-  });
+  const payload = await getMovieDemographics(movie.id);
 
-  const ratingRows: RatingRow[] = verifiedRatings
-    .filter((r) => r.user.gender && r.user.birthYear)
-    .map((r) => ({
-      score: r.score,
-      isArtificial: false,
-      gender: r.user.gender!,
-      birthYear: r.user.birthYear!,
-    }));
-
-  const payload = buildDemographicsPayload(movie.id, ratingRows);
-
-  const realCount = verifiedRatings.length;
-  const realAvg =
-    realCount > 0
-      ? parseFloat(
-          (verifiedRatings.reduce((sum, r) => sum + r.score, 0) / realCount).toFixed(1)
-        )
-      : null;
+  const realCount = payload.counts.real;
+  const realAvg = payload.real.global.avg;
 
   const femaleAvg = payload.real.byGender.female.avg;
   const maleAvg = payload.real.byGender.male.avg;

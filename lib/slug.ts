@@ -25,12 +25,9 @@ export function slugify(text: string): string {
 export function parseMovieParam(param: string): { tmdbId: number | null; slug?: string } {
   if (!param) return { tmdbId: null };
 
+  // Sin reserva con parseInt: "07bb15f0-..." (un UUID) no debe leerse como la película 7.
   const match = param.match(/^(\d+)(?:-(.*))?$/);
-  if (!match) {
-    // Si no empieza por dígitos, intentamos parseInt por si acaso
-    const num = parseInt(param, 10);
-    return isNaN(num) ? { tmdbId: null } : { tmdbId: num };
-  }
+  if (!match) return { tmdbId: null };
 
   const tmdbId = parseInt(match[1], 10);
   const slug = match[2] || undefined;

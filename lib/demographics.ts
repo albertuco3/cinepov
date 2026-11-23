@@ -3,10 +3,10 @@
  *
  * Dos principios rigen este módulo:
  *
- * 1. SEPARACIÓN REAL / ESTIMADO. Las valoraciones sintéticas de arranque
- *    (`isArtificial: true`) nunca se mezclan con las de personas reales en un
- *    mismo número. Se agregan por separado para que la interfaz pueda
- *    etiquetarlas y para que nunca contaminen contenido compartible ni informes.
+ * 1. SOLO DATOS REALES. Aquí solo llegan valoraciones que cuentan (personas
+ *    reales con el email verificado, ver `lib/rating-filters.ts`). No existen
+ *    estimaciones ni votos sintéticos: donde no hay datos, se muestra el
+ *    progreso hacia tenerlos.
  *
  * 2. GRANULARIDAD PROGRESIVA. El desglose no es una feature binaria: es una
  *    escalera de precisión que se desbloquea según los datos REALES lo permiten.
@@ -45,12 +45,22 @@ export const GRANULARITY_THRESHOLDS: Record<
 /** Umbral mínimo de valoraciones para que un segmento individual muestre su nota. */
 export const SEGMENT_MIN_VOTES = 3;
 
-/** Fila mínima necesaria para agregar. Mantener el `select` reducido a estos campos. */
-export interface RatingRow {
-  score: number;
-  isArtificial: boolean;
+/**
+ * Votos agregados de un género y un año de nacimiento: suma de notas y número
+ * de votos. Es exactamente lo que devuelve un `groupBy` de la base de datos,
+ * así que el volumen de datos que viaja no depende del número de valoraciones
+ * (como mucho, géneros × años de nacimiento).
+ */
+export interface RatingCell {
   gender: string;
   birthYear: number;
+  sum: number;
+  count: number;
+}
+
+/** Una valoración individual como celda de un solo voto. */
+export function ratingCell(score: number, gender: string, birthYear: number): RatingCell {
+  return { gender, birthYear, sum: score, count: 1 };
 }
 
 export interface Segment {
@@ -78,18 +88,12 @@ export interface LevelProgress {
 
 export interface DemographicsPayload {
   movieId: string;
-  counts: { real: number; estimated: number; total: number };
-  /** Máximo nivel desbloqueado con datos reales. La UI abre por defecto en este nivel. */
+  counts: { real: number };
+  /** Máximo nivel desbloqueado. La UI abre por defecto en este nivel. */
   maxLevel: GranularityLevel;
   progress: Record<Exclude<GranularityLevel, "global">, LevelProgress>;
-  /** Agregados construidos SOLO con valoraciones de personas reales. */
+  /** Agregados de valoraciones de personas reales verificadas. */
   real: AggregatedBreakdown;
-  /**
-   * Agregados construidos SOLO con valoraciones sintéticas de arranque.
-   * Nunca deben presentarse como opiniones de usuarios ni usarse en contenido
-   * compartible, rankings públicos ni informes comerciales.
-   */
-  estimated: AggregatedBreakdown | null;
   thresholds: typeof GRANULARITY_THRESHOLDS;
   segmentMinVotes: number;
 }
@@ -114,14 +118,35 @@ export const GENDER_LABELS: Record<GenderKey, string> = {
   non_binary: "No binarios",
 };
 
+/** Edades (inclusivas) de un tramo. `max: null` significa sin tope. */
+export interface AgeRange {
+  min: number;
+  max: number | null;
+}
+
+/** Única definición de los tramos de edad. Los filtros de base de datos se derivan de aquí. */
+export const AGE_RANGES: Record<AgeKey, AgeRange> = {
+  "18_24": { min: 18, max: 24 },
+  "25_34": { min: 25, max: 34 },
+  "35_44": { min: 35, max: 44 },
+  "45_54": { min: 45, max: 54 },
+  "55_plus": { min: 55, max: null },
+};
+
+/** Tramos amplios: cada uno agrupa tramos completos de `AGE_RANGES`. */
+export const AGE_BROAD_RANGES: Record<AgeBroadKey, AgeRange> = {
+  young: { min: 18, max: 34 },
+  adult: { min: 35, max: 54 },
+  senior: { min: 55, max: null },
+};
+
 /** Convierte un año de nacimiento en su tramo de edad, o `null` si queda fuera. */
 export function ageKeyFromBirthYear(birthYear: number, currentYear = new Date().getFullYear()): AgeKey | null {
   const age = currentYear - birthYear;
-  if (age >= 18 && age <= 24) return "18_24";
-  if (age >= 25 && age <= 34) return "25_34";
-  if (age >= 35 && age <= 44) return "35_44";
-  if (age >= 45 && age <= 54) return "45_54";
-  if (age >= 55) return "55_plus";
+  for (const key of AGE_KEYS) {
+    const { min, max } = AGE_RANGES[key];
+    if (age >= min && (max === null || age <= max)) return key;
+  }
   return null;
 }
 
@@ -135,16 +160,34 @@ export function isGenderKey(gender: string): gender is GenderKey {
   return (GENDER_KEYS as readonly string[]).includes(gender);
 }
 
+export function isAgeKey(value: string): value is AgeKey {
+  return (AGE_KEYS as readonly string[]).includes(value);
+}
+
+export function isAgeBroadKey(value: string): value is AgeBroadKey {
+  return (AGE_BROAD_KEYS as readonly string[]).includes(value);
+}
+
 function emptySegment(): Segment {
   return { avg: null, count: 0, missing: SEGMENT_MIN_VOTES };
 }
 
-function buildSegment(scores: number[], minVotes = SEGMENT_MIN_VOTES): Segment {
-  const count = scores.length;
+interface Accumulator {
+  sum: number;
+  count: number;
+}
+
+const newAccumulator = (): Accumulator => ({ sum: 0, count: 0 });
+
+function addTo(acc: Accumulator, cell: RatingCell) {
+  acc.sum += cell.sum;
+  acc.count += cell.count;
+}
+
+function buildSegment({ sum, count }: Accumulator, minVotes = SEGMENT_MIN_VOTES): Segment {
   if (count < minVotes) {
     return { avg: null, count, missing: minVotes - count };
   }
-  const sum = scores.reduce((acc, s) => acc + s, 0);
   return {
     avg: Math.round((sum / count) * 10) / 10,
     count,
@@ -153,58 +196,56 @@ function buildSegment(scores: number[], minVotes = SEGMENT_MIN_VOTES): Segment {
 }
 
 /**
- * Agrega un conjunto de valoraciones en todos los cortes demográficos.
+ * Agrega un conjunto de celdas en todos los cortes demográficos.
  *
  * Función pura: no toca la base de datos, para poder probarla de forma aislada.
- * Las filas que llegan aquí deben ser homogéneas (todas reales o todas
- * sintéticas); mezclarlas rompería el principio de separación del módulo.
  */
-export function aggregateBreakdown(rows: RatingRow[], currentYear = new Date().getFullYear()): AggregatedBreakdown {
-  const globalScores: number[] = [];
-  const genderScores = {} as Record<GenderKey, number[]>;
-  const ageBroadScores = {} as Record<AgeBroadKey, number[]>;
-  const ageScores = {} as Record<AgeKey, number[]>;
-  const crossScores = {} as Record<GenderKey, Record<AgeKey, number[]>>;
+export function aggregateBreakdown(cells: RatingCell[], currentYear = new Date().getFullYear()): AggregatedBreakdown {
+  const globalAcc = newAccumulator();
+  const genderAcc = {} as Record<GenderKey, Accumulator>;
+  const ageBroadAcc = {} as Record<AgeBroadKey, Accumulator>;
+  const ageAcc = {} as Record<AgeKey, Accumulator>;
+  const crossAcc = {} as Record<GenderKey, Record<AgeKey, Accumulator>>;
 
   for (const g of GENDER_KEYS) {
-    genderScores[g] = [];
-    crossScores[g] = {} as Record<AgeKey, number[]>;
-    for (const a of AGE_KEYS) crossScores[g][a] = [];
+    genderAcc[g] = newAccumulator();
+    crossAcc[g] = {} as Record<AgeKey, Accumulator>;
+    for (const a of AGE_KEYS) crossAcc[g][a] = newAccumulator();
   }
-  for (const b of AGE_BROAD_KEYS) ageBroadScores[b] = [];
-  for (const a of AGE_KEYS) ageScores[a] = [];
+  for (const b of AGE_BROAD_KEYS) ageBroadAcc[b] = newAccumulator();
+  for (const a of AGE_KEYS) ageAcc[a] = newAccumulator();
 
-  for (const row of rows) {
-    globalScores.push(row.score);
+  for (const cell of cells) {
+    addTo(globalAcc, cell);
 
-    const gender = isGenderKey(row.gender) ? row.gender : null;
-    if (gender) genderScores[gender].push(row.score);
+    const gender = isGenderKey(cell.gender) ? cell.gender : null;
+    if (gender) addTo(genderAcc[gender], cell);
 
-    const ageKey = ageKeyFromBirthYear(row.birthYear, currentYear);
+    const ageKey = ageKeyFromBirthYear(cell.birthYear, currentYear);
     if (ageKey) {
-      ageScores[ageKey].push(row.score);
-      ageBroadScores[ageBroadFromAgeKey(ageKey)].push(row.score);
-      if (gender) crossScores[gender][ageKey].push(row.score);
+      addTo(ageAcc[ageKey], cell);
+      addTo(ageBroadAcc[ageBroadFromAgeKey(ageKey)], cell);
+      if (gender) addTo(crossAcc[gender][ageKey], cell);
     }
   }
 
   const byGender = {} as Record<GenderKey, Segment>;
   const cross = {} as Record<GenderKey, Record<AgeKey, Segment>>;
   for (const g of GENDER_KEYS) {
-    byGender[g] = buildSegment(genderScores[g]);
+    byGender[g] = buildSegment(genderAcc[g]);
     cross[g] = {} as Record<AgeKey, Segment>;
-    for (const a of AGE_KEYS) cross[g][a] = buildSegment(crossScores[g][a]);
+    for (const a of AGE_KEYS) cross[g][a] = buildSegment(crossAcc[g][a]);
   }
 
   const byAgeBroad = {} as Record<AgeBroadKey, Segment>;
-  for (const b of AGE_BROAD_KEYS) byAgeBroad[b] = buildSegment(ageBroadScores[b]);
+  for (const b of AGE_BROAD_KEYS) byAgeBroad[b] = buildSegment(ageBroadAcc[b]);
 
   const byAgeRange = {} as Record<AgeKey, Segment>;
-  for (const a of AGE_KEYS) byAgeRange[a] = buildSegment(ageScores[a]);
+  for (const a of AGE_KEYS) byAgeRange[a] = buildSegment(ageAcc[a]);
 
   return {
     // La nota global se muestra con un solo voto: no revela nada de nadie.
-    global: buildSegment(globalScores, 1),
+    global: buildSegment(globalAcc, 1),
     byGender,
     byAgeBroad,
     byAgeRange,
@@ -294,40 +335,30 @@ export function maxUnlockedLevel(
   return "global";
 }
 
-/** Construye la respuesta completa del endpoint de demografía a partir de las filas crudas. */
+/** Construye la respuesta completa del endpoint de demografía a partir de las celdas agregadas. */
 export function buildDemographicsPayload(
   movieId: string,
-  rows: RatingRow[],
+  cells: RatingCell[],
   currentYear = new Date().getFullYear()
 ): DemographicsPayload {
-  const realRows = rows.filter((r) => !r.isArtificial);
-  const estimatedRows = rows.filter((r) => r.isArtificial);
-
-  const real = aggregateBreakdown(realRows, currentYear);
-  const estimated = estimatedRows.length > 0 ? aggregateBreakdown(estimatedRows, currentYear) : null;
+  const real = aggregateBreakdown(cells, currentYear);
   const progress = computeProgress(real);
 
   return {
     movieId,
-    counts: {
-      real: realRows.length,
-      estimated: estimatedRows.length,
-      total: rows.length,
-    },
+    counts: { real: real.global.count },
     maxLevel: maxUnlockedLevel(progress),
     progress,
     real,
-    estimated,
     thresholds: GRANULARITY_THRESHOLDS,
     segmentMinVotes: SEGMENT_MIN_VOTES,
   };
 }
 
 /**
- * Indica si una película tiene datos reales suficientes para aparecer en
- * contenido compartible o comercial (páginas virales, imágenes OG, informes).
- *
- * Regla vinculante de la sección 6.4 del plan: nunca se viraliza una estimación.
+ * Indica si una película tiene datos suficientes para aparecer en contenido
+ * compartible o comercial (páginas virales, imágenes OG, informes): al menos
+ * una comparación desbloqueada, para no viralizar ruido.
  */
 export function isShareable(payload: DemographicsPayload): boolean {
   return payload.progress.gender.unlocked || payload.progress.age_broad.unlocked;

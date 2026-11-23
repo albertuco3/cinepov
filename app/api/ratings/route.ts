@@ -7,8 +7,10 @@ import { sanitizeAndTruncate } from "@/lib/sanitize";
 import { checkContentModeration } from "@/lib/moderation";
 import { checkReviewBombingAnomaly } from "@/lib/anti-abuse";
 import { ratingSchema, getFirstZodError } from "@/lib/schemas";
+import { countedRatingWhere } from "@/lib/rating-filters";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
-// POST: Crear o actualizar una valoración de película (y aplicar reemplazo 1-a-1 de bots)
+// POST: Crear o actualizar una valoración de película
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -37,7 +39,10 @@ export async function POST(request: Request) {
     }
 
     const { movieId, score: parsedScore } = parseResult.data;
-    const { watchedAt, reviewText } = body;
+    const { watchedAt } = body;
+    // Las reseñas escritas solo se aceptan con las funciones sociales activas:
+    // sin moderación activa, no se guarda texto libre que nadie revisa.
+    const reviewText: unknown = SOCIAL_ENABLED ? body.reviewText : undefined;
 
     // Fecha de visionado opcional. Convierte la valoración en un diario, que es
     // el hábito recurrente que sostiene la retención.
@@ -95,63 +100,24 @@ export async function POST(request: Request) {
       console.warn(`[ANTIABUSO / REVIEW BOMBING] Pico detectado en película ${movie.title}: ${anomalyCheck.details}`);
     }
 
-    // Comprobar si el usuario ya ha valorado esta película anteriormente
-    const existingRating = await db.rating.findUnique({
-      where: {
-        userId_movieId: {
-          userId,
-          movieId,
-        },
+    // Upsert: dos envíos seguidos del mismo voto no deben chocar con el índice
+    // único (usuario, película).
+    const rating = await db.rating.upsert({
+      where: { userId_movieId: { userId, movieId } },
+      update: {
+        score: parsedScore,
+        // Solo se sobrescribe la fecha si el cliente envía una nueva.
+        ...(parsedWatchedAt ? { watchedAt: parsedWatchedAt } : {}),
+        ...(typeof reviewText !== "undefined" ? { reviewText: sanitizedReview } : {}),
+      },
+      create: {
+        score: parsedScore,
+        userId,
+        movieId,
+        watchedAt: parsedWatchedAt,
+        reviewText: sanitizedReview,
       },
     });
-
-    let rating;
-
-    if (existingRating) {
-      // 1. Si ya existe, actualizamos la nota de la valoración real
-      rating = await db.rating.update({
-        where: { id: existingRating.id },
-        data: {
-          score: parsedScore,
-          // Solo se sobrescribe la fecha si el cliente envía una nueva.
-          ...(parsedWatchedAt ? { watchedAt: parsedWatchedAt } : {}),
-          ...(typeof reviewText !== "undefined" ? { reviewText: sanitizedReview } : {}),
-        },
-      });
-      console.log(`[Valoración] Actualizada nota de usuario ${session.user.email} para película ${movie.title} a ${parsedScore}`);
-    } else {
-      // 2. Si no existe, es una nueva valoración real.
-      
-      // Aplicar algoritmo de reemplazo 1-a-1:
-      // Buscamos si existe alguna valoración artificial (bot) para esta película
-      const artificialRating = await db.rating.findFirst({
-        where: {
-          movieId,
-          isArtificial: true,
-        },
-      });
-
-      if (artificialRating) {
-        // Borramos un voto de bot para equilibrar la masa de votos
-        await db.rating.delete({
-          where: { id: artificialRating.id },
-        });
-        console.log(`[Decaimiento] Borrado 1 voto artificial de bot para la película ${movie.title} por inserción de voto real.`);
-      }
-
-      // Creamos la valoración real del usuario
-      rating = await db.rating.create({
-        data: {
-          score: parsedScore,
-          userId,
-          movieId,
-          isArtificial: false,
-          watchedAt: parsedWatchedAt,
-          reviewText: sanitizedReview,
-        },
-      });
-      console.log(`[Valoración] Creado nuevo voto real de usuario ${session.user.email} para película ${movie.title} con nota ${parsedScore}`);
-    }
 
     // Auto-limpieza de Watchlist (Fase 5.2.1):
     // Si la película estaba en la watchlist, se retira automáticamente porque ya ha sido vista.
@@ -159,10 +125,9 @@ export async function POST(request: Request) {
       where: { userId, movieId },
     });
 
-    // 3. Recalcular la nota media de valoraciones REALES para retornar al cliente.
-    // Las estimaciones de arranque nunca entran en la nota que se presenta.
+    // Nota actualizada con el mismo criterio que la ficha: solo votos que cuentan.
     const realAgg = await db.rating.aggregate({
-      where: { movieId, isArtificial: false },
+      where: { ...countedRatingWhere(), movieId },
       _avg: { score: true },
       _count: { score: true },
     });
@@ -229,11 +194,8 @@ export async function DELETE(request: Request) {
       where: { id: targetRating.id },
     });
 
-    console.log(`[Valoración] Eliminada valoración del usuario ${session.user.email} para película ID ${movieId}`);
-
-    // Recalcular estadísticas actualizadas sobre valoraciones reales
     const realAgg = await db.rating.aggregate({
-      where: { movieId, isArtificial: false },
+      where: { ...countedRatingWhere(), movieId },
       _avg: { score: true },
       _count: { score: true },
     });

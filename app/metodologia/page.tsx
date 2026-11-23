@@ -1,26 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { COUNTED_USER_WHERE, countedRatingWhere } from "@/lib/rating-filters";
 import { GRANULARITY_THRESHOLDS, SEGMENT_MIN_VOTES } from "@/lib/demographics";
 
 export const metadata: Metadata = {
   title: "Metodología · CinePOV",
   description:
-    "Cómo calcula CinePOV las valoraciones por segmento demográfico, qué son las estimaciones de arranque y cómo distinguimos los datos reales de las proyecciones estadísticas.",
+    "Cómo calcula CinePOV las valoraciones por segmento demográfico, qué votos cuentan y qué mostramos cuando todavía no hay datos suficientes.",
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function MetodologiaPage() {
-  const [realCount, estimatedCount, userCount, movieCount] = await Promise.all([
-    db.rating.count({ where: { isArtificial: false } }),
-    db.rating.count({ where: { isArtificial: true } }),
-    db.user.count({ where: { email: { not: { startsWith: "bot." } } } }),
+  const [realCount, userCount, movieCount] = await Promise.all([
+    db.rating.count({ where: countedRatingWhere() }),
+    db.user.count({ where: { ...COUNTED_USER_WHERE, isAnonymized: false } }),
     db.movie.count(),
   ]);
-
-  const total = realCount + estimatedCount;
-  const realPct = total > 0 ? Math.round((realCount / total) * 100) : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-12">
@@ -42,26 +39,15 @@ export default async function MetodologiaPage() {
       {/* Estado actual del dataset, en vivo */}
       <section className="glass-panel rounded-3xl border border-white/5 p-6 sm:p-8 space-y-5">
         <h2 className="text-lg font-bold text-white">Estado actual de la base de datos</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Stat label="Valoraciones reales" value={realCount.toLocaleString("es-ES")} accent="text-emerald-400" />
-          <Stat label="Estimaciones de arranque" value={estimatedCount.toLocaleString("es-ES")} accent="text-amber-400" />
-          <Stat label="Usuarios registrados" value={userCount.toLocaleString("es-ES")} accent="text-white" />
+        <div className="grid grid-cols-3 gap-4">
+          <Stat label="Valoraciones que cuentan" value={realCount.toLocaleString("es-ES")} accent="text-emerald-400" />
+          <Stat label="Personas verificadas" value={userCount.toLocaleString("es-ES")} accent="text-white" />
           <Stat label="Películas en catálogo" value={movieCount.toLocaleString("es-ES")} accent="text-white" />
         </div>
-        <div className="space-y-2">
-          <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden flex">
-            <div className="h-full bg-emerald-500/70" style={{ width: `${realPct}%` }} />
-            <div
-              className="h-full bg-amber-500/30 border-l border-dashed border-amber-500/50"
-              style={{ width: `${100 - realPct}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            El <span className="text-emerald-400 font-bold">{realPct}%</span> de las valoraciones de la
-            plataforma son de personas reales. Esta cifra se calcula en vivo cada vez que cargas esta página, y
-            nuestro objetivo declarado es que llegue al 100%.
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Estas cifras se calculan en vivo cada vez que cargas esta página. Todas las valoraciones son de
+          personas reales con el email verificado: no hay votos simulados ni estimaciones.
+        </p>
       </section>
 
       {/* Cómo se calcula */}
@@ -93,6 +79,10 @@ export default async function MetodologiaPage() {
             La media de tres personas no es información: es anécdota. Por eso un segmento solo muestra su nota
             cuando alcanza un mínimo de <span className="text-white font-bold">{SEGMENT_MIN_VOTES} valoraciones
             reales</span>. Por debajo de ese umbral verás cuántas faltan, no un número inventado.
+          </p>
+          <p>
+            Solo cuentan las valoraciones de cuentas con el email verificado. Es la barrera básica contra quien
+            crea cuentas en masa para inflar o hundir la nota de un grupo concreto.
           </p>
           <p>
             Ese umbral cumple una segunda función: la privacidad. Si mostráramos la nota de un segmento con una
@@ -154,54 +144,26 @@ export default async function MetodologiaPage() {
         </p>
       </section>
 
-      {/* La parte incómoda */}
+      {/* Sin datos inventados */}
       <section className="space-y-4">
-        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-6 sm:p-8 space-y-4">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            3. Las estimaciones de arranque
-          </h2>
-          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-            <p className="text-white font-semibold">
-              Esta es la parte que preferimos contarte nosotros antes de que la descubras tú.
-            </p>
-            <p>
-              Una plataforma de valoraciones colaborativas tiene un problema de origen conocido como
-              &ldquo;arranque en frío&rdquo;: no es útil hasta que mucha gente ha votado, y cuesta atraer gente
-              cuando todavía no es útil. Para que las fichas no estuvieran completamente vacías el primer día,
-              generamos un conjunto de valoraciones simuladas mediante un modelo estadístico.
-            </p>
-            <p>
-              Son proyecciones calculadas a partir de la nota global de la película y de patrones demográficos
-              generales. <span className="text-white font-bold">No son opiniones de personas.</span> Nadie las ha
-              escrito, nadie ha visto esas películas, y no representan a ningún usuario real.
-            </p>
-            <p className="text-white font-semibold pt-1">Estas son las reglas que nos autoimponemos:</p>
-            <ul className="space-y-2.5 pl-1">
-              {[
-                "Nunca se suman a las valoraciones reales en un mismo número. La nota de CinePOV que ves en una ficha se calcula exclusivamente con votos de personas.",
-                "Siempre están etiquetadas y visualmente diferenciadas, con borde discontinuo y color propio. Están ocultas por defecto y tienes que pedir verlas.",
-                "Nunca desbloquean un nivel de detalle. Los umbrales de la tabla anterior cuentan solo valoraciones reales.",
-                "Nunca aparecen en rankings, en contenido compartible ni en informes. Solo se viraliza y se publica lo que es real.",
-                "Desaparecen a medida que llegan datos reales: cada valoración de una persona elimina una estimación de esa película.",
-                "Publicamos el porcentaje exacto que representan, arriba en esta misma página, actualizado en vivo.",
-              ].map((rule, i) => (
-                <li key={i} className="flex gap-3 text-sm">
-                  <span className="text-amber-400 font-black flex-shrink-0">{i + 1}.</span>
-                  <span>{rule}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <h2 className="text-xl font-bold text-white">3. Qué mostramos cuando todavía no hay datos</h2>
         <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-          <h3 className="text-base font-bold text-white">Por qué no usamos inteligencia artificial para esto</h3>
           <p>
-            Nos lo hemos planteado y lo hemos descartado por una razón de fondo: un modelo de lenguaje no sabe qué
-            opina una mujer de 22 años sobre una película, sabe qué se dice en internet sobre lo que opinan las
-            mujeres de 22 años. Es decir, devuelve el estereotipo.
+            Una plataforma de valoraciones colaborativas tiene un problema de origen conocido como
+            &ldquo;arranque en frío&rdquo;: no es útil hasta que mucha gente ha votado. Nuestra respuesta es no
+            rellenar los huecos. Donde no hay datos suficientes, te enseñamos cuántos faltan para desbloquear cada
+            nivel, y tu voto es literalmente el que lo acerca.
+          </p>
+          <p>
+            Durante el desarrollo probamos a generar valoraciones simuladas con un modelo estadístico para que las
+            fichas no estuvieran vacías. Las retiramos antes de abrir la plataforma: aunque iban etiquetadas,
+            dibujaban diferencias entre grupos que nadie había expresado. Nunca contaron para ninguna nota ni
+            desbloquearon ningún nivel.
+          </p>
+          <h3 className="text-base font-bold text-white pt-2">Por qué tampoco usamos inteligencia artificial</h3>
+          <p>
+            Un modelo de lenguaje no sabe qué opina una mujer de 22 años sobre una película: sabe qué se dice en
+            internet sobre lo que opinan las mujeres de 22 años. Es decir, devuelve el estereotipo.
           </p>
           <p>
             CinePOV existe precisamente para comprobar con datos si esos estereotipos son ciertos. Rellenar los
@@ -289,7 +251,7 @@ export default async function MetodologiaPage() {
           pie de página. Corregirlo y explicarlo públicamente nos importa más que quedar bien.
         </p>
         <p className="text-xs text-muted-foreground">
-          Última revisión de esta página: julio de 2026.
+          Última revisión de esta página: noviembre de 2026.
         </p>
       </section>
     </div>

@@ -9,25 +9,26 @@ import {
   computeProgress,
   isShareable,
   maxUnlockedLevel,
-  type RatingRow,
+  ratingCell,
+  type RatingCell,
 } from "./demographics";
 
 /**
  * El cálculo demográfico es el corazón del producto y su modo de fallo más
  * peligroso es silencioso: un error de agregación produce números plausibles
- * pero falsos, que nadie detecta hasta que es tarde. Estos tests cubren
- * especialmente la separación entre datos reales y estimados.
+ * pero falsos, que nadie detecta hasta que es tarde.
  */
 
 const YEAR = 2026;
 
-function row(score: number, gender: string, birthYear: number, isArtificial = false): RatingRow {
-  return { score, gender, birthYear, isArtificial };
+/** Una valoración individual, como celda de un voto. */
+function row(score: number, gender: string, birthYear: number): RatingCell {
+  return ratingCell(score, gender, birthYear);
 }
 
-/** Genera `n` filas idénticas, para alcanzar umbrales con comodidad. */
-function rows(n: number, score: number, gender: string, birthYear: number, isArtificial = false): RatingRow[] {
-  return Array.from({ length: n }, () => row(score, gender, birthYear, isArtificial));
+/** Genera `n` valoraciones idénticas, para alcanzar umbrales con comodidad. */
+function rows(n: number, score: number, gender: string, birthYear: number): RatingCell[] {
+  return Array.from({ length: n }, () => row(score, gender, birthYear));
 }
 
 describe("ageKeyFromBirthYear", () => {
@@ -125,48 +126,22 @@ describe("aggregateBreakdown", () => {
   });
 });
 
-describe("separación entre valoraciones reales y estimadas", () => {
-  it("nunca mezcla estimaciones en los agregados reales", () => {
-    const payload = buildDemographicsPayload(
-      "movie-1",
-      [...rows(5, 9, "female", 1995, false), ...rows(50, 3, "female", 1995, true)],
-      YEAR
-    );
-
-    // La nota real no se ve arrastrada por las 50 estimaciones de un 3.
-    expect(payload.real.byGender.female.avg).toBe(9);
-    expect(payload.real.byGender.female.count).toBe(5);
-    expect(payload.estimated?.byGender.female.avg).toBe(3);
-    expect(payload.estimated?.byGender.female.count).toBe(50);
+describe("agregación por celdas", () => {
+  it("da el mismo resultado con celdas agregadas que con votos sueltos", () => {
+    // La base de datos devuelve celdas (suma y recuento por género y año);
+    // los tests construyen votos sueltos. Ambos caminos deben coincidir.
+    const loose = [...rows(4, 9, "female", 1995), ...rows(2, 6, "female", 1995), ...rows(3, 7, "male", 1980)];
+    const grouped: RatingCell[] = [
+      { gender: "female", birthYear: 1995, sum: 4 * 9 + 2 * 6, count: 6 },
+      { gender: "male", birthYear: 1980, sum: 3 * 7, count: 3 },
+    ];
+    expect(aggregateBreakdown(grouped, YEAR)).toEqual(aggregateBreakdown(loose, YEAR));
   });
 
-  it("informa de los recuentos por procedencia", () => {
-    const payload = buildDemographicsPayload(
-      "movie-1",
-      [...rows(4, 8, "male", 1995, false), ...rows(11, 5, "male", 1995, true)],
-      YEAR
-    );
-    expect(payload.counts).toEqual({ real: 4, estimated: 11, total: 15 });
-  });
-
-  it("devuelve `estimated` nulo cuando no hay ninguna estimación", () => {
-    const payload = buildDemographicsPayload("movie-1", rows(3, 7, "male", 1995), YEAR);
-    expect(payload.estimated).toBeNull();
-  });
-
-  it("no permite que las estimaciones desbloqueen un nivel de granularidad", () => {
-    // 500 estimaciones y ni un voto real: nada puede desbloquearse.
-    const payload = buildDemographicsPayload("movie-1", rows(500, 7, "male", 1995, true), YEAR);
-    expect(payload.maxLevel).toBe("global");
-    expect(payload.progress.age_broad.unlocked).toBe(false);
-    expect(payload.progress.gender.unlocked).toBe(false);
-    expect(payload.progress.cross.unlocked).toBe(false);
-    expect(payload.real.global.count).toBe(0);
-  });
-
-  it("no considera compartible una película sostenida solo por estimaciones", () => {
-    const soloEstimado = buildDemographicsPayload("m", rows(300, 8, "male", 1995, true), YEAR);
-    expect(isShareable(soloEstimado)).toBe(false);
+  it("informa del número de valoraciones del payload", () => {
+    const payload = buildDemographicsPayload("movie-1", [{ gender: "male", birthYear: 1995, sum: 32, count: 4 }], YEAR);
+    expect(payload.counts).toEqual({ real: 4 });
+    expect(payload.real.global.avg).toBe(8);
   });
 });
 

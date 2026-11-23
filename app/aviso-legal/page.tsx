@@ -179,8 +179,8 @@ export default function AvisoLegalPage() {
             limitación.
           </p>
           <p>
-            La metodología de cálculo de los datos publicados, incluidos los umbrales mínimos y el uso de
-            estimaciones de arranque, está documentada de forma pública en la{" "}
+            La metodología de cálculo de los datos publicados, incluidos los umbrales mínimos y qué valoraciones
+            cuentan, está documentada de forma pública en la{" "}
             <Link href="/metodologia" className="text-primary-light font-semibold hover:underline">
               página de metodología
             </Link>

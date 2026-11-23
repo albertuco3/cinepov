@@ -1,41 +1,63 @@
 import { db } from "./db";
 import { getMovieWithCredits } from "./tmdb";
+import { parseMovieParam } from "./slug";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resuelve el identificador que llega a una API al id interno de la película.
+ *
+ * Admite el id interno (UUID), el de TMDB ("157336") y el de TMDB con slug
+ * ("157336-interstellar"). El UUID se comprueba primero: uno que empiece por
+ * dígitos ("12391438-…") no debe confundirse con un id de TMDB. No importa
+ * nada de TMDB: si la película no existe en local, devuelve `null`.
+ */
+export async function resolveMovieId(param: string): Promise<string | null> {
+  const clean = param.trim();
+  if (!clean) return null;
+
+  if (UUID_PATTERN.test(clean)) {
+    const movie = await db.movie.findUnique({ where: { id: clean }, select: { id: true } });
+    return movie?.id ?? null;
+  }
+
+  const { tmdbId } = parseMovieParam(clean);
+  if (!tmdbId) return null;
+  const movie = await db.movie.findUnique({ where: { tmdbId }, select: { id: true } });
+  return movie?.id ?? null;
+}
 
 /**
  * Obtiene una película de la base de datos local por su TMDB ID.
  * Si no existe localmente, la consulta a TMDB, la guarda en la base de datos
  * local (creando/conectando los géneros correspondientes) y la devuelve.
  *
- * Las películas nuevas se importan limpias, con cero votos sintéticos,
- * para respetar el principio de granularidad progresiva y transparencia de datos.
+ * Usa `upsert`: si dos peticiones piden a la vez una película nueva (lo normal
+ * en un pico viral), las dos obtienen la película en lugar de que una choque
+ * con el índice único y devuelva un 404.
  */
 export async function getOrCreateMovie(tmdbId: number) {
-  // 1. Buscar en la base de datos local
   const localMovie = await db.movie.findUnique({
     where: { tmdbId },
-    include: {
-      genres: true,
-    },
+    include: { genres: true },
   });
+  if (localMovie) return localMovie;
 
-  if (localMovie) {
-    console.log(`[Cache local] Pelicula encontrada en BD: "${localMovie.title}" (TMDB ID: ${tmdbId})`);
-    return localMovie;
-  }
-
-  // 2. Si no existe, buscar en TMDB
-  console.log(`[API TMDB] Pelicula no encontrada en BD. Consultando a TMDB para ID: ${tmdbId}...`);
   const tmdbMovie = await getMovieWithCredits(tmdbId);
+  if (!tmdbMovie) return null;
 
-  if (!tmdbMovie) {
-    console.log(`[API TMDB] No se pudo encontrar la pelicula con ID ${tmdbId} en TMDB.`);
-    return null;
-  }
+  const genres = {
+    connectOrCreate: tmdbMovie.genres.map((genreName) => ({
+      where: { name: genreName },
+      create: { name: genreName },
+    })),
+  };
 
-  // 3. Guardar en la base de datos local con géneros asociados
   try {
-    const savedMovie = await db.movie.create({
-      data: {
+    return await db.movie.upsert({
+      where: { tmdbId: tmdbMovie.tmdbId },
+      update: {},
+      create: {
         tmdbId: tmdbMovie.tmdbId,
         title: tmdbMovie.title,
         originalTitle: tmdbMovie.originalTitle,
@@ -47,22 +69,17 @@ export async function getOrCreateMovie(tmdbId: number) {
         runtime: tmdbMovie.runtime,
         tmdbRating: tmdbMovie.tmdbRating,
         cast: tmdbMovie.cast,
-        genres: {
-          connectOrCreate: tmdbMovie.genres.map((genreName) => ({
-            where: { name: genreName },
-            create: { name: genreName },
-          })),
-        },
+        genres,
       },
-      include: {
-        genres: true,
-      },
+      include: { genres: true },
     });
-
-    console.log(`[Cache local] Pelicula importada y guardada en BD: "${savedMovie.title}"`);
-    return savedMovie;
   } catch (error) {
-    console.error(`Error al guardar la pelicula TMDB ID ${tmdbId} en la base de datos:`, error);
+    // Incluso con upsert, dos inserciones simultáneas pueden chocar en el
+    // índice único (de la película o de un género). La otra petición ya la ha
+    // creado: basta con releerla.
+    const existing = await db.movie.findUnique({ where: { tmdbId }, include: { genres: true } });
+    if (existing) return existing;
+    console.error(`Error al guardar la película TMDB ${tmdbId}:`, error);
     return null;
   }
 }

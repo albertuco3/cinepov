@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { buildDemographicsPayload, type RatingRow } from "@/lib/demographics";
+import { getManyMovieDemographics, getMostRatedMovieIds } from "@/lib/movie-demographics";
 import { getTopDemographicContrast } from "@/lib/viral";
 
 export const dynamic = "force-dynamic";
+
+const MIN_VOTES = 6;
+const MAX_CANDIDATES = 200;
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,56 +14,22 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type") || "all";
     const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20", 10), 1), 50);
 
-    // 1. Buscar películas que tengan al menos 10 votos reales verificados
-    const activeMovies = await db.movie.findMany({
-      where: {
-        ratings: {
-          some: {
-            isArtificial: false,
-            user: { emailVerified: { not: null } },
-          },
-        },
-      },
-      select: {
-        id: true,
-        tmdbId: true,
-        title: true,
-        year: true,
-        posterUrl: true,
-        ratings: {
-          where: {
-            isArtificial: false,
-            user: { emailVerified: { not: null } },
-          },
-          select: {
-            score: true,
-            user: {
-              select: {
-                gender: true,
-                birthYear: true,
-              },
-            },
-          },
-        },
-      },
-      take: 100,
-    });
+    // 1. Candidatas: las películas con más votos que cuentan (mínimo 6, que es
+    // lo que necesita una brecha para ser calculable).
+    const candidateIds = await getMostRatedMovieIds(MIN_VOTES, MAX_CANDIDATES);
+    const [payloads, movies] = await Promise.all([
+      getManyMovieDemographics(candidateIds),
+      db.movie.findMany({
+        where: { id: { in: candidateIds } },
+        select: { id: true, tmdbId: true, title: true, year: true, posterUrl: true },
+      }),
+    ]);
 
     const results = [];
 
-    for (const movie of activeMovies) {
-      const rows: RatingRow[] = movie.ratings
-        .filter((r) => r.user.gender && r.user.birthYear)
-        .map((r) => ({
-          score: r.score,
-          isArtificial: false,
-          gender: r.user.gender!,
-          birthYear: r.user.birthYear!,
-        }));
-
-      if (rows.length < 6) continue;
-
-      const payload = buildDemographicsPayload(movie.id, rows);
+    for (const movie of movies) {
+      const payload = payloads.get(movie.id);
+      if (!payload) continue;
       const contrast = getTopDemographicContrast(payload);
 
       const female = payload.real.byGender.female;
@@ -90,7 +59,7 @@ export async function GET(request: NextRequest) {
           title: movie.title,
           year: movie.year,
           posterUrl: movie.posterUrl,
-          realCount: rows.length,
+          realCount: payload.counts.real,
           genderGap,
           ageGap,
           polarizationScore,

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { ageKeyFromBirthYear } from "@/lib/demographics";
+import { countedRatingWhere } from "@/lib/rating-filters";
 
 export interface WrappedStats {
   year: number;
@@ -121,32 +121,15 @@ export async function calculateUserWrapped(
   );
   const mostActiveMonth = MONTH_NAMES[topMonthIndex] || "Noviembre";
 
-  // Comparativa de severidad contra su segmento demográfico
-  const ageKey = ageKeyFromBirthYear(user.birthYear, currentYear);
-  const segmentLabel =
-    user.gender === "female"
-      ? `mujeres de ${ageKey} años`
-      : user.gender === "male"
-      ? `hombres de ${ageKey} años`
-      : `espectadores de ${ageKey} años`;
-
-  // Media global de la comunidad en estas mismas películas
+  // Media de la comunidad en estas mismas películas, calculada en la base de
+  // datos y solo con valoraciones que cuentan.
   const movieIds = yearRatings.map((r) => r.movieId);
-  const communityRatings = await db.rating.findMany({
-    where: {
-      movieId: { in: movieIds },
-      isArtificial: false,
-      userId: { not: userId },
-    },
-    select: { score: true },
+  const community = await db.rating.aggregate({
+    where: { ...countedRatingWhere(), movieId: { in: movieIds }, userId: { not: userId } },
+    _avg: { score: true },
   });
 
-  const segmentAvg =
-    communityRatings.length > 0
-      ? parseFloat(
-          (communityRatings.reduce((a, b) => a + b.score, 0) / communityRatings.length).toFixed(1)
-        )
-      : null;
+  const segmentAvg = community._avg.score !== null ? parseFloat(community._avg.score.toFixed(1)) : null;
 
   const diff = segmentAvg !== null ? parseFloat((avgScore - segmentAvg).toFixed(1)) : null;
 

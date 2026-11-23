@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import LandingDemo from "@/components/LandingDemo";
 import SearchBar from "@/components/SearchBar";
 import HomeRecommendationsSection from "@/components/HomeRecommendationsSection";
 import { db } from "@/lib/db";
+import { COUNTED_USER_WHERE, countedRatingWhere } from "@/lib/rating-filters";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata = {
   title: "CinePOV — La Película no tiene un 7.2. Tiene un 8.6 para ti.",
@@ -13,17 +13,14 @@ export const metadata = {
 };
 
 export default async function Home() {
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
   const dict = getDictionary(locale);
 
   // Cifras reales de la base de datos. La landing no anuncia números que no
-  // pueda respaldar: los usuarios sintéticos de arranque no se cuentan como
-  // usuarios, y las estimaciones se declaran como tales.
-  const [realUsers, realRatings, estimatedRatings, movieCount] = await Promise.all([
-    db.user.count({ where: { email: { not: { startsWith: "bot." } }, isAnonymized: false } }),
-    db.rating.count({ where: { isArtificial: false } }),
-    db.rating.count({ where: { isArtificial: true } }),
+  // pueda respaldar: solo personas verificadas y valoraciones que cuentan.
+  const [realUsers, realRatings, movieCount] = await Promise.all([
+    db.user.count({ where: { ...COUNTED_USER_WHERE, isAnonymized: false } }),
+    db.rating.count({ where: countedRatingWhere() }),
     db.movie.count(),
   ]);
 
@@ -206,22 +203,6 @@ export default async function Home() {
               </div>
             </div>
 
-            {estimatedRatings > 0 && (
-              <div className="max-w-xl mx-auto rounded-2xl border border-dashed border-amber-500/25 bg-amber-500/5 p-4 space-y-1.5">
-                <p className="text-xs font-bold text-amber-300/90">
-                  {locale === "en"
-                    ? `Plus ${estimatedRatings.toLocaleString("en-US")} bootstrap projections`
-                    : `Y ${estimatedRatings.toLocaleString("es-ES")} estimaciones de arranque`}
-                </p>
-                <p className="text-[11px] text-amber-100/60 leading-relaxed">
-                  {dict.landing.seedEstimationsDesc}{" "}
-                  <Link href="/metodologia" className="underline decoration-dotted hover:text-amber-200">
-                    {dict.nav.methodology}
-                  </Link>
-                  .
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </section>

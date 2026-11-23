@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { countedRatingWhere } from "@/lib/rating-filters";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+    const locale = await getRequestLocale();
 
     // 1. Obtener la sesión del usuario
     const session = await getServerSession(authOptions);
@@ -89,9 +88,8 @@ export async function GET() {
     // para recomendar: si no hay datos de personas, se cae al fallback de TMDB.
     const ratings = await db.rating.findMany({
       where: {
+        ...countedRatingWhere(),
         movieId: { in: unratedMovieIds },
-        isArtificial: false,
-        user: { emailVerified: { not: null } },
       },
       select: {
         movieId: true,

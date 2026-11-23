@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useJson } from "@/lib/hooks/use-json";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -12,7 +12,8 @@ interface RecommendedMovie {
   posterUrl: string;
   year: number;
   cohortRating: number;
-  affinityScore: number;
+  affinityScore: number | null;
+  source: "segment" | "tmdb";
   taglineReason: string;
 }
 
@@ -22,24 +23,10 @@ interface RecommendationsData {
 }
 
 export default function HomeRecommendationsSection() {
-  const { data: session, status } = useSession();
-  const [data, setData] = useState<RecommendationsData | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      setLoading(true);
-      fetch("/api/recommendations?limit=4")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((json) => {
-          if (json && json.recommendations?.length > 0) {
-            setData(json);
-          }
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    }
-  }, [status]);
+  const { status } = useSession();
+  const { data } = useJson<RecommendationsData>(
+    status === "authenticated" ? "/api/recommendations?limit=4" : null
+  );
 
   if (status !== "authenticated" || !data || data.recommendations.length === 0) {
     return null;
@@ -73,7 +60,7 @@ export default function HomeRecommendationsSection() {
           {data.recommendations.map((movie) => (
             <Link
               key={movie.id}
-              href={`/movie/${movie.id}`}
+              href={`/movie/${movie.tmdbId}`}
               className="group glass-panel rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all duration-300 flex flex-col"
             >
               <div className="relative aspect-[2/3] w-full bg-white/5 overflow-hidden">
@@ -90,10 +77,17 @@ export default function HomeRecommendationsSection() {
                     Sin póster
                   </div>
                 )}
-                <div className="absolute top-2 left-2 bg-[#0a0a0f]/90 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-bold text-white border border-white/10">
-                  {movie.affinityScore}% afín
-                </div>
-                <div className="absolute bottom-2 right-2 bg-primary text-white px-1.5 py-0.5 rounded text-xs font-black">
+                {movie.affinityScore !== null && (
+                  <div className="absolute top-2 left-2 bg-[#0a0a0f]/90 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-bold text-white border border-white/10">
+                    {movie.affinityScore}% afín
+                  </div>
+                )}
+                <div
+                  className={`absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-xs font-black text-white ${
+                    movie.source === "tmdb" ? "bg-cyan-600/90" : "bg-primary"
+                  }`}
+                >
+                  {movie.source === "tmdb" && <span className="mr-1 text-[9px] font-bold opacity-80">TMDB</span>}
                   {movie.cohortRating.toFixed(1)}
                 </div>
               </div>

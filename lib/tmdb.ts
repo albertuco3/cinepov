@@ -22,6 +22,19 @@ export interface TMDBMovieResult {
   popularity: number;
 }
 
+/** Campos de `/movie/{id}` que usamos. */
+interface TMDBMovieDetails extends TMDBMovieResult {
+  runtime: number | null;
+  vote_count: number;
+  genres?: { id: number; name: string }[];
+}
+
+/** Campos de `/movie/{id}/credits` que usamos. */
+interface TMDBCredits {
+  cast?: { name: string }[];
+  crew: { job: string; name: string }[];
+}
+
 export interface FormattedMovie {
   tmdbId: number;
   title: string;
@@ -96,16 +109,16 @@ export async function getMovieWithCredits(tmdbId: number, language: string = "es
   try {
     // 1. Obtener detalles y créditos de forma concurrente
     const [details, credits] = await Promise.all([
-      fetchFromTMDB<any>(`/movie/${tmdbId}`, { language }),
-      fetchFromTMDB<any>(`/movie/${tmdbId}/credits`, { language }),
+      fetchFromTMDB<TMDBMovieDetails>(`/movie/${tmdbId}`, { language }),
+      fetchFromTMDB<TMDBCredits>(`/movie/${tmdbId}/credits`, { language }),
     ]);
 
     // 2. Extraer el director
-    const directorInfo = credits.crew.find((member: any) => member.job === "Director");
+    const directorInfo = credits.crew.find((member) => member.job === "Director");
     const director = directorInfo ? directorInfo.name : "Director Desconocido";
 
     // 3. Extraer nombres de géneros
-    const genres = details.genres ? details.genres.map((g: any) => g.name) : [];
+    const genres = details.genres ? details.genres.map((g) => g.name) : [];
 
     // 4. Formatear el año
     const year = details.release_date ? new Date(details.release_date).getFullYear() : 0;
@@ -114,7 +127,7 @@ export async function getMovieWithCredits(tmdbId: number, language: string = "es
     const cast = credits.cast
       ? credits.cast
           .slice(0, 6)
-          .map((actor: any) => actor.name)
+          .map((actor) => actor.name)
           .join(", ")
       : "";
 
@@ -244,10 +257,10 @@ interface SimilarMovie {
  */
 export async function getSimilarMovies(tmdbId: number, language: string = "es-ES"): Promise<SimilarMovie[]> {
   try {
-    const data = await fetchFromTMDB<{ results: any[] }>(`/movie/${tmdbId}/similar`, { language });
+    const data = await fetchFromTMDB<{ results: TMDBMovieResult[] }>(`/movie/${tmdbId}/similar`, { language });
     if (!data.results) return [];
 
-    return data.results.slice(0, 6).map((movie: any) => {
+    return data.results.slice(0, 6).map((movie) => {
       const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 0;
       const posterUrl = movie.poster_path
         ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
