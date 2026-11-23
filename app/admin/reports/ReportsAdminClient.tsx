@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -67,8 +68,8 @@ export default function ReportsAdminClient({ initialReports }: Props) {
           prev.map((r) => (r.id === ratingId ? { ...r, isModerated: true } : r))
         );
       }
-    } catch (err: any) {
-      toast.error(err.message || "Error al procesar acción");
+    } catch (err) {
+      toast.error(errorMessage(err) || "Error al procesar acción");
     } finally {
       setProcessingId(null);
     }

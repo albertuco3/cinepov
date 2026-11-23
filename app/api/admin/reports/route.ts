@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +9,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const guard = await requireAdmin();
+    if (!guard.ok) return guard.response;
 
     const reportedRatings = await db.rating.findMany({
       where: {
@@ -76,10 +73,8 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const guard = await requireAdmin();
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
     const { ratingId, action } = body;

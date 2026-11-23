@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth/next";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { getAdminUser } from "@/lib/auth-guards";
 import ReportsAdminClient, { type ReportItem } from "./ReportsAdminClient";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +12,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminReportsPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    redirect("/login");
+  // Solo administradores. A cualquier otra persona se le responde como si la
+  // página no existiera.
+  if (!(await getAdminUser())) {
+    notFound();
   }
 
   const reportedRatings = await db.rating.findMany({
