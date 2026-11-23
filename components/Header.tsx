@@ -11,6 +11,7 @@ import confetti from "canvas-confetti";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n/client";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
 export default function Header() {
   const pathname = usePathname();
@@ -23,7 +24,7 @@ export default function Header() {
     { href: "/rankings", label: dict.nav.rankings },
     { href: "/tonight", label: dict.nav.coupleMode },
     { href: "/recommendations", label: dict.nav.forYou },
-    { href: "/feed", label: dict.nav.feed },
+    ...(SOCIAL_ENABLED ? [{ href: "/feed", label: dict.nav.feed }] : []),
     { href: "/wrapped", label: dict.nav.wrapped },
     { href: "/blog", label: dict.nav.blog },
     ...(status === "authenticated" ? [{ href: "/profile", label: dict.nav.profile }] : []),
@@ -96,7 +97,7 @@ export default function Header() {
 
             {status === "authenticated" ? (
               <div className="flex items-center gap-2.5">
-                <NotificationsDropdown />
+                {SOCIAL_ENABLED && <NotificationsDropdown />}
                 <Link
                   href="/profile"
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:scale-105 interactive-transition cursor-pointer text-[11px] font-black text-primary-light"

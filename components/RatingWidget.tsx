@@ -1,11 +1,13 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n/client";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
 interface RatingWidgetProps {
   movieId: string;
@@ -21,7 +23,7 @@ export default function RatingWidget({
   onRatingUpdated,
 }: RatingWidgetProps) {
   const { dict } = useI18n();
-  const { data: session, status, update } = useSession();
+  const { status, update } = useSession();
   const [currentScore, setCurrentScore] = useState<number | null>(initialScore);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,9 +92,9 @@ export default function RatingWidget({
 
       // Quitar el estado de exito tras 1.5 segundos
       setTimeout(() => setSuccess(false), 1500);
-    } catch (err: any) {
-      setError(err.message || dict.common.error);
-      toast.error(err.message || dict.common.error);
+    } catch (err) {
+      setError(errorMessage(err) || dict.common.error);
+      toast.error(errorMessage(err) || dict.common.error);
     } finally {
       setLoading(false);
     }
@@ -127,9 +129,9 @@ export default function RatingWidget({
       if (onRatingUpdated && data.stats) {
         onRatingUpdated(data.stats.avgRating, data.stats.ratingCount);
       }
-    } catch (err: any) {
-      setError(err.message || dict.common.error);
-      toast.error(err.message || dict.common.error);
+    } catch (err) {
+      setError(errorMessage(err) || dict.common.error);
+      toast.error(errorMessage(err) || dict.common.error);
     } finally {
       setLoading(false);
     }
@@ -222,7 +224,8 @@ export default function RatingWidget({
         )}
       </div>
 
-      {/* Reseña escrita opcional */}
+      {/* Reseña escrita opcional (solo con las funciones sociales activas) */}
+      {SOCIAL_ENABLED && (
       <div className="pt-2 border-t border-white/5 space-y-2">
         {!showReviewInput ? (
           <button
@@ -259,6 +262,7 @@ export default function RatingWidget({
           </div>
         )}
       </div>
+      )}
 
       {success && (
         <p className="text-xs text-emerald-400 text-center font-medium animate-pulse">

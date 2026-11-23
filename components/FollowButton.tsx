@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -48,11 +49,11 @@ export default function FollowButton({
       toast.success(
         data.isFollowing ? "Ahora sigues a este usuario" : "Has dejado de seguir a este usuario"
       );
-    } catch (err: any) {
+    } catch (err) {
       // Revertir optimismo
       setIsFollowing(!nextState);
       setFollowerCount((prev) => (!nextState ? prev + 1 : Math.max(0, prev - 1)));
-      toast.error(err.message || "Error al actualizar seguimiento");
+      toast.error(errorMessage(err) || "Error al actualizar seguimiento");
     } finally {
       setLoading(false);
     }

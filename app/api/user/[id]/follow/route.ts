@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ interface RouteProps {
 }
 
 export async function GET(request: NextRequest, { params }: RouteProps) {
+  if (!SOCIAL_ENABLED) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
   try {
     const { id: targetUserId } = await params;
     const session = await getServerSession(authOptions);
@@ -44,6 +46,7 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
 }
 
 export async function POST(request: NextRequest, { params }: RouteProps) {
+  if (!SOCIAL_ENABLED) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import Link from "next/link";
 import Image from "next/image";
@@ -7,13 +6,14 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { buildCanonicalMoviePath } from "@/lib/slug";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { SOCIAL_ENABLED } from "@/lib/features";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
   const dict = getDictionary(locale);
 
   return {
@@ -23,8 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function FeedPage() {
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  if (!SOCIAL_ENABLED) notFound();
+  const locale = await getRequestLocale();
   const dict = getDictionary(locale);
   const t = dict.feed;
 

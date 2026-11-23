@@ -21,24 +21,27 @@ export default function NotificationsDropdown() {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch("/api/notifications");
-      if (!res.ok) return;
-      const data = await res.json();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch {
-      // Silencioso
-    }
-  };
-
+  // Se cargan al montar, al abrir el desplegable y al volver a la pestaña. Sin
+  // polling: preguntar cada minuto en cada pestaña abierta mantiene despierta la
+  // base de datos para avisos que llegan de tarde en tarde.
   useEffect(() => {
-    fetchNotifications();
-    // Poll cada 60s
-    const timer = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(timer);
-  }, []);
+    const load = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch("/api/notifications");
+        if (!res.ok) return;
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      } catch {
+        // Silencioso: se conserva lo último cargado.
+      }
+    };
+
+    void load();
+    document.addEventListener("visibilitychange", load);
+    return () => document.removeEventListener("visibilitychange", load);
+  }, [open]);
 
   // Cerrar al hacer click fuera
   useEffect(() => {

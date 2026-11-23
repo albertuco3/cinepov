@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sanitizeAndTruncate } from "@/lib/sanitize";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ interface RouteProps {
 const VALID_REASONS = ["offensive", "spam", "spoiler", "other"] as const;
 
 export async function POST(request: NextRequest, { params }: RouteProps) {
+  if (!SOCIAL_ENABLED) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

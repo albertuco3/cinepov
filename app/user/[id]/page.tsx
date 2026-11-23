@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { buildCanonicalMoviePath } from "@/lib/slug";
 import UserShareButton from "./UserShareButton";
 import FollowButton from "@/components/FollowButton";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -139,12 +140,14 @@ export default async function PublicUserProfilePage({ params }: Props) {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <FollowButton
-              targetUserId={user.id}
-              initialIsFollowing={Boolean(isFollowing)}
-              initialFollowerCount={followerCount}
-              currentUserId={currentUserId}
-            />
+            {SOCIAL_ENABLED && (
+              <FollowButton
+                targetUserId={user.id}
+                initialIsFollowing={Boolean(isFollowing)}
+                initialFollowerCount={followerCount}
+                currentUserId={currentUserId}
+              />
+            )}
             <UserShareButton displayName={user.displayName} />
           </div>
         </div>
@@ -261,7 +264,7 @@ export default async function PublicUserProfilePage({ params }: Props) {
                       <p className="text-xs text-muted-foreground">{r.movie.year}</p>
                     </div>
 
-                    {r.reviewText && (
+                    {SOCIAL_ENABLED && r.reviewText && (
                       <p className="text-xs text-white/80 line-clamp-2 italic pt-1 border-t border-white/5">
                         &quot;{r.reviewText}&quot;
                       </p>
