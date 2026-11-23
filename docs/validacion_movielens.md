@@ -41,6 +41,60 @@ Se separa al azar el 10 % de las valoraciones como prueba (semilla fija) y se mi
 
 **Limitaciones asumidas de antemano.** Datos de hace más de 20 años, de usuarios mayoritariamente estadounidenses y de una web de recomendaciones (no una muestra representativa); escala 1–5 más gruesa que la 1–10; tramos de edad que no coinciden exactamente. El resultado orienta, no demuestra.
 
-## 2. Resultados
+## 2. Resultados (23 de noviembre de 2026)
 
-_Pendiente de ejecutar._
+Datos tras excluir menores: 5.818 usuarios y 972.998 valoraciones. Checksum del fichero comprobado contra el MD5 publicado por GroupLens.
+
+### Pregunta 1: brechas
+
+| Corte | Películas elegibles | Con brecha relevante (≥ 1,0 y significativa) | Brecha mediana |
+|---|---|---|---|
+| Género | 1.790 | 38 (**2,1 %**) | 0,28 puntos |
+| Edad (tramo más alto − más bajo) | 1.888 | 285 (**15,1 %**) | 0,57 puntos |
+| Género o edad | 2.014 | 314 (**15,6 %**) | — |
+
+### Pregunta 2: poder predictivo (RMSE sobre 97.309 valoraciones de prueba, escala 1–10)
+
+| Modelo | RMSE | Frente a M1 |
+|---|---|---|
+| M0, media global | 2,2246 | −14,22 % |
+| M1, media de la película | 1,9476 | — |
+| M2, media del segmento | 1,9398 | **+0,40 %** |
+| M3, película + sesgo personal | 1,8073 | **+7,21 %** |
+| M4, segmento + sesgo personal | 1,7997 | +7,59 % |
+
+### Aplicación de los umbrales
+
+| Umbral | Resultado | ¿Se cumple? |
+|---|---|---|
+| ≥ 33 % de películas con brecha relevante | 15,6 % | **No** |
+| M2 mejora a M1 en ≥ 2 % | 0,40 % | **No** |
+| Mejora personal > 2 × mejora del segmento | 7,21 % frente a 0,40 % (unas 18 veces) | **Sí** |
+
+**Decisión según la tabla fijada de antemano: replantear la propuesta de valor antes del lanzamiento público.**
+
+### Análisis posterior (no prerregistrado; solo orienta)
+
+Sensibilidad al umbral de brecha:
+
+| Umbral | Género | Edad |
+|---|---|---|
+| 0,5 puntos | 18,1 % | 42,4 % |
+| 1,0 puntos | 2,1 % | 15,1 % |
+| 1,5 puntos | 0,1 % | 2,4 % |
+
+Las mayores brechas significativas son sobre todo **generacionales** (*Happy Gilmore*: +2,5 entre 18–24 y 45–55; *Fly Away Home*, *Los Goonies*, *Spaceballs*), y las de género son pocas y concentradas (*Newsies*, *Dirty Dancing*, *El bueno, el feo y el malo*).
+
+## 3. Lectura
+
+1. **Como utilidad general, el desglose demográfico no se sostiene en estos datos.** En la mayoría de películas los grupos coinciden en medio punto o menos. Saber tu segmento mejora la predicción de tu nota un 0,4 %; saber cómo puntúas tú, un 7,2 %. El lema "La película no tiene un 7,2. Tiene un 8,6 para ti" promete algo que la demografía no da.
+2. **Como contenido, sí hay material.** En torno al 15 % de las películas tiene una brecha generacional real de un punto o más. Son pocas, pero son las que generan conversación: encaja con la hipótesis B3 del análisis crítico (el contenido como producto).
+3. **La edad pesa unas siete veces más que el género.** Refuerza la decisión de la preocupación B2: edad al frente y género como capa secundaria.
+4. **Lo que sí predice es el gusto propio.** Incluso el modelo personal más simple supera con creces al segmento; el filtrado colaborativo ("gente con tus gustos") debería mejorar todavía más.
+
+**Propuesta para decidir** (la decisión es del equipo, no de este documento):
+- Utilidad: recomendaciones por gustos propios (filtrado colaborativo), alimentadas por los importadores de Letterboxd e IMDb.
+- Contenido: el desglose demográfico como capa de curiosidad, destacando solo las películas con brecha real ("cuando hay brecha, es noticia"), con la edad por delante.
+- Revisar el lema y la landing antes del lanzamiento público.
+
+**Recordatorio de limitaciones:** datos de hacia el año 2000, usuarios mayoritariamente estadounidenses de una web de recomendaciones, escala 1–5. Los datos reales de CinePOV pueden diferir; esta validación conviene repetirla con los datos propios cuando haya volumen.
