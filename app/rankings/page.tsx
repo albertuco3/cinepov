@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import RankingsClient from "@/components/RankingsClient";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
   const dict = getDictionary(locale);
 
   return {

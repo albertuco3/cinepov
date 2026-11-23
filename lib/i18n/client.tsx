@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { Locale, Dictionary, DEFAULT_LOCALE, LOCALE_COOKIE_NAME, SUPPORTED_LOCALES } from "./types";
 import { es } from "./dictionaries/es";
 import { en } from "./dictionaries/en";
@@ -19,12 +19,12 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | null>(null);
 
-function getNestedValue(obj: any, path: string): string | undefined {
+function getNestedValue(obj: unknown, path: string): string | undefined {
   const parts = path.split(".");
-  let current = obj;
+  let current: unknown = obj;
   for (const part of parts) {
     if (current && typeof current === "object" && part in current) {
-      current = current[part];
+      current = (current as Record<string, unknown>)[part];
     } else {
       return undefined;
     }
@@ -41,32 +41,9 @@ export function I18nProvider({
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
-  // Leer la cookie o el navegador al montar en el cliente
-  useEffect(() => {
-    try {
-      const match = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith(`${LOCALE_COOKIE_NAME}=`));
-
-      if (match) {
-        const value = match.split("=")[1] as Locale;
-        if (SUPPORTED_LOCALES.includes(value)) {
-          setLocaleState(value);
-          document.documentElement.lang = value;
-          return;
-        }
-      }
-
-      // Si no hay cookie, detectar idioma preferido del navegador
-      const browserLang = navigator.language?.toLowerCase() || "";
-      if (browserLang.startsWith("en")) {
-        setLocaleState("en");
-        document.documentElement.lang = "en";
-      }
-    } catch {
-      // Entornos sin acceso a cookies o modo privado restringido
-    }
-  }, []);
+  // El idioma inicial llega resuelto desde el servidor (cookie o idioma del
+  // navegador, ver lib/i18n/server.ts): no se vuelve a detectar en el cliente,
+  // lo que evitaba un parpadeo de un idioma a otro al hidratar.
 
   const setLocale = (newLocale: Locale) => {
     if (!SUPPORTED_LOCALES.includes(newLocale)) return;

@@ -10,8 +10,7 @@ import CookieBanner from "@/components/CookieBanner";
 
 import BottomNav from "@/components/BottomNav";
 import { I18nProvider } from "@/lib/i18n/client";
-import { cookies } from "next/headers";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, Locale } from "@/lib/i18n/types";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,8 +37,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const locale = (cookieStore.get(LOCALE_COOKIE_NAME)?.value as Locale) || DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
 
   return (
     <html
