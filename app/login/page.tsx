@@ -40,10 +40,27 @@ export default function LoginPage() {
         throw new Error(res.error || (locale === "en" ? "Invalid email or password." : "El email o la contraseña son incorrectos."));
       }
 
-      // Login exitoso, redirigir a la raíz y forzar refresco para Header
-      router.push("/");
-      router.refresh();
+      // Login exitoso: determinar destino directo para evitar rebotes 307 de middleware y abortos RSC
+      try {
+        const sessionRes = await fetch("/api/auth/session");
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (sessionData?.user) {
+            if (!sessionData.user.gender || !sessionData.user.birthYear) {
+              window.location.href = "/welcome";
+              return;
+            }
+            if (!sessionData.user.onboardingCompleted) {
+              window.location.href = "/onboarding";
+              return;
+            }
+          }
+        }
+      } catch {
+        // Fallback seguro a la raíz
+      }
 
+      window.location.href = "/";
     } catch (err: any) {
       setError(err.message || (locale === "en" ? "Error signing in." : "Error al iniciar sesión."));
     } finally {
