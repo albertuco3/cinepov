@@ -1,8 +1,8 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { GENDER_LABELS } from "@/lib/demographics";
 import { useI18n } from "@/lib/i18n/client";
 
 interface Review {
@@ -13,8 +13,6 @@ interface Review {
   createdAt: string;
   user: {
     displayName: string;
-    gender: string | null;
-    ageRange: string | null;
   };
 }
 
@@ -42,9 +40,22 @@ export default function MovieReviewsSection({
   const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
   const [submittingReport, setSubmittingReport] = useState(false);
 
-  useEffect(() => {
+  // Al cambiar de filtro u orden se vuelve a la primera página. El estado de
+  // carga se activa en el propio manejador, no dentro del efecto.
+  const changeFilter = (value: string) => {
+    if (value === filter) return;
     setLoading(true);
     setPage(1);
+    setFilter(value);
+  };
+  const changeSort = (value: "recent" | "best") => {
+    if (value === sort) return;
+    setLoading(true);
+    setPage(1);
+    setSort(value);
+  };
+
+  useEffect(() => {
     fetch(`/api/movies/${movieId}/reviews?filter=${filter}&sort=${sort}&page=1&limit=10`)
       .then(async (res) => {
         if (!res.ok) {
@@ -106,8 +117,8 @@ export default function MovieReviewsSection({
       if (data.moderated) {
         setReviews((prev) => prev.filter((r) => r.id !== reviewId));
       }
-    } catch (err: any) {
-      toast.error(err.message || (locale === "en" ? "Could not submit report." : "No se pudo enviar el reporte."));
+    } catch (err) {
+      toast.error(errorMessage(err) || (locale === "en" ? "Could not submit report." : "No se pudo enviar el reporte."));
     } finally {
       setSubmittingReport(false);
     }
@@ -128,7 +139,7 @@ export default function MovieReviewsSection({
         {/* Filtros demográficos */}
         <div className="flex gap-2 flex-wrap">
           <button
-            onClick={() => setFilter("all")}
+            onClick={() => changeFilter("all")}
             className={`px-3 py-1.5 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
               filter === "all"
                 ? "bg-primary border-primary text-white"
@@ -139,7 +150,7 @@ export default function MovieReviewsSection({
           </button>
           {hasUserSegment && (
             <button
-              onClick={() => setFilter("my_segment")}
+              onClick={() => changeFilter("my_segment")}
               className={`px-3 py-1.5 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
                 filter === "my_segment"
                   ? "bg-primary border-primary text-white"
@@ -150,7 +161,7 @@ export default function MovieReviewsSection({
             </button>
           )}
           <button
-            onClick={() => setFilter("female")}
+            onClick={() => changeFilter("female")}
             className={`px-3 py-1.5 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
               filter === "female"
                 ? "bg-primary border-primary text-white"
@@ -160,7 +171,7 @@ export default function MovieReviewsSection({
             {dict.movie.womenReviews}
           </button>
           <button
-            onClick={() => setFilter("male")}
+            onClick={() => changeFilter("male")}
             className={`px-3 py-1.5 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
               filter === "male"
                 ? "bg-primary border-primary text-white"
@@ -170,7 +181,7 @@ export default function MovieReviewsSection({
             {dict.movie.menReviews}
           </button>
           <button
-            onClick={() => setFilter("young")}
+            onClick={() => changeFilter("young")}
             className={`px-3 py-1.5 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
               filter === "young"
                 ? "bg-primary border-primary text-white"
@@ -180,7 +191,7 @@ export default function MovieReviewsSection({
             {dict.movie.youngReviews}
           </button>
           <button
-            onClick={() => setFilter("senior")}
+            onClick={() => changeFilter("senior")}
             className={`px-3 py-1.5 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
               filter === "senior"
                 ? "bg-primary border-primary text-white"
@@ -193,7 +204,7 @@ export default function MovieReviewsSection({
           {/* Selector de ordenación */}
           <select
             value={sort}
-            onChange={(e: any) => setSort(e.target.value)}
+            onChange={(e) => changeSort(e.target.value === "best" ? "best" : "recent")}
             className="bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full outline-none cursor-pointer focus:border-primary/50"
           >
             <option value="recent">{dict.movie.recentSort}</option>
@@ -222,14 +233,6 @@ export default function MovieReviewsSection({
                     <span className="text-xs font-black text-white truncate">
                       {rev.user.displayName}
                     </span>
-                    {(rev.user.gender || rev.user.ageRange) && (
-                      <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-primary-light font-bold">
-                        {rev.user.gender && (locale === "en"
-                          ? ({ male: "Men", female: "Women", non_binary: "Non-Binary", prefer_not_to_say: "Other" }[rev.user.gender] || rev.user.gender)
-                          : (GENDER_LABELS[rev.user.gender as keyof typeof GENDER_LABELS] || rev.user.gender))}
-                        {rev.user.ageRange && ` · ${rev.user.ageRange} ${locale === "en" ? "yo" : "años"}`}
-                      </span>
-                    )}
                   </div>
                   <div className="flex items-baseline gap-0.5 bg-[#0f111a] border border-white/5 px-2.5 py-1 rounded-xl flex-shrink-0">
                     <span className="text-base font-black text-primary">{rev.score}</span>

@@ -37,6 +37,16 @@ function getResendClient(): Resend | null {
   return resendClient;
 }
 
+/**
+ * Enmascara una dirección para los logs: "ana.garcia@gmail.com" → "a***@gmail.com".
+ * Los logs de la plataforma no deben contener datos personales.
+ */
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "***";
+  return `${local.slice(0, 1)}***@${domain}`;
+}
+
 function printToConsole(label: string, to: string, subject: string, html: string): void {
   console.log("\n" + "=".repeat(80));
   console.log(`[EMAIL SIMULADOR] 📬 ${label}`);
@@ -60,9 +70,13 @@ async function sendEmail(
   const client = getResendClient();
 
   if (!client) {
-    console.warn(
-      `[EMAIL] RESEND_API_KEY no está configurada: el correo "${label}" NO se ha enviado de verdad, se simula por consola.`
-    );
+    // En producción nunca se imprime el correo: contiene enlaces de un solo uso
+    // (verificación, restablecimiento de contraseña) que acabarían en los logs.
+    if (process.env.NODE_ENV === "production") {
+      console.error(`[EMAIL] RESEND_API_KEY no está configurada: el correo "${label}" no se ha enviado.`);
+      return false;
+    }
+    console.warn(`[EMAIL] RESEND_API_KEY no está configurada: el correo "${label}" se simula por consola.`);
     printToConsole(label, to, subject, html);
     return true;
   }
@@ -76,14 +90,13 @@ async function sendEmail(
     });
 
     if (error) {
-      console.error(`[EMAIL] Resend rechazó el envío de "${label}" a ${to}:`, error);
+      console.error(`[EMAIL] Resend rechazó el envío de "${label}" a ${maskEmail(to)}:`, error);
       return false;
     }
 
-    console.log(`[EMAIL] "${label}" enviado correctamente a ${to}.`);
     return true;
   } catch (err) {
-    console.error(`[EMAIL] Error inesperado al enviar "${label}" a ${to}:`, err);
+    console.error(`[EMAIL] Error inesperado al enviar "${label}" a ${maskEmail(to)}:`, err);
     return false;
   }
 }

@@ -37,7 +37,6 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`[Onboarding] Perfil completado para el usuario ${updatedUser.email}`);
 
     return NextResponse.json(
       {

@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  ageKeyFromBirthYear,
-  ageBroadFromAgeKey,
-  AGE_RANGE_LABELS,
-} from "@/lib/demographics";
+import type { Prisma } from "@/app/generated/prisma/client";
+import { ageKeyFromBirthYear, ageBroadFromAgeKey } from "@/lib/demographics";
+import { COUNTED_USER_WHERE, segmentUserWhere, type SegmentFilter } from "@/lib/rating-filters";
+import { SOCIAL_ENABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +14,7 @@ interface RouteProps {
 }
 
 export async function GET(request: NextRequest, { params }: RouteProps) {
+  if (!SOCIAL_ENABLED) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -45,45 +45,25 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
 
     const session = await getServerSession(authOptions);
 
-    // Construir filtro de usuarios
-    const userWhere: any = {
-      emailVerified: { not: null },
-      isAnonymized: false,
-    };
-
-    if (filter === "female") {
-      userWhere.gender = "female";
-    } else if (filter === "male") {
-      userWhere.gender = "male";
-    } else if (filter === "young") {
-      // 18 a 34 años
-      userWhere.birthYear = {
-        gte: currentYear - 34,
-        lte: currentYear - 18,
-      };
-    } else if (filter === "senior") {
-      // 55+ años
-      userWhere.birthYear = {
-        lte: currentYear - 55,
-      };
+    // Filtro de autores. Las cuentas anonimizadas no muestran reseñas: ya no
+    // hay una persona detrás a la que atribuirlas.
+    let segment: SegmentFilter = {};
+    if (filter === "female" || filter === "male") {
+      segment = { gender: filter };
+    } else if (filter === "young" || filter === "senior") {
+      segment = { ageBroad: filter };
     } else if (filter === "my_segment" && session?.user) {
-      if (session.user.gender) {
-        userWhere.gender = session.user.gender;
-      }
-      if (session.user.birthYear) {
-        const ageKey = ageKeyFromBirthYear(session.user.birthYear, currentYear);
-        if (ageKey) {
-          const broad = ageBroadFromAgeKey(ageKey);
-          if (broad === "young") {
-            userWhere.birthYear = { gte: currentYear - 34, lte: currentYear - 18 };
-          } else if (broad === "adult") {
-            userWhere.birthYear = { gte: currentYear - 54, lte: currentYear - 35 };
-          } else if (broad === "senior") {
-            userWhere.birthYear = { lte: currentYear - 55 };
-          }
-        }
-      }
+      const ageKey = session.user.birthYear ? ageKeyFromBirthYear(session.user.birthYear, currentYear) : null;
+      segment = {
+        gender: session.user.gender || undefined,
+        ageBroad: ageKey ? ageBroadFromAgeKey(ageKey) : undefined,
+      };
     }
+    const userWhere: Prisma.UserWhereInput = {
+      ...COUNTED_USER_WHERE,
+      isAnonymized: false,
+      ...segmentUserWhere(segment, currentYear),
+    };
 
     const reviews = await db.rating.findMany({
       where: {
@@ -102,8 +82,6 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
         user: {
           select: {
             displayName: true,
-            gender: true,
-            birthYear: true,
           },
         },
       },
@@ -120,21 +98,18 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
 
     const formattedReviews = paginatedReviews
       .filter((r) => r.reviewText && r.reviewText.trim().length > 0)
-      .map((r) => {
-        const ageKey = r.user.birthYear ? ageKeyFromBirthYear(r.user.birthYear, currentYear) : null;
-        return {
-          id: r.id,
-          score: r.score,
-          reviewText: r.reviewText,
-          watchedAt: r.watchedAt ? r.watchedAt.toISOString() : null,
-          createdAt: r.createdAt.toISOString(),
-          user: {
-            displayName: r.user.displayName,
-            gender: r.user.gender,
-            ageRange: ageKey ? AGE_RANGE_LABELS[ageKey] : null,
-          },
-        };
-      });
+      // Nunca se devuelve el género ni la edad del autor: el registro promete
+      // que esos datos no se muestran de forma individual.
+      .map((r) => ({
+        id: r.id,
+        score: r.score,
+        reviewText: r.reviewText,
+        watchedAt: r.watchedAt ? r.watchedAt.toISOString() : null,
+        createdAt: r.createdAt.toISOString(),
+        user: {
+          displayName: r.user.displayName,
+        },
+      }));
 
     return NextResponse.json({
       reviews: formattedReviews,
