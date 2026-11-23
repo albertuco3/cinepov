@@ -166,18 +166,20 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
                     : "bg-transparent border-dashed border-white/10 text-muted-foreground/60 hover:text-muted-foreground hover:border-white/20"
               }`}
             >
-              <span className="flex items-center gap-1.5">
-                {!p.unlocked && (
-                  <svg className="h-3 w-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
-                  </svg>
-                )}
+              <span className="flex items-center gap-2">
                 <span className="hidden sm:inline">{tab.label}</span>
                 <span className="sm:hidden">{tab.short}</span>
+                {!p.unlocked && (
+                  <span
+                    className={`text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wider ${
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-white/5 text-muted-foreground border border-white/10"
+                    }`}
+                  >
+                    {locale === "en" ? "Calibrating" : "En calibración"}
+                  </span>
+                )}
               </span>
             </button>
           );
@@ -386,7 +388,11 @@ function UserSegmentCard({
         <div className="flex flex-col items-center gap-1.5 bg-white/5 border border-dashed border-white/10 px-5 py-4 rounded-2xl text-center self-center sm:flex-shrink-0">
           <span className="text-2xl font-black text-white/40">?</span>
           <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">
-            {segment.count === 0 ? (locale === "en" ? "Be first" : "Sé el primero") : (locale === "en" ? `Need ${segment.missing}` : `Faltan ${segment.missing}`)}
+            {segment.count === 0
+              ? (locale === "en" ? "Be first" : "Sé el primero")
+              : (locale === "en"
+                  ? `${segment.missing} ${segment.missing === 1 ? "vote needed" : "votes needed"}`
+                  : `Faltan ${segment.missing} ${segment.missing === 1 ? "voto" : "votos"}`)}
           </span>
         </div>
       )}
@@ -402,7 +408,7 @@ function LockedLevelNotice({ progress }: { progress: { current: number; required
     <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 p-5 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-bold text-white">
-          {locale === "en" ? "This level of detail is still being unlocked" : "Este nivel de detalle todavía se está construyendo"}
+          {locale === "en" ? "This level of detail is in calibration" : "Este nivel de detalle todavía se está calibrando"}
         </p>
         <span className="text-[10px] font-black uppercase tracking-wider text-primary-light tabular-nums">
           {progress.current} / {progress.required}
@@ -417,11 +423,11 @@ function LockedLevelNotice({ progress }: { progress: { current: number; required
       <p className="text-xs text-muted-foreground leading-relaxed">
         {locale === "en" ? (
           <>
-            <span className="text-white font-bold">{progress.missing}</span> more verified ratings needed to make this breakdown statistically sound. We show available data below: honest partial insight is always better than fabricated numbers.
+            <span className="text-white font-bold">{progress.missing}</span> more verified {progress.missing === 1 ? "rating" : "ratings"} needed to consolidate this breakdown. We show available data below: honest partial insight is always better than fabricated numbers.
           </>
         ) : (
           <>
-            Faltan <span className="text-white font-bold">{progress.missing}</span> valoraciones reales para que este desglose sea estadísticamente honesto. Mostramos lo que hay debajo mientras se completa: preferimos un dato incompleto y verdadero a un dato completo e inventado.
+            Faltan <span className="text-white font-bold">{progress.missing}</span> {progress.missing === 1 ? "valoración real" : "valoraciones reales"} para consolidar este desglose con rigor estadístico. Mostramos lo que hay debajo mientras se completa: preferimos un dato incompleto y verdadero a un dato completo e inventado.
           </>
         )}
       </p>
@@ -483,7 +489,9 @@ function BarChartPanel({
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold uppercase tracking-wider text-primary-light/80">
-                      {locale === "en" ? `Need ${row.segment.missing}` : `Faltan ${row.segment.missing}`}
+                      {locale === "en"
+                        ? `${row.segment.missing} ${row.segment.missing === 1 ? "vote needed" : "votes needed"}`
+                        : `Faltan ${row.segment.missing} ${row.segment.missing === 1 ? "voto" : "votos"}`}
                     </span>
                   )}
                 </span>
@@ -605,7 +613,9 @@ function CrossMatrix({
                           {segment.count}/{segmentMinVotes}
                         </span>
                         <span className="text-[8px] font-bold uppercase tracking-tight leading-tight">
-                          {locale === "en" ? `need ${segment.missing}` : `faltan ${segment.missing}`}
+                          {locale === "en"
+                            ? `${segment.missing} ${segment.missing === 1 ? "vote" : "votes"}`
+                            : `faltan ${segment.missing} ${segment.missing === 1 ? "voto" : "votos"}`}
                         </span>
                       </>
                     )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import SearchBar from "@/components/SearchBar";
 import { toast } from "sonner";
@@ -12,9 +13,21 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n/client";
 
 export default function Header() {
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const { dict } = useI18n();
   const prevRatingsCount = useRef<number | undefined>(undefined);
+
+  const navLinks = [
+    { href: "/explore", label: dict.nav.explore },
+    { href: "/rankings", label: dict.nav.rankings },
+    { href: "/tonight", label: dict.nav.coupleMode },
+    { href: "/recommendations", label: dict.nav.forYou },
+    { href: "/feed", label: dict.nav.feed },
+    { href: "/wrapped", label: dict.nav.wrapped },
+    { href: "/blog", label: dict.nav.blog },
+    ...(status === "authenticated" ? [{ href: "/profile", label: dict.nav.profile }] : []),
+  ];
 
   useEffect(() => {
     if (session?.user) {
@@ -53,56 +66,22 @@ export default function Header() {
 
             {/* Navegación Desktop */}
             <nav className="hidden lg:flex items-center gap-5">
-              <Link
-                href="/explore"
-                className="text-xs font-bold text-muted-foreground hover:text-white interactive-transition"
-              >
-                {dict.nav.explore}
-              </Link>
-              <Link
-                href="/rankings"
-                className="text-xs font-bold text-muted-foreground hover:text-white interactive-transition"
-              >
-                {dict.nav.rankings}
-              </Link>
-              <Link
-                href="/tonight"
-                className="text-xs font-bold text-muted-foreground hover:text-white interactive-transition"
-              >
-                {dict.nav.coupleMode}
-              </Link>
-              <Link
-                href="/recommendations"
-                className="text-xs font-bold text-primary-light hover:text-white interactive-transition"
-              >
-                {dict.nav.forYou}
-              </Link>
-              <Link
-                href="/feed"
-                className="text-xs font-bold text-muted-foreground hover:text-white interactive-transition"
-              >
-                {dict.nav.feed}
-              </Link>
-              <Link
-                href="/wrapped"
-                className="text-xs font-bold text-primary-light hover:text-white interactive-transition"
-              >
-                {dict.nav.wrapped}
-              </Link>
-              <Link
-                href="/blog"
-                className="text-xs font-bold text-muted-foreground hover:text-white interactive-transition"
-              >
-                {dict.nav.blog}
-              </Link>
-              {status === "authenticated" && (
-                <Link
-                  href="/profile"
-                  className="text-xs font-bold text-muted-foreground hover:text-white interactive-transition"
-                >
-                  {dict.nav.profile}
-                </Link>
-              )}
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`text-xs transition-colors ${
+                      isActive
+                        ? "text-white font-black"
+                        : "text-muted-foreground hover:text-white font-semibold"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
 

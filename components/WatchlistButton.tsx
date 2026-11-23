@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Bookmark } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 
 interface WatchlistButtonProps {
@@ -72,18 +73,9 @@ export default function WatchlistButton({
       }`}
       title={inWatchlist ? (locale === "en" ? "Remove from watchlist" : "Quitar de mi lista") : (locale === "en" ? "Add to watchlist" : "Añadir a mi lista")}
     >
-      <svg
-        className={`h-3.5 w-3.5 ${inWatchlist ? "fill-amber-400 text-amber-400" : "fill-none text-current"}`}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-        />
-      </svg>
+      <Bookmark
+        className={`h-3.5 w-3.5 ${inWatchlist ? "fill-amber-400 text-amber-400" : "text-current"}`}
+      />
       <span>{inWatchlist ? dict.movie.inWatchlist : dict.movie.wantToSee}</span>
     </button>
   );
