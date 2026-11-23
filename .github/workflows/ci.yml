@@ -60,8 +60,13 @@ jobs:
       - name: Tests
         run: npm run test
 
-      - name: Preparar base de datos para el build
-        run: npx prisma db push --skip-generate
+      # Aplica las migraciones igual que se hará en producción: si una
+      # migración no cuadra con el esquema, el CI falla aquí y no en el despliegue.
+      - name: Aplicar migraciones
+        run: npx prisma migrate deploy
+
+      - name: Comprobar que las migraciones reflejan el esquema
+        run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 
       - name: Build de producción
         run: npm run build
