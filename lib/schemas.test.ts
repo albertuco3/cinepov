@@ -4,7 +4,7 @@ import {
   completeProfileSchema,
   ratingSchema,
   feedbackSchema,
-  reviewSchema,
+  updateProfileSchema,
   getFirstZodError,
 } from "./schemas";
 
@@ -17,6 +17,7 @@ describe("Validaciones Zod (lib/schemas.ts)", () => {
         displayName: "Cinemaníaco",
         birthYear: 1995,
         gender: "male",
+        isAdult: true,
       });
 
       expect(result.success).toBe(true);
@@ -34,6 +35,7 @@ describe("Validaciones Zod (lib/schemas.ts)", () => {
         displayName: "Usuario",
         birthYear: 1995,
         gender: "female",
+        isAdult: true,
       });
 
       expect(result.success).toBe(false);
@@ -49,6 +51,7 @@ describe("Validaciones Zod (lib/schemas.ts)", () => {
         displayName: "Usuario",
         birthYear: 1995,
         gender: "female",
+        isAdult: true,
       });
 
       expect(result.success).toBe(false);
@@ -64,6 +67,7 @@ describe("Validaciones Zod (lib/schemas.ts)", () => {
         displayName: "Usuario",
         birthYear: 1900,
         gender: "female",
+        isAdult: true,
       });
 
       expect(result.success).toBe(false);
@@ -76,9 +80,47 @@ describe("Validaciones Zod (lib/schemas.ts)", () => {
         displayName: "Usuario",
         birthYear: 1995,
         gender: "alien",
+        isAdult: true,
       });
 
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("edad mínima", () => {
+    const base = {
+      email: "test@example.com",
+      password: "password123",
+      displayName: "Usuario",
+      gender: "female",
+    };
+    const thisYear = new Date().getFullYear();
+
+    it("acepta a quien nació hace 18 años o más", () => {
+      expect(registerSchema.safeParse({ ...base, birthYear: thisYear - 18, isAdult: true }).success).toBe(true);
+    });
+
+    it("rechaza a menores de 18 años", () => {
+      const result = registerSchema.safeParse({ ...base, birthYear: thisYear - 17, isAdult: true });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(getFirstZodError(result.error)).toContain("18 años");
+      }
+    });
+
+    it("exige la declaración explícita de mayoría de edad", () => {
+      expect(registerSchema.safeParse({ ...base, birthYear: 1990 }).success).toBe(false);
+      expect(registerSchema.safeParse({ ...base, birthYear: 1990, isAdult: false }).success).toBe(false);
+      expect(completeProfileSchema.safeParse({ birthYear: 1990, gender: "male" }).success).toBe(false);
+    });
+
+    it("también se aplica al editar el perfil", () => {
+      expect(
+        updateProfileSchema.safeParse({ displayName: "Usuario", birthYear: thisYear - 10, gender: "male" }).success
+      ).toBe(false);
+      expect(
+        updateProfileSchema.safeParse({ displayName: "Usuario", birthYear: 1990, gender: "male" }).success
+      ).toBe(true);
     });
   });
 
@@ -87,6 +129,7 @@ describe("Validaciones Zod (lib/schemas.ts)", () => {
       const result = completeProfileSchema.safeParse({
         birthYear: "1988",
         gender: "non_binary",
+        isAdult: true,
       });
 
       expect(result.success).toBe(true);

@@ -128,8 +128,6 @@ export interface Dictionary {
     registeredUsers: string;
     realRatings: string;
     moviesCatalog: string;
-    seedEstimationsTitle: string;
-    seedEstimationsDesc: string;
     readyTitle: string;
     readySubtitle: string;
     readyCta: string;
@@ -153,6 +151,7 @@ export interface Dictionary {
     submitLogin: string;
     submitRegister: string;
     alreadyHaveAccount: string;
+    adultDeclaration: string;
     dontHaveAccount: string;
   };
   movie: {
@@ -168,8 +167,6 @@ export interface Dictionary {
     realVotes: string;
     tmdbScore: string;
     externalRef: string;
-    bootstrapEstimate: string;
-    bootstrapEstimateDesc: string;
     howItWorks: string;
     unauthenticatedRateTitle: string;
     unauthenticatedRateCta: string;
@@ -186,9 +183,6 @@ export interface Dictionary {
     communityReviewsSubtitle: string;
     similarMovies: string;
     dataProvenance: string;
-    viewEstimates: string;
-    hideEstimates: string;
-    onlyRealDataNotice: string;
     byGeneration: string;
     byGender: string;
     byDetailedAge: string;
@@ -394,5 +388,6 @@ export interface Dictionary {
     errorSave: string;
     errorNetwork: string;
     userFallback: string;
+    adultDeclaration: string;
   };
 }

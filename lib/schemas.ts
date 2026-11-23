@@ -1,12 +1,28 @@
 import { z } from "zod";
 import { validateDisplayName, sanitizeText, LIMITS } from "./sanitize";
+import { MIN_AGE, MIN_BIRTH_YEAR, maxBirthYear } from "./age";
 
-const currentYear = new Date().getFullYear();
-export const MIN_BIRTH_YEAR = 1920;
-export const MAX_BIRTH_YEAR = currentYear - 6;
+export { MIN_BIRTH_YEAR };
+export const MAX_BIRTH_YEAR = maxBirthYear();
 
 // Géneros demográficos soportados
 export const GENDER_VALUES = ["male", "female", "non_binary"] as const;
+
+const ADULT_ERROR = `Debes tener ${MIN_AGE} años o más para usar CinePOV.`;
+
+/**
+ * El año se valida contra la fecha de cada petición, no contra la de arranque
+ * del servidor: una instancia que sobreviva al cambio de año no debe aceptar
+ * a quien todavía no ha cumplido la edad mínima.
+ */
+const birthYearField = z.coerce
+  .number()
+  .int("El año de nacimiento debe ser un número entero.")
+  .min(MIN_BIRTH_YEAR, `El año de nacimiento mínimo es ${MIN_BIRTH_YEAR}.`)
+  .refine((year) => year <= maxBirthYear(), { message: ADULT_ERROR });
+
+/** Declaración explícita de mayoría de edad: el año de nacimiento no basta para garantizarla. */
+const adultDeclarationField = z.literal(true, { error: ADULT_ERROR });
 
 /**
  * Esquema de validación para el registro de nuevos usuarios
@@ -34,14 +50,11 @@ export const registerSchema = z.object({
       const res = validateDisplayName(val);
       return res.ok ? res.value : val;
     }),
-  birthYear: z.coerce
-    .number()
-    .int("El año de nacimiento debe ser un número entero.")
-    .min(MIN_BIRTH_YEAR, `El año de nacimiento mínimo es ${MIN_BIRTH_YEAR}.`)
-    .max(MAX_BIRTH_YEAR, `El año de nacimiento máximo es ${MAX_BIRTH_YEAR}.`),
+  birthYear: birthYearField,
   gender: z.enum(GENDER_VALUES, {
     error: "El género seleccionado no es válido. Debe ser hombre, mujer o no binario.",
   }),
+  isAdult: adultDeclarationField,
   website: z.string().optional(), // Honeypot antiabuso
 });
 
@@ -51,17 +64,38 @@ export type RegisterInput = z.infer<typeof registerSchema>;
  * Esquema de validación para completar el perfil demográfico (Fase Welcome / Onboarding)
  */
 export const completeProfileSchema = z.object({
-  birthYear: z.coerce
-    .number()
-    .int("El año de nacimiento debe ser un número entero.")
-    .min(MIN_BIRTH_YEAR, `El año de nacimiento mínimo es ${MIN_BIRTH_YEAR}.`)
-    .max(MAX_BIRTH_YEAR, `El año de nacimiento máximo es ${MAX_BIRTH_YEAR}.`),
+  birthYear: birthYearField,
   gender: z.enum(GENDER_VALUES, {
     error: "El género seleccionado no es válido. Debe ser hombre, mujer o no binario.",
   }),
+  isAdult: adultDeclarationField,
 });
 
 export type CompleteProfileInput = z.infer<typeof completeProfileSchema>;
+
+/**
+ * Esquema de validación para editar el perfil desde los ajustes.
+ * No pide la declaración de edad: ya se hizo en el registro.
+ */
+export const updateProfileSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .refine((val) => validateDisplayName(val).ok, {
+      message: "El nombre público debe tener entre 2 y 40 caracteres y no estar reservado.",
+    })
+    .transform((val) => {
+      const res = validateDisplayName(val);
+      return res.ok ? res.value : val;
+    }),
+  birthYear: birthYearField,
+  gender: z.enum(GENDER_VALUES, {
+    error: "El género seleccionado no es válido. Debe ser hombre, mujer o no binario.",
+  }),
+  emailWeeklyActive: z.boolean().optional(),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 /**
  * Esquema de validación para emitir o actualizar una valoración (1 a 10)

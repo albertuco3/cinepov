@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { errorMessage } from "@/lib/errors";
+import { MIN_BIRTH_YEAR, maxBirthYear } from "@/lib/age";
+import { useJson } from "@/lib/hooks/use-json";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import AccountDangerZone from "@/components/AccountDangerZone";
-import { track } from "@/lib/analytics";
 
 interface Movie {
   id: string;
@@ -172,8 +174,8 @@ export default function UserProfileClient({
       setNewListDesc("");
       setCreatingList(false);
       toast.success("Lista creada correctamente");
-    } catch (err: any) {
-      toast.error(err.message || "Error al crear lista");
+    } catch (err) {
+      toast.error(errorMessage(err) || "Error al crear lista");
     } finally {
       setSubmittingList(false);
     }
@@ -186,8 +188,8 @@ export default function UserProfileClient({
       if (!res.ok) throw new Error("No se pudo eliminar la lista");
       setLists((prev) => prev.filter((l) => l.id !== listId));
       toast.success("Lista eliminada");
-    } catch (err: any) {
-      toast.error(err.message || "Error al eliminar lista");
+    } catch (err) {
+      toast.error(errorMessage(err) || "Error al eliminar lista");
     } finally {
       setDeletingListId(null);
     }
@@ -197,24 +199,12 @@ export default function UserProfileClient({
   const [activeSubTab, setActiveSubTab] = useState<ProfileSubTab>("ratings");
 
   // Desbloqueos de la comunidad
-  const [unlocks, setUnlocks] = useState<CommunityUnlock[]>([]);
-  const [loadingUnlocks, setLoadingUnlocks] = useState(false);
-  const [unlocksLoaded, setUnlocksLoaded] = useState(false);
-
-  // Cargar desbloqueos cuando el usuario selecciona la pestana o al montar
-  useEffect(() => {
-    if (activeSubTab === "unlocks" && !unlocksLoaded) {
-      setLoadingUnlocks(true);
-      fetch("/api/user/unlocks")
-        .then((res) => (res.ok ? res.json() : Promise.reject()))
-        .then((data) => {
-          setUnlocks(data.unlocks || []);
-          setUnlocksLoaded(true);
-        })
-        .catch((err) => console.error("Error al cargar desbloqueos:", err))
-        .finally(() => setLoadingUnlocks(false));
-    }
-  }, [activeSubTab, unlocksLoaded]);
+  // Los desbloqueos se cargan al abrir su pestaña (y se refrescan al volver a ella).
+  const { data: unlocksData, loading: unlocksLoading } = useJson<{ unlocks: CommunityUnlock[] }>(
+    activeSubTab === "unlocks" ? "/api/user/unlocks" : null
+  );
+  const unlocks = unlocksData?.unlocks ?? [];
+  const loadingUnlocks = unlocksLoading && !unlocksData;
 
   // Calcular estadisticas basicas
   const totalRatingsCount = ratings.length;
@@ -286,12 +276,12 @@ export default function UserProfileClient({
       });
       toast.success("Perfil actualizado con exito.");
       update();
-    } catch (err: any) {
+    } catch (err) {
       setProfileMessage({
         type: "error",
-        text: err.message || "Error al procesar la solicitud.",
+        text: errorMessage(err) || "Error al procesar la solicitud.",
       });
-      toast.error(err.message || "Error al actualizar el perfil.");
+      toast.error(errorMessage(err) || "Error al actualizar el perfil.");
     } finally {
       setSaving(false);
     }
@@ -312,9 +302,9 @@ export default function UserProfileClient({
       setRatings(ratings.filter((r) => r.id !== ratingId));
       toast.success("Valoracion eliminada correctamente.");
       update();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      toast.error(err.message || "Error al intentar eliminar la valoracion.");
+      toast.error(errorMessage(err) || "Error al intentar eliminar la valoracion.");
     } finally {
       setDeletingId(null);
     }
@@ -709,7 +699,7 @@ export default function UserProfileClient({
                   </span>
                   <select
                     value={sortBy}
-                    onChange={(e: any) => setSortBy(e.target.value)}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                     className="bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-xl outline-none cursor-pointer focus:border-primary/50"
                   >
                     <option value="date_desc">Fecha (Recientes primero)</option>
@@ -1336,8 +1326,8 @@ export default function UserProfileClient({
                 <input
                   id="birthYear"
                   type="number"
-                  min="1920"
-                  max={new Date().getFullYear()}
+                  min={MIN_BIRTH_YEAR}
+                  max={maxBirthYear()}
                   value={birthYear}
                   onChange={(e) => setBirthYear(e.target.value)}
                   className="w-full bg-[#0f111a] border border-white/10 focus:border-primary/50 outline-none text-white text-sm font-semibold px-4 py-3 rounded-2xl transition-colors"

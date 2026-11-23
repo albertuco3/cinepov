@@ -1,11 +1,13 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n/client";
+import { birthYearOptions } from "@/lib/age";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function RegisterPage() {
     displayName: "",
     birthYear: "",
     gender: "",
+    isAdult: false,
     website: "", // Campo trampa (honeypot) contra bots
   });
   
@@ -25,16 +28,12 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Generar años desde 1920 hasta 2020
-  const currentYear = new Date().getFullYear();
-  const years = Array.from(
-    { length: currentYear - 6 - 1920 + 1 },
-    (_, i) => currentYear - 6 - i
-  );
+  const years = birthYearOptions();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,8 +74,8 @@ export default function RegisterPage() {
         router.push("/login");
       }, 2000);
 
-    } catch (err: any) {
-      setError(err.message || (locale === "en" ? "Error creating account." : "Error al crear la cuenta."));
+    } catch (err) {
+      setError(errorMessage(err) || (locale === "en" ? "Error creating account." : "Error al crear la cuenta."));
     } finally {
       setLoading(false);
     }
@@ -221,6 +220,19 @@ export default function RegisterPage() {
               onChange={handleChange}
             />
           </div>
+
+          {/* Declaración de mayoría de edad: el año de nacimiento por sí solo no la garantiza */}
+          <label className="flex items-start gap-3 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              name="isAdult"
+              required
+              checked={formData.isAdult}
+              onChange={handleChange}
+              className="mt-0.5 h-4 w-4 rounded border-white/10 bg-transparent accent-primary cursor-pointer"
+            />
+            <span>{dict.auth.adultDeclaration}</span>
+          </label>
 
           {/* Nota de privacidad demográfica */}
           <p className="text-[10px] text-muted-foreground leading-relaxed text-center">

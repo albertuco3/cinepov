@@ -1,9 +1,11 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n/client";
+import { birthYearOptions } from "@/lib/age";
 
 export default function WelcomePage() {
   const { data: session, status, update } = useSession();
@@ -14,6 +16,7 @@ export default function WelcomePage() {
   const [formData, setFormData] = useState({
     birthYear: "",
     gender: "",
+    isAdult: false,
   });
   
   const [loading, setLoading] = useState(false);
@@ -26,21 +29,17 @@ export default function WelcomePage() {
       router.push("/login");
     }
     // Si ya tiene los datos demográficos completos, mandarlo a la raíz
-    if (status === "authenticated" && session?.user && (session.user as any).birthYear && (session.user as any).gender) {
+    if (status === "authenticated" && session?.user && session.user.birthYear && session.user.gender) {
       router.push("/");
     }
   }, [status, session, router]);
 
-  // Generar años desde 1920 hasta 2020
-  const currentYear = new Date().getFullYear();
-  const years = Array.from(
-    { length: currentYear - 6 - 1920 + 1 },
-    (_, i) => currentYear - 6 - i
-  );
+  const years = birthYearOptions();
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +55,7 @@ export default function WelcomePage() {
         body: JSON.stringify({
           birthYear: parseInt(formData.birthYear, 10),
           gender: formData.gender,
+          isAdult: formData.isAdult,
         }),
       });
 
@@ -76,8 +76,8 @@ export default function WelcomePage() {
         router.refresh();
       }, 1500);
 
-    } catch (err: any) {
-      setError(err.message || t.errorNetwork);
+    } catch (err) {
+      setError(errorMessage(err) || t.errorNetwork);
     } finally {
       setLoading(false);
     }
@@ -164,6 +164,19 @@ export default function WelcomePage() {
               </div>
             </div>
           </div>
+
+          {/* Declaración de mayoría de edad: el año de nacimiento por sí solo no la garantiza */}
+          <label className="flex items-start gap-3 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              name="isAdult"
+              required
+              checked={formData.isAdult}
+              onChange={handleChange}
+              className="mt-0.5 h-4 w-4 rounded border-white/10 bg-transparent accent-primary cursor-pointer"
+            />
+            <span>{t.adultDeclaration}</span>
+          </label>
 
           <button
             type="submit"
