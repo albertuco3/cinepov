@@ -5,27 +5,7 @@ import { db } from "@/lib/db";
 import { searchMovieByTitleAndYear } from "@/lib/tmdb";
 import { getOrCreateMovie } from "@/lib/movies";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
-
-// Función auxiliar para parsear una línea de CSV de manera robusta (manejando comillas)
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      inQuotes = !inQuotes; // Alternar estado de comillas
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
+import { parseLetterboxdCsv } from "@/lib/csv";
 
 export async function POST(request: Request) {
   try {
@@ -47,65 +27,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Extraer cuerpo de la petición
+    // 2. Extraer y parsear cuerpo CSV mediante PapaParse
     const { csvText } = await responseToJSON(request);
-    if (!csvText || typeof csvText !== "string") {
-      return NextResponse.json({ error: "El contenido del archivo CSV está vacío." }, { status: 400 });
+    const parseResult = parseLetterboxdCsv(csvText);
+    if (!parseResult.ok) {
+      return NextResponse.json({ error: parseResult.error }, { status: 400 });
     }
 
-    // 3. Parsear líneas del CSV
-    const lines = csvText.split(/\r?\n/).map((l) => l.trim());
-    if (lines.length <= 1) {
-      return NextResponse.json({ error: "El archivo CSV no contiene datos suficientes." }, { status: 400 });
-    }
-
-    // Analizar la cabecera para identificar índices de columnas
-    const headerColumns = lines[0].split(",").map((col) => col.trim().toLowerCase());
-    const nameIdx = headerColumns.findIndex((c) => c === "name" || c === "title");
-    const yearIdx = headerColumns.findIndex((c) => c === "year");
-    const ratingIdx = headerColumns.findIndex((c) => c === "rating");
-
-    if (nameIdx === -1 || ratingIdx === -1) {
-      return NextResponse.json(
-        { error: "La estructura del archivo CSV de Letterboxd es inválida. Debe contener las columnas 'Name' o 'Title', y 'Rating'." },
-        { status: 400 }
-      );
-    }
-
-    const rawMoviesToImport = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line) continue;
-
-      const columns = parseCSVLine(line);
-      // Validar que la línea tenga suficientes columnas
-      if (columns.length <= Math.max(nameIdx, ratingIdx)) continue;
-
-      // Limpiar comillas iniciales y finales residuales del parser
-      const title = columns[nameIdx].replace(/^"|"$/g, "").trim();
-      const yearStr = yearIdx !== -1 ? columns[yearIdx].replace(/^"|"$/g, "").trim() : "";
-      const ratingStr = columns[ratingIdx].replace(/^"|"$/g, "").trim();
-
-      const year = yearStr ? parseInt(yearStr, 10) : 0;
-      const rating = ratingStr ? parseFloat(ratingStr) : null;
-
-      // Solo importar si tiene título y valoración numérica válida
-      if (title && rating !== null && !isNaN(rating)) {
-        rawMoviesToImport.push({
-          title,
-          year: isNaN(year) ? 0 : year,
-          rating,
-        });
-      }
-    }
-
-    if (rawMoviesToImport.length === 0) {
-      return NextResponse.json(
-        { error: "No se encontraron películas con valoraciones válidas para importar en el archivo CSV." },
-        { status: 400 }
-      );
-    }
+    const rawMoviesToImport = parseResult.movies;
 
     // Limitar la importación a un máximo de 100 películas para evitar timeouts y rate limits
     const limit = 100;

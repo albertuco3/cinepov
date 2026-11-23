@@ -5,27 +5,7 @@ import { db } from "@/lib/db";
 import { findMovieByImdbId } from "@/lib/tmdb";
 import { getOrCreateMovie } from "@/lib/movies";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
-
-// Función auxiliar para parsear una línea de CSV de manera robusta (manejando comillas)
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      inQuotes = !inQuotes; // Alternar estado de comillas
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
+import { parseImdbCsv } from "@/lib/csv";
 
 export async function POST(request: Request) {
   try {
@@ -47,71 +27,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Extraer cuerpo de la petición
+    // 2. Extraer y parsear cuerpo CSV mediante PapaParse
     const { csvText } = await responseToJSON(request);
-    if (!csvText || typeof csvText !== "string") {
-      return NextResponse.json({ error: "El contenido del archivo CSV está vacío." }, { status: 400 });
+    const parseResult = parseImdbCsv(csvText);
+    if (!parseResult.ok) {
+      return NextResponse.json({ error: parseResult.error }, { status: 400 });
     }
 
-    // 3. Parsear líneas del CSV
-    const lines = csvText.split(/\r?\n/).map((l) => l.trim());
-    if (lines.length <= 1) {
-      return NextResponse.json({ error: "El archivo CSV no contiene datos suficientes." }, { status: 400 });
-    }
-
-    // Analizar la cabecera para identificar índices de columnas
-    const headerColumns = lines[0].split(",").map((col) => col.trim().toLowerCase());
-    const constIdx = headerColumns.findIndex((c) => c === "const" || c === "imdb id" || c === "position");
-    const ratingIdx = headerColumns.findIndex((c) => c === "your rating" || c === "rating");
-    const titleIdx = headerColumns.findIndex((c) => c === "title" || c === "name");
-    const typeIdx = headerColumns.findIndex((c) => c === "title type" || c === "type");
-
-    if (constIdx === -1 || ratingIdx === -1 || titleIdx === -1) {
-      return NextResponse.json(
-        { error: "La estructura del archivo CSV de IMDb es inválida. Debe contener al menos las columnas 'Const' (ID de IMDb), 'Title' y 'Your Rating'." },
-        { status: 400 }
-      );
-    }
-
-    const rawMoviesToImport = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line) continue;
-
-      const columns = parseCSVLine(line);
-      // Validar que la línea tenga suficientes columnas
-      if (columns.length <= Math.max(constIdx, ratingIdx, titleIdx)) continue;
-
-      // Extraer datos
-      const imdbId = columns[constIdx].replace(/^"|"$/g, "").trim();
-      const ratingStr = columns[ratingIdx].replace(/^"|"$/g, "").trim();
-      const title = columns[titleIdx].replace(/^"|"$/g, "").trim();
-      const titleType = typeIdx !== -1 ? columns[typeIdx].replace(/^"|"$/g, "").trim().toLowerCase() : "movie";
-
-      // Filtrar por películas únicamente (ignorar series, videojuegos, etc.)
-      if (titleType !== "movie" && titleType !== "tvmovie" && titleType !== "short") {
-        continue;
-      }
-
-      const rating = ratingStr ? parseFloat(ratingStr) : null;
-
-      // Solo importar si tiene ID de IMDb válido y nota numérica
-      if (imdbId && imdbId.startsWith("tt") && rating !== null && !isNaN(rating) && title) {
-        rawMoviesToImport.push({
-          imdbId,
-          title,
-          rating,
-        });
-      }
-    }
-
-    if (rawMoviesToImport.length === 0) {
-      return NextResponse.json(
-        { error: "No se encontraron películas con valoraciones válidas para importar en el archivo CSV." },
-        { status: 400 }
-      );
-    }
+    const rawMoviesToImport = parseResult.movies;
 
     // Limitar la importación a un máximo de 100 películas para evitar timeouts y rate limits
     const limit = 100;
