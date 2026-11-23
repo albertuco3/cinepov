@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
-import { validateFeedbackMessage } from "@/lib/sanitize";
+import { feedbackSubmissionSchema, getFirstZodError } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   try {
@@ -14,31 +14,23 @@ export async function POST(request: Request) {
       return rateLimitResponse(limit, "Has enviado varias sugerencias seguidas. Inténtalo más tarde.");
     }
 
-    const { category, message } = await request.json();
-
-    if (!category || !message) {
+    const rawBody = await request.json();
+    const parseResult = feedbackSubmissionSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "Falta rellenar campos obligatorios (categoría o mensaje)." },
+        { error: getFirstZodError(parseResult.error) },
         { status: 400 }
       );
     }
 
-    const validCategories = ["suggestion", "bug", "other"];
-    if (!validCategories.includes(category)) {
-      return NextResponse.json({ error: "Categoría de sugerencia inválida." }, { status: 400 });
-    }
-
-    const validated = validateFeedbackMessage(message);
-    if (!validated.ok) {
-      return NextResponse.json({ error: validated.error }, { status: 400 });
-    }
+    const { category, message: cleanMessage } = parseResult.data;
 
     // El feedback se guarda vinculado al usuario si está autenticado
     const feedback = await db.feedback.create({
       data: {
         userId: session?.user?.id || null,
         category,
-        message: validated.value,
+        message: cleanMessage,
       },
     });
 

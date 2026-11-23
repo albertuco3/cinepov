@@ -6,6 +6,7 @@ import { createToken, TOKEN_EMAIL_VERIFICATION } from "@/lib/tokens";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { validateDisplayName } from "@/lib/sanitize";
 import { validateHoneypot } from "@/lib/anti-abuse";
+import { registerSchema, getFirstZodError } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   try {
@@ -19,68 +20,21 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { email, password, displayName, birthYear, gender, website } = body;
+    const parseResult = registerSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: getFirstZodError(parseResult.error) },
+        { status: 400 }
+      );
+    }
+
+    const { email, password, displayName: cleanDisplayName, birthYear, gender, website } = parseResult.data;
 
     // Validación Honeypot contra bots automáticos (Fase 3.6)
     if (!validateHoneypot(website)) {
       console.warn(`[ANTIABUSO] Registro bloqueado por campo trampa (honeypot): IP ${clientIp}`);
       return NextResponse.json(
         { error: "Petición no permitida." },
-        { status: 400 }
-      );
-    }
-
-    // 1. Validaciones básicas de campos vacíos
-    if (!email || !password || !displayName || !birthYear || !gender) {
-      return NextResponse.json(
-        { error: "Todos los campos son obligatorios." },
-        { status: 400 }
-      );
-    }
-
-    // 1.1 Validar y sanear el nombre público
-    const validatedName = validateDisplayName(displayName);
-    if (!validatedName.ok) {
-      return NextResponse.json(
-        { error: validatedName.error },
-        { status: 400 }
-      );
-    }
-    const cleanDisplayName = validatedName.value;
-
-    // 2. Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "El formato de correo electrónico no es válido." },
-        { status: 400 }
-      );
-    }
-
-    // 3. Validar longitud de la contraseña
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "La contraseña debe tener al menos 6 caracteres." },
-        { status: 400 }
-      );
-    }
-
-    // 4. Validar año de nacimiento razonable (entre 1910 y 2018)
-    const currentYear = new Date().getFullYear();
-    const parsedBirthYear = parseInt(birthYear, 10);
-    
-    if (isNaN(parsedBirthYear) || parsedBirthYear < 1910 || parsedBirthYear > currentYear - 6) {
-      return NextResponse.json(
-        { error: "El año de nacimiento no es válido." },
-        { status: 400 }
-      );
-    }
-
-    // 5. Validar opciones de género en el enum esperado
-    const validGenders = ["male", "female", "non_binary"];
-    if (!validGenders.includes(gender)) {
-      return NextResponse.json(
-        { error: "El género seleccionado no es válido." },
         { status: 400 }
       );
     }
@@ -106,7 +60,7 @@ export async function POST(request: Request) {
         email: email.toLowerCase().trim(),
         passwordHash,
         displayName: cleanDisplayName,
-        birthYear: parsedBirthYear,
+        birthYear,
         gender,
       },
     });

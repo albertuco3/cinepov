@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { completeProfileSchema, getFirstZodError } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   try {
@@ -17,35 +18,15 @@ export async function POST(request: Request) {
 
     const userId = session.user.id;
     const body = await request.json();
-    const { birthYear, gender } = body;
-
-    // 2. Validaciones básicas
-    if (!birthYear || !gender) {
+    const parseResult = completeProfileSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "El año de nacimiento y el género son campos obligatorios." },
+        { error: getFirstZodError(parseResult.error) },
         { status: 400 }
       );
     }
 
-    // 3. Validar año de nacimiento razonable (entre 1910 y 2018)
-    const currentYear = new Date().getFullYear();
-    const parsedBirthYear = parseInt(birthYear, 10);
-    
-    if (isNaN(parsedBirthYear) || parsedBirthYear < 1910 || parsedBirthYear > currentYear - 6) {
-      return NextResponse.json(
-        { error: "El año de nacimiento introducido no es válido." },
-        { status: 400 }
-      );
-    }
-
-    // 4. Validar género
-    const validGenders = ["male", "female", "non_binary"];
-    if (!validGenders.includes(gender)) {
-      return NextResponse.json(
-        { error: "El género seleccionado no es válido." },
-        { status: 400 }
-      );
-    }
+    const { birthYear: parsedBirthYear, gender } = parseResult.data;
 
     // 5. Actualizar el perfil del usuario en la base de datos
     const updatedUser = await db.user.update({

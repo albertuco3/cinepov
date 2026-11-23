@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sanitizeAndTruncate } from "@/lib/sanitize";
 import { checkContentModeration } from "@/lib/moderation";
 import { checkReviewBombingAnomaly } from "@/lib/anti-abuse";
+import { ratingSchema, getFirstZodError } from "@/lib/schemas";
 
 // POST: Crear o actualizar una valoración de película (y aplicar reemplazo 1-a-1 de bots)
 export async function POST(request: Request) {
@@ -27,16 +28,16 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { movieId, score, watchedAt, reviewText } = body;
-
-    // Validar puntuación entre 1 y 10
-    const parsedScore = parseInt(score, 10);
-    if (isNaN(parsedScore) || parsedScore < 1 || parsedScore > 10) {
+    const parseResult = ratingSchema.safeParse({ movieId: body.movieId, score: body.score });
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "La puntuación debe ser un número entero entre 1 y 10." },
+        { error: getFirstZodError(parseResult.error) },
         { status: 400 }
       );
     }
+
+    const { movieId, score: parsedScore } = parseResult.data;
+    const { watchedAt, reviewText } = body;
 
     // Fecha de visionado opcional. Convierte la valoración en un diario, que es
     // el hábito recurrente que sostiene la retención.
