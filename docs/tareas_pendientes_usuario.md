@@ -45,7 +45,12 @@ El proyecto de Neon ya existe y tu `.env` apunta a él, pero contiene datos de d
    ```bash
    SEED_DEV_CONFIRM=borrar-y-rellenar npm run db:seed:dev
    ```
-7. Activa en Neon las copias de seguridad (*point-in-time restore*) de la rama `production` y **prueba una restauración** en una rama temporal.
+7. **Catálogo corregido en producción.** El onboarding de producción todavía muestra seis películas equivocadas. En Git Bash, desde `D:\cinepov`, con las dos cadenas de la rama `production` entre comillas (no cambia tu `.env`):
+   ```bash
+   DATABASE_URL="cadena pooled de production" DIRECT_URL="cadena directa de production" npm run db:seed
+   ```
+   Es el seed seguro: solo crea o actualiza películas y retira del onboarding las que sobran. Debe terminar con "Catálogo listo: 50 de 50 películas".
+8. Activa en Neon las copias de seguridad (*point-in-time restore*) de la rama `production` y **prueba una restauración** en una rama temporal.
 
 ---
 
@@ -124,7 +129,7 @@ Sustituye los marcadores de posición (nombre o razón social, NIF, domicilio y 
 ## 9. Decisiones de producto pendientes
 
 1. **Reposicionamiento.** La validación con MovieLens no sostiene la hipótesis central: el segmento demográfico mejora la predicción un 0,4 % y el gusto propio un 7,2 %. Detalle y propuesta en [validacion_movielens.md](./validacion_movielens.md).
-2. **URLs por idioma.** Rutas con prefijo (`/en/…`, `/es/…`) o SEO en un solo idioma. Detalle en el [roadmap, Hito 1.4](./roadmap.md#14-decisión-urls-por-idioma-antes-de-que-google-indexe).
+2. ~~URLs por idioma~~: decidido y hecho (`/es/…` y `/en/…`).
 
 ---
 

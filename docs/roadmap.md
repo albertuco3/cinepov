@@ -52,6 +52,7 @@
 
 Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.md).
 
+- [ ] Aplicar en producción el catálogo corregido (`npm run db:seed` con las cadenas de la rama `production`): seis películas del onboarding eran otras.
 - [x] Separar bases de datos: rama `dev` de Neon para desarrollo (el `.env` local apunta a ella) y `production` solo para producción.
 - [x] Retirar de la base de producción los votos sintéticos, los bots y los usuarios de prueba (15.557 votos y 5.010 usuarios borrados).
 - [x] Registrar la migración base en la rama `production` de Neon.
@@ -84,6 +85,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Las migraciones solo creaban 7 de las 13 tablas.** Sustituidas por una migración base que coincide con el esquema y con la base real; el CI aplica migraciones y falla si se desvían del esquema.
 - [ ] *(código)* **Las recomendaciones presentaban la nota de TMDB como opinión del segmento** (y un perfil inventado de "mujer de 28" si faltaban datos). Ahora se etiqueta la procedencia y no se inventa perfil. Sus enlaces llevaban a la película equivocada.
 - [ ] *(código)* **`parseMovieParam` convertía un UUID en un id de TMDB** ("07bb…" → película 7).
+- [ ] *(código)* **Seis películas del onboarding eran otras** por ids de TMDB equivocados (*The Lone Ranger* en lugar de *Parásitos*, *Hocus Pocus* en lugar de *Torrente*…). Catálogo comprobado contra TMDB; el seed retira del onboarding las que salen de la lista. Falta aplicarlo en producción (1.1).
 - [ ] *(código)* **El `NEXTAUTH_SECRET` de `.env.example` era el mismo que el de `.env`.** Nunca se versionó; ahora el ejemplo lleva un marcador y sí se versiona.
 - [x] **Las imágenes OG daban error 500 en todas las películas** (Satori exige `display: flex` en cualquier `div` cuyo contenido no sea una cadena). Corregido y comprobado en producción; la tarjeta tiene tests que reproducen la regla y generan PNG reales.
 - [x] **El sitemap, `robots.txt`, las URLs canónicas y los enlaces de los emails salían con `//`** si `NEXTAUTH_URL` llevaba barra final. Ahora todo sale de `lib/site.ts`. Comprobado en producción.
@@ -96,14 +98,10 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] Cobertura: porcentaje de películas populares con cada nivel de granularidad desbloqueado.
 - [ ] Sentry con alertas, y un canal (Discord o Telegram) para errores críticos.
 
-### 1.4 Decisión: URLs por idioma (antes de que Google indexe)
+### 1.4 URLs por idioma
 
-El idioma ya se resuelve una sola vez en el servidor (cookie y, si no hay, `Accept-Language`), así que no hay parpadeo al cargar. Pero las URLs siguen siendo las mismas en los dos idiomas: Googlebot rastrea sin cookies ni `Accept-Language` e indexará solo el idioma por defecto, que hoy es **español**, mientras el plan apuesta por el SEO en inglés. `hreflang` no se puede implementar sin URLs distintas.
-
-- [ ] Elegir:
-  - **A (recomendada):** rutas con prefijo (`/en/…`, `/es/…`) y `hreflang`.
-  - **B:** SEO en un solo idioma, con `DEFAULT_LOCALE` en el idioma que se quiera indexar.
-- [ ] Aplicar la decisión **antes** de enviar el sitemap a Search Console.
+- [x] Decidido: rutas con prefijo `/es/…` y `/en/…`. El middleware reescribe a las rutas internas sin duplicar el árbol; sin prefijo se redirige según la cookie o el navegador. Cada página declara canónica y `hreflang`, y el sitemap lista cada URL en sus idiomas. Comprobado en producción el 26 de noviembre.
+- [ ] Muchas páginas existen solo en español (legales, metodología, blog, polarizantes, década, género, segmento, wrapped, listas, perfiles, `/vs/`). Su versión `/en/` apunta la canónica a `/es/`. Al traducir una, añadirla a `TRANSLATED_ROUTES` en `lib/i18n/paths.ts` (Hito 2).
 
 ### 1.5 Superficie de la beta
 
@@ -144,7 +142,7 @@ Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisi
 - [ ] Enviar el sitemap a Search Console y vigilar la cobertura de indexación.
 - [ ] Texto introductorio con datos reales en las páginas de género, década y segmento.
 - [ ] Documentación del widget para blogs y medios.
-- [ ] Textos legales en inglés (hoy privacidad, términos y aviso legal solo existen en español).
+- [ ] Traducir las páginas que solo existen en español, empezando por los textos legales, y añadirlas a `TRANSLATED_ROUTES`.
 - [ ] Imagen OG estática de respaldo y tono de voz de la marca.
 - [ ] Antes de reactivar lo social: decidir el umbral de anonimato ([R-14](#r-14--umbral-de-anonimato)) y cómo filtrar reseñas por segmento sin revelar el segmento de cada autor.
 - [ ] Reactivar feed, seguidores y reseñas cuando haya densidad (umbral a fijar con los datos de la beta).
@@ -254,8 +252,9 @@ Un segmento muestra su nota con 3 votos (`SEGMENT_MIN_VOTES`), y la matriz ense�
 ## Notas de desarrollo
 
 - **Windows y la letra de unidad:** ejecuta las herramientas desde `D:\cinepov`, no desde `d:\cinepov`. Con la minúscula, Node carga algunos módulos dos veces: Vitest falla con `Cannot read properties of undefined (reading 'config')` y los fragmentos `Prisma.sql` dejan de reconocerse en scripts con `tsx`. En CI (Linux) no ocurre.
-- **Seeds:** `npm run db:seed` solo crea el catálogo y es seguro en cualquier base. `npm run db:seed:dev` borra todos los usuarios y crea datos de prueba; se niega a ejecutarse en producción y exige `SEED_DEV_CONFIRM=borrar-y-rellenar`.
+- **Seeds:** `npm run db:seed` solo crea el catálogo y es seguro en cualquier base. La rama `dev` de Neon tiene datos de prueba con todos los niveles de la escalera de granularidad. `npm run db:seed:dev` borra todos los usuarios y crea datos de prueba; se niega a ejecutarse en producción y exige `SEED_DEV_CONFIRM=borrar-y-rellenar`.
 - **Migraciones:** el esquema se cambia con `prisma migrate dev` (contra la base de desarrollo), nunca con `db push` contra producción. El CI aplica las migraciones y comprueba que reflejan el esquema.
+- **Idiomas:** usa `Link` de `@/components/LocaleLink` (nunca `next/link`), `useLocalePath()` para `router.push` y `localizePath()` en los `redirect()` de servidor. El idioma en servidor siempre con `getRequestLocale()`.
 - **CI:** `.github/workflows/ci.yml` ejecuta typecheck, lint, tests, migraciones y build contra PostgreSQL 16 en cada push y PR a `main` y `dev`.
 
 ---
