@@ -27,7 +27,7 @@
 | Calidad | `tsc` sin errores, lint sin errores ni avisos, 85 tests en verde, `next build` correcto. |
 | Repositorio | En GitHub (privado), con `main` y `dev`. CI en verde. |
 | Base de datos | Neon con dos ramas: `production` (limpia: sin bots ni usuarios de prueba, migración base registrada) y `dev` (copia del estado anterior, para desarrollo). |
-| Producción | Desplegado en <https://www.cinepov.com> desde `main`. Faltan Resend, PostHog y Sentry. |
+| Producción | Desplegado en <https://www.cinepov.com> desde `main`, con emails reales (Resend). Faltan PostHog y Sentry. |
 | Usuarios reales | 0. |
 | Hipótesis central | **No validada** con MovieLens: ver [En paralelo](#en-paralelo--validar-la-hipótesis-con-movielens). Requiere una decisión antes del lanzamiento público. |
 
@@ -59,7 +59,7 @@ Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.m
 - [x] Proyecto en Vercel desplegando `main`, con `ADMIN_EMAILS`, `CRON_SECRET`, `NEXTAUTH_URL` y un `NEXTAUTH_SECRET` nuevo.
 - [x] Dominio `cinepov.com` en Vercel (DNS de Vercel; `cinepov.com` redirige a `www.cinepov.com`) y `NEXTAUTH_URL` actualizada. Comprobado el 27 de noviembre: sitemap, canónicas, `hreflang` e imágenes OG usan el dominio nuevo.
 - [ ] Dominio `.es` defensivo y handles en redes.
-- [ ] Resend con SPF, DKIM y DMARC en el dominio.
+- [x] Resend con SPF, DKIM y DMARC en `cinepov.com`. Comprobado el 27 de noviembre: el email de restablecimiento llega a la bandeja de entrada desde `hola@cinepov.com`.
 - [ ] PostHog en la región UE.
 - [ ] Copias de seguridad automáticas y **una restauración probada**.
 - [ ] Documentar el despliegue y el rollback.
@@ -89,6 +89,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Seis películas del onboarding eran otras** por ids de TMDB equivocados (*The Lone Ranger* en lugar de *Parásitos*, *Hocus Pocus* en lugar de *Torrente*…). Catálogo comprobado contra TMDB; el seed retira del onboarding las que salen de la lista. Falta aplicarlo en producción (1.1).
 - [ ] *(código)* **El `NEXTAUTH_SECRET` de `.env.example` era el mismo que el de `.env`.** Nunca se versionó; ahora el ejemplo lleva un marcador y sí se versiona.
 - [x] **Las imágenes OG daban error 500 en todas las películas** (Satori exige `display: flex` en cualquier `div` cuyo contenido no sea una cadena). Corregido y comprobado en producción; la tarjeta tiene tests que reproducen la regla y generan PNG reales.
+- [x] **Las rutas de registro, perfil, sugerencias y valoraciones daban un error 500 en Vercel** (DOMPurify arrastraba jsdom, que no carga allí). Sustituido por un saneado propio sin dependencias; de paso, los textos ya no se guardan escapados ("Tom &amp; Jerry") y los emails escapan al construir su HTML.
 - [x] **Nadie sabía que su email estaba sin verificar** (y por tanto que sus votos no contaban): ahora un aviso bajo la cabecera lo explica y permite reenviar el email. La sesión lleva `emailVerified` y se refresca sola al verificar.
 - [x] **El sitemap, `robots.txt`, las URLs canónicas y los enlaces de los emails salían con `//`** si `NEXTAUTH_URL` llevaba barra final. Ahora todo sale de `lib/site.ts`. Comprobado en producción.
 
@@ -115,7 +116,8 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [x] Rutas públicas comprobadas en producción el 26 de noviembre: páginas en 200, administración y social en 404, cron sin secreto en 401, perfil redirige al login, cabeceras de seguridad presentes.
 - [ ] Registro → verificación de email → valoración → desglose, en móvil y escritorio (necesita Resend).
 - [ ] Registrar un usuario, redesplegar y comprobar que sigue ahí.
-- [ ] Recuperación de contraseña y borrado de cuenta de principio a fin.
+- [x] Recuperación de contraseña de principio a fin en producción (además verifica el email).
+- [ ] Borrado de cuenta de principio a fin.
 - [ ] Ningún secreto en el repositorio ni en el bundle del cliente.
 - [ ] Accesibilidad básica (contraste, teclado, lector de pantalla) y textos de error en ambos idiomas.
 
