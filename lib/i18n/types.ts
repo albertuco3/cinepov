@@ -154,6 +154,9 @@ export interface Dictionary {
     submitRegister: string;
     alreadyHaveAccount: string;
     adultDeclaration: string;
+    verifyBannerText: string;
+    verifyBannerCta: string;
+    verifyBannerSent: string;
     dontHaveAccount: string;
   };
   movie: {

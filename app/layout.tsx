@@ -9,6 +9,7 @@ import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import CookieBanner from "@/components/CookieBanner";
 
 import BottomNav from "@/components/BottomNav";
+import VerifyEmailBanner from "@/components/VerifyEmailBanner";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getRequestLocale, getRequestPathname, localeAlternates } from "@/lib/i18n/server";
 import { SITE_URL } from "@/lib/site";
@@ -65,6 +66,7 @@ export default async function RootLayout({
           <I18nProvider initialLocale={locale}>
             <AnalyticsProvider>
               <Header />
+              <VerifyEmailBanner />
               <main className="flex-1 flex flex-col pb-16 md:pb-0">{children}</main>
               <Footer />
               <BottomNav />

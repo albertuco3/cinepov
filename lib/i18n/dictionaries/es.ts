@@ -145,6 +145,9 @@ export const es: Dictionary = {
     submitRegister: "Crear cuenta",
     alreadyHaveAccount: "¿Ya tienes cuenta? Inicia sesión",
     adultDeclaration: "Confirmo que tengo 18 años o más.",
+    verifyBannerText: "Verifica tu email para que tus valoraciones cuenten en las notas de la comunidad.",
+    verifyBannerCta: "Reenviar email",
+    verifyBannerSent: "Te hemos enviado el email de verificación.",
     dontHaveAccount: "¿Aún no tienes cuenta? Regístrate gratis",
   },
   movie: {

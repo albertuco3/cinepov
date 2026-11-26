@@ -65,6 +65,7 @@ export const authOptions: NextAuthOptions = {
           birthYear: user.birthYear,
           onboardingCompleted: user.onboardingCompleted,
           ratingsCount,
+          emailVerified: Boolean(user.emailVerified),
         };
       },
     }),
@@ -80,6 +81,15 @@ export const authOptions: NextAuthOptions = {
         token.birthYear = user.birthYear;
         token.onboardingCompleted = user.onboardingCompleted;
         token.ratingsCount = user.ratingsCount;
+        token.emailVerified = Boolean(user.emailVerified);
+      }
+
+      // Mientras el email no esté verificado se vuelve a comprobar en cada
+      // lectura de la sesión, para que el aviso desaparezca en cuanto se pulsa
+      // el enlace. Una vez verificado, no hay más consultas.
+      if (token.id && token.emailVerified !== true) {
+        const current = await db.user.findUnique({ where: { id: token.id }, select: { emailVerified: true } });
+        token.emailVerified = Boolean(current?.emailVerified);
       }
       
       // Permitir la actualización en caliente de los datos de la sesión del cliente
@@ -108,6 +118,7 @@ export const authOptions: NextAuthOptions = {
         session.user.birthYear = token.birthYear;
         session.user.onboardingCompleted = token.onboardingCompleted;
         session.user.ratingsCount = token.ratingsCount;
+        session.user.emailVerified = token.emailVerified;
       }
       return session;
     },

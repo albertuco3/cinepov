@@ -11,6 +11,7 @@ declare module "next-auth" {
     birthYear: number;
     onboardingCompleted: boolean;
     ratingsCount: number;
+    emailVerified: boolean;
   }
 
   interface Session {
@@ -22,6 +23,7 @@ declare module "next-auth" {
       birthYear: number;
       onboardingCompleted: boolean;
       ratingsCount: number;
+    emailVerified: boolean;
       image?: string | null;
     }
   }
@@ -34,5 +36,6 @@ declare module "next-auth/jwt" {
     birthYear: number;
     onboardingCompleted: boolean;
     ratingsCount: number;
+    emailVerified: boolean;
   }
 }

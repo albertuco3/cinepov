@@ -27,7 +27,7 @@
 | Calidad | `tsc` sin errores, lint sin errores ni avisos, 85 tests en verde, `next build` correcto. |
 | Repositorio | En GitHub (privado), con `main` y `dev`. CI en verde. |
 | Base de datos | Neon con dos ramas: `production` (limpia: sin bots ni usuarios de prueba, migración base registrada) y `dev` (copia del estado anterior, para desarrollo). |
-| Producción | Desplegado en <https://cinepov-beta.vercel.app> desde `main`. Faltan dominio, Resend, PostHog y Sentry. |
+| Producción | Desplegado en <https://www.cinepov.com> desde `main`. Faltan Resend, PostHog y Sentry. |
 | Usuarios reales | 0. |
 | Hipótesis central | **No validada** con MovieLens: ver [En paralelo](#en-paralelo--validar-la-hipótesis-con-movielens). Requiere una decisión antes del lanzamiento público. |
 
@@ -57,7 +57,8 @@ Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.m
 - [x] Retirar de la base de producción los votos sintéticos, los bots y los usuarios de prueba (15.557 votos y 5.010 usuarios borrados).
 - [x] Registrar la migración base en la rama `production` de Neon.
 - [x] Proyecto en Vercel desplegando `main`, con `ADMIN_EMAILS`, `CRON_SECRET`, `NEXTAUTH_URL` y un `NEXTAUTH_SECRET` nuevo.
-- [ ] Dominio definitivo (`.com` y `.es` defensivo) y handles en redes.
+- [x] Dominio `cinepov.com` en Vercel (DNS de Vercel; `cinepov.com` redirige a `www.cinepov.com`) y `NEXTAUTH_URL` actualizada. Comprobado el 27 de noviembre: sitemap, canónicas, `hreflang` e imágenes OG usan el dominio nuevo.
+- [ ] Dominio `.es` defensivo y handles en redes.
 - [ ] Resend con SPF, DKIM y DMARC en el dominio.
 - [ ] PostHog en la región UE.
 - [ ] Copias de seguridad automáticas y **una restauración probada**.
@@ -88,6 +89,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Seis películas del onboarding eran otras** por ids de TMDB equivocados (*The Lone Ranger* en lugar de *Parásitos*, *Hocus Pocus* en lugar de *Torrente*…). Catálogo comprobado contra TMDB; el seed retira del onboarding las que salen de la lista. Falta aplicarlo en producción (1.1).
 - [ ] *(código)* **El `NEXTAUTH_SECRET` de `.env.example` era el mismo que el de `.env`.** Nunca se versionó; ahora el ejemplo lleva un marcador y sí se versiona.
 - [x] **Las imágenes OG daban error 500 en todas las películas** (Satori exige `display: flex` en cualquier `div` cuyo contenido no sea una cadena). Corregido y comprobado en producción; la tarjeta tiene tests que reproducen la regla y generan PNG reales.
+- [x] **Nadie sabía que su email estaba sin verificar** (y por tanto que sus votos no contaban): ahora un aviso bajo la cabecera lo explica y permite reenviar el email. La sesión lleva `emailVerified` y se refresca sola al verificar.
 - [x] **El sitemap, `robots.txt`, las URLs canónicas y los enlaces de los emails salían con `//`** si `NEXTAUTH_URL` llevaba barra final. Ahora todo sale de `lib/site.ts`. Comprobado en producción.
 
 ### 1.3 Medición

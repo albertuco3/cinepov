@@ -145,6 +145,9 @@ export const en: Dictionary = {
     submitRegister: "Create Account",
     alreadyHaveAccount: "Already have an account? Sign in",
     adultDeclaration: "I confirm that I am 18 or older.",
+    verifyBannerText: "Verify your email so your ratings count towards community scores.",
+    verifyBannerCta: "Resend email",
+    verifyBannerSent: "We have sent you the verification email.",
     dontHaveAccount: "Don't have an account yet? Sign up for free",
   },
   movie: {
