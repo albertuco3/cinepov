@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Bookmark } from "lucide-react";
-import { useI18n } from "@/lib/i18n/client";
+import { useI18n, useLocalePath } from "@/lib/i18n/client";
 
 interface WatchlistButtonProps {
   movieId: string;
@@ -21,13 +21,14 @@ export default function WatchlistButton({
   const [inWatchlist, setInWatchlist] = useState(initialInWatchlist);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const lp = useLocalePath();
 
   const handleToggle = async () => {
     if (!isLoggedIn) {
       toast(locale === "en" ? "Sign in to save movies to your watchlist" : "Inicia sesión para guardar películas en tu lista", {
         action: {
           label: dict.nav.login,
-          onClick: () => router.push("/login"),
+          onClick: () => router.push(lp("/login")),
         },
       });
       return;

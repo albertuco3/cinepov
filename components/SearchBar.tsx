@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Search, Loader2 } from "lucide-react";
-import { useI18n } from "@/lib/i18n/client";
+import { useI18n, useLocalePath } from "@/lib/i18n/client";
 
 interface SearchResult {
   id: number;
@@ -16,6 +16,7 @@ interface SearchResult {
 
 export default function SearchBar() {
   const router = useRouter();
+  const lp = useLocalePath();
   const { locale, dict } = useI18n();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -78,7 +79,7 @@ export default function SearchBar() {
     setQuery("");
     setIsOpen(false);
     // Navegar a la página dinámica de detalle de la película
-    router.push(`/movie/${tmdbId}`);
+    router.push(lp(`/movie/${tmdbId}`));
   };
 
   const getYear = (dateString?: string) => {

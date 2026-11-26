@@ -1,61 +1,99 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { LOCALE_COOKIE_NAME } from "@/lib/i18n/types";
+import {
+  LOCALE_HEADER,
+  PATHNAME_HEADER,
+  isLocalizablePath,
+  localizePath,
+  negotiateLocale,
+  splitLocale,
+} from "@/lib/i18n/paths";
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const path = req.nextUrl.pathname;
+/** Rutas que exigen sesión (y sus subrutas). */
+const PROTECTED_PREFIXES = ["/profile", "/import", "/welcome", "/onboarding"];
+/** Rutas en las que se fuerza completar el perfil y el onboarding. */
+const ONBOARDING_CHECKED = new Set(["/", "/explore"]);
 
-    // Si el usuario está autenticado pero no tiene los datos demográficos completados,
-    // y no está intentando ir a /welcome, redirigir a /welcome
-    if (token && (!token.birthYear || !token.gender)) {
-      if (path !== "/welcome") {
-        return NextResponse.redirect(new URL("/welcome", req.url));
-      }
-    }
+const ONE_YEAR = 60 * 60 * 24 * 365;
 
-    // Si ya tiene perfil completo e intenta entrar a /welcome:
-    // - Si no ha completado el onboarding, mandarlo a /onboarding
-    // - Si ya completó el onboarding, mandarlo a la raíz
-    if (token && token.birthYear && token.gender && path === "/welcome") {
-      if (!token.onboardingCompleted) {
-        return NextResponse.redirect(new URL("/onboarding", req.url));
-      }
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+function isProtected(path: string) {
+  return PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+}
 
-    // Si tiene perfil demográfico completo pero no ha hecho el onboarding de valoración rápida,
-    // y no está en /onboarding, redirigirlo obligatoriamente a /onboarding
-    if (token && token.birthYear && token.gender && !token.onboardingCompleted) {
-      if (path !== "/onboarding" && path !== "/welcome") {
-        return NextResponse.redirect(new URL("/onboarding", req.url));
-      }
-    }
+/**
+ * Middleware de CinePOV (en Next 16, `proxy`). Dos tareas:
+ *
+ * 1. Idioma en la URL. /es/... y /en/... se reescriben a la ruta interna sin
+ *    prefijo, pasando el idioma en una cabecera. Una ruta sin prefijo
+ *    redirige a la del idioma preferido (cookie, navegador o por defecto).
+ * 2. Sesión y onboarding. Las rutas protegidas exigen sesión, y quien no ha
+ *    completado su perfil o el onboarding vuelve a ellos.
+ */
+export default async function proxy(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
+  if (!isLocalizablePath(pathname)) return NextResponse.next();
 
-    // Si ya completó el onboarding e intenta acceder de nuevo a /onboarding, mandarlo a la raíz
-    if (token && token.onboardingCompleted && path === "/onboarding") {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+  const { locale, rest } = splitLocale(pathname);
+  const cookieLocale = req.cookies.get(LOCALE_COOKIE_NAME)?.value;
 
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        const path = req.nextUrl.pathname;
-        // La raíz "/" y la exploración "/explore" son accesibles para invitados (no logueados)
-        if (path === "/" || path === "/explore") {
-          return true;
-        }
-        // Las rutas protegidas (/profile, /import, /welcome, /onboarding) requieren estar autenticado
-        return !!token;
-      },
-    },
+  if (!locale) {
+    const preferred = negotiateLocale(cookieLocale, req.headers.get("accept-language"));
+    const url = req.nextUrl.clone();
+    url.pathname = localizePath(pathname, preferred);
+    return NextResponse.redirect(url);
   }
-);
+
+  const redirectTo = (path: string) => {
+    const url = req.nextUrl.clone();
+    url.pathname = localizePath(path, locale);
+    url.search = "";
+    return NextResponse.redirect(url);
+  };
+
+  if (isProtected(rest) || ONBOARDING_CHECKED.has(rest)) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+    if (!token) {
+      if (isProtected(rest)) {
+        const url = req.nextUrl.clone();
+        url.pathname = localizePath("/login", locale);
+        url.search = `?callbackUrl=${encodeURIComponent(pathname + search)}`;
+        return NextResponse.redirect(url);
+      }
+    } else {
+      const profileComplete = Boolean(token.birthYear && token.gender);
+      // Sin datos demográficos: a completar el perfil.
+      if (!profileComplete && rest !== "/welcome") return redirectTo("/welcome");
+      // Con perfil completo, /welcome ya no tiene sentido.
+      if (profileComplete && rest === "/welcome") {
+        return redirectTo(token.onboardingCompleted ? "/" : "/onboarding");
+      }
+      // Perfil completo sin onboarding: a la valoración rápida.
+      if (profileComplete && !token.onboardingCompleted && rest !== "/onboarding") {
+        return redirectTo("/onboarding");
+      }
+      // Onboarding ya hecho: no se repite.
+      if (token.onboardingCompleted && rest === "/onboarding") return redirectTo("/");
+    }
+  }
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set(LOCALE_HEADER, locale);
+  requestHeaders.set(PATHNAME_HEADER, rest);
+
+  const url = req.nextUrl.clone();
+  url.pathname = rest;
+  const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+
+  // El idioma de la URL pasa a ser el preferido para las rutas sin prefijo.
+  if (cookieLocale !== locale) {
+    response.cookies.set(LOCALE_COOKIE_NAME, locale, { path: "/", maxAge: ONE_YEAR, sameSite: "lax" });
+  }
+  return response;
+}
 
 export const config = {
-  // El middleware ahora intercepta también "/" y "/explore" para poder redirigir al onboarding
-  // a usuarios autenticados que no lo hayan completado, manteniendo acceso libre para invitados
-  matcher: ["/", "/explore", "/profile", "/import", "/welcome", "/onboarding"],
+  // Todo salvo la API, los recursos de Next y los ficheros con extensión.
+  matcher: ["/((?!api|_next/static|_next/image|.*\\..*).*)"],
 };

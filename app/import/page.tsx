@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import ImportClient from "@/components/ImportClient";
+import { localizePath } from "@/lib/i18n/paths";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata = {
   title: "Importar Valoraciones — CinePOV",
@@ -12,7 +14,7 @@ export default async function ImportPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    redirect("/login");
+    redirect(localizePath("/login", await getRequestLocale()));
   }
 
   return (

@@ -5,68 +5,87 @@ import { ALL_SEGMENT_SLUGS } from "@/lib/segments";
 import { ALL_DECADE_SLUGS } from "@/lib/decades";
 import { ALL_BLOG_SLUGS } from "@/lib/blog-data";
 import { SITE_URL } from "@/lib/site";
+import { localesForPath, localizePath } from "@/lib/i18n/paths";
+
+type SitemapEntry = MetadataRoute.Sitemap[number];
+
+/**
+ * Una entrada por idioma en el que existe la página, cada una con sus
+ * alternativas `hreflang`. Las rutas se escriben sin prefijo.
+ */
+function localized(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
+  return entries.flatMap((entry: SitemapEntry) => {
+    const path = entry.url;
+    const locales = localesForPath(path);
+    const languages = Object.fromEntries(locales.map((l) => [l, `${SITE_URL}${localizePath(path, l)}`]));
+    return locales.map((l) => ({
+      ...entry,
+      url: languages[l],
+      ...(locales.length > 1 ? { alternates: { languages } } : {}),
+    }));
+  });
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = SITE_URL;
 
   // 1. Rutas públicas estáticas
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: "/",
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/explore`,
+      url: `/explore`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/blog`,
+      url: `/blog`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/tonight`,
+      url: `/tonight`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/polarizing`,
+      url: `/polarizing`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/rankings`,
+      url: `/rankings`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/metodologia`,
+      url: `/metodologia`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: `${baseUrl}/privacidad`,
+      url: `/privacidad`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/terminos`,
+      url: `/terminos`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/aviso-legal`,
+      url: `/aviso-legal`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
@@ -75,7 +94,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // 2. Rutas dinámicas de géneros cinematográficos (SEO Programático)
   const genreRoutes: MetadataRoute.Sitemap = ALL_GENRE_SLUGS.map((slug) => ({
-    url: `${baseUrl}/genre/${slug}`,
+    url: `/genre/${slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.8,
@@ -83,7 +102,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // 3. Rutas dinámicas de segmentos demográficos (SEO Programático)
   const segmentRoutes: MetadataRoute.Sitemap = ALL_SEGMENT_SLUGS.map((slug) => ({
-    url: `${baseUrl}/segment/${slug}`,
+    url: `/segment/${slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.85,
@@ -91,7 +110,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // 4. Rutas dinámicas de décadas cinematográficas (SEO Programático)
   const decadeRoutes: MetadataRoute.Sitemap = ALL_DECADE_SLUGS.map((slug) => ({
-    url: `${baseUrl}/decade/${slug}`,
+    url: `/decade/${slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.85,
@@ -99,7 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // 5. Rutas dinámicas de artículos del blog de datos
   const blogRoutes: MetadataRoute.Sitemap = ALL_BLOG_SLUGS.map((slug) => ({
-    url: `${baseUrl}/blog/${slug}`,
+    url: `/blog/${slug}`,
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.8,
@@ -117,25 +136,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const movieRoutes: MetadataRoute.Sitemap = movies.flatMap((m) => [
     {
-      url: `${baseUrl}/movie/${m.tmdbId}`,
+      url: `/movie/${m.tmdbId}`,
       lastModified: m.cachedAt,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/vs/${m.tmdbId}`,
+      url: `/vs/${m.tmdbId}`,
       lastModified: m.cachedAt,
       changeFrequency: "weekly" as const,
       priority: 0.7,
     },
   ]);
 
-  return [
+  return localized([
     ...staticRoutes,
     ...genreRoutes,
     ...segmentRoutes,
     ...decadeRoutes,
     ...blogRoutes,
     ...movieRoutes,
-  ];
+  ]);
 }

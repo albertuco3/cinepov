@@ -5,7 +5,7 @@ import { MIN_BIRTH_YEAR, maxBirthYear } from "@/lib/age";
 import { useJson } from "@/lib/hooks/use-json";
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import AccountDangerZone from "@/components/AccountDangerZone";

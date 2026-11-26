@@ -1,7 +1,7 @@
 "use client";
 
 import { useJson } from "@/lib/hooks/use-json";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import WatchlistButton from "@/components/WatchlistButton";

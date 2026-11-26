@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { getBlogPost, ALL_BLOG_SLUGS } from "@/lib/blog-data";
 import { SITE_URL } from "@/lib/site";
+import { getRequestLocale, localeAlternates } from "@/lib/i18n/server";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -20,15 +21,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Artículo no encontrado | CinePOV" };
   }
 
-  const baseUrl = SITE_URL;
-  const canonicalUrl = `${baseUrl}/blog/${post.slug}`;
-
   return {
     title: `${post.title} | Blog de Datos CinePOV`,
     description: post.excerpt,
-    alternates: {
-      canonical: canonicalUrl,
-    },
+    alternates: localeAlternates(`/blog/${post.slug}`, await getRequestLocale()),
     openGraph: {
       title: post.title,
       description: post.excerpt,
@@ -78,7 +74,7 @@ export default async function BlogPostPage({ params }: Props) {
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `${baseUrl}/blog/${post.slug}`,
+      "@id": `${baseUrl}/es/blog/${post.slug}`,
     },
   };
 

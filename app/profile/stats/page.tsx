@@ -14,6 +14,8 @@ import {
   AGE_BROAD_LABELS,
 } from "@/lib/demographics";
 import CinematicProfileClient from "./CinematicProfileClient";
+import { localizePath } from "@/lib/i18n/paths";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata = {
   title: "Tu Perfil Cinematográfico — CinePOV",
@@ -25,7 +27,7 @@ export default async function CinematicProfilePage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect(localizePath("/login", await getRequestLocale()));
   }
 
   const currentYear = new Date().getFullYear();

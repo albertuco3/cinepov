@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n/client";
 import {

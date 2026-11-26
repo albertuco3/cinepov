@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import LandingDemo from "@/components/LandingDemo";
 import SearchBar from "@/components/SearchBar";
 import HomeRecommendationsSection from "@/components/HomeRecommendationsSection";

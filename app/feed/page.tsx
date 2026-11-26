@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth/next";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import Image from "next/image";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";

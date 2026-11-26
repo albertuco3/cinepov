@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useState } from "react";
 import { Locale, Dictionary, DEFAULT_LOCALE, LOCALE_COOKIE_NAME, SUPPORTED_LOCALES } from "./types";
+import { localizePath, swapLocale } from "./paths";
 import { es } from "./dictionaries/es";
 import { en } from "./dictionaries/en";
 
@@ -45,16 +46,19 @@ export function I18nProvider({
   // navegador, ver lib/i18n/server.ts): no se vuelve a detectar en el cliente,
   // lo que evitaba un parpadeo de un idioma a otro al hidratar.
 
+  // El idioma vive en la URL (/es/..., /en/...): cambiarlo es navegar a la
+  // misma página con el otro prefijo. Se hace con una carga completa para que
+  // el servidor vuelva a pintar todo (incluido el layout) en el nuevo idioma.
   const setLocale = (newLocale: Locale) => {
-    if (!SUPPORTED_LOCALES.includes(newLocale)) return;
+    if (!SUPPORTED_LOCALES.includes(newLocale) || newLocale === locale) return;
     setLocaleState(newLocale);
     try {
-      // Guardar en cookie para 1 año
       const oneYear = 60 * 60 * 24 * 365;
       document.cookie = `${LOCALE_COOKIE_NAME}=${newLocale}; path=/; max-age=${oneYear}; SameSite=Lax`;
-      document.documentElement.lang = newLocale;
+      const { pathname, search, hash } = window.location;
+      window.location.assign(swapLocale(pathname + search, newLocale) + hash);
     } catch {
-      // Fallback
+      // Sin acceso a cookies o a la navegación: el cambio queda en la sesión actual.
     }
   };
 
@@ -76,6 +80,17 @@ export function I18nProvider({
       {children}
     </I18nContext.Provider>
   );
+}
+
+/** Idioma actual; fuera del proveedor (páginas de error) devuelve el idioma por defecto. */
+export function useLocale(): Locale {
+  return useContext(I18nContext)?.locale ?? DEFAULT_LOCALE;
+}
+
+/** Función que añade el prefijo de idioma a una ruta interna, para router.push y similares. */
+export function useLocalePath() {
+  const locale = useLocale();
+  return useCallback((href: string) => localizePath(href, locale), [locale]);
 }
 
 export function useI18n() {

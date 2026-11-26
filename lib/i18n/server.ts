@@ -1,32 +1,48 @@
 import { cookies, headers } from "next/headers";
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, SUPPORTED_LOCALES, type Locale } from "./types";
-
-function isLocale(value: string | undefined): value is Locale {
-  return !!value && (SUPPORTED_LOCALES as string[]).includes(value);
-}
-
-/** Primer idioma soportado de una cabecera Accept-Language ("en-GB,en;q=0.9,es;q=0.8"). */
-export function localeFromAcceptLanguage(header: string | null): Locale | null {
-  if (!header) return null;
-  const languages = header
-    .split(",")
-    .map((part) => {
-      const [tag, q] = part.trim().split(";q=");
-      return { lang: tag.slice(0, 2).toLowerCase(), q: q ? Number(q) : 1 };
-    })
-    .sort((a, b) => b.q - a.q);
-  return languages.map((l) => l.lang).find(isLocale) ?? null;
-}
+import { redirect } from "next/navigation";
+import { LOCALE_COOKIE_NAME, type Locale } from "./types";
+import { LOCALE_HEADER, PATHNAME_HEADER, isLocale, localesForPath, localizePath, negotiateLocale } from "./paths";
+import { SITE_URL } from "@/lib/site";
 
 /**
- * Idioma de la petición, resuelto en el servidor: la cookie elegida por el
- * usuario y, si no hay, el idioma del navegador. Decidirlo aquí evita que la
- * página se pinte en un idioma y cambie al otro al hidratarse.
+ * Idioma de la petición, resuelto en el servidor. Manda el prefijo de la URL
+ * (que el middleware pasa en una cabecera); si no lo hay, la cookie elegida
+ * por el usuario y, en último lugar, el idioma del navegador.
  *
  * Es la única forma de obtener el idioma en el servidor: no leas la cookie a mano.
  */
 export async function getRequestLocale(): Promise<Locale> {
+  const headerStore = await headers();
+  const fromUrl = headerStore.get(LOCALE_HEADER);
+  if (isLocale(fromUrl)) return fromUrl;
   const cookieValue = (await cookies()).get(LOCALE_COOKIE_NAME)?.value;
-  if (isLocale(cookieValue)) return cookieValue;
-  return localeFromAcceptLanguage((await headers()).get("accept-language")) ?? DEFAULT_LOCALE;
+  return negotiateLocale(cookieValue, headerStore.get("accept-language"));
+}
+
+/** Ruta de la página actual sin prefijo de idioma ("/movie/1"), según el middleware. */
+export async function getRequestPathname(): Promise<string | null> {
+  return (await headers()).get(PATHNAME_HEADER);
+}
+
+/** `redirect()` a una ruta interna en el idioma de la petición. */
+export async function localizedRedirect(path: string): Promise<never> {
+  redirect(localizePath(path, await getRequestLocale()));
+}
+
+/**
+ * Canónica y alternativas por idioma de una ruta sin prefijo, para los
+ * metadatos. Solo se declaran los idiomas en los que la página está traducida;
+ * si se pide en otro, la canónica apunta a la versión que existe. `x-default`
+ * es la raíz sin prefijo, que redirige según el idioma de quien llega.
+ */
+export function localeAlternates(path: string, locale: Locale) {
+  const available = localesForPath(path);
+  const languages = Object.fromEntries(
+    available.map((l) => [l, `${SITE_URL}${localizePath(path, l)}`])
+  ) as Partial<Record<Locale, string>>;
+  const canonicalLocale = available.includes(locale) ? locale : available[0];
+  return {
+    canonical: languages[canonicalLocale]!,
+    languages: { ...languages, "x-default": `${SITE_URL}${path === "/" ? "" : path}` },
+  };
 }

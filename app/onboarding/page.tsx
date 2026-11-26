@@ -7,6 +7,7 @@ import OnboardingClient from "@/components/OnboardingClient";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { getMovieLocalized } from "@/lib/movies";
+import { localizePath } from "@/lib/i18n/paths";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
@@ -24,7 +25,7 @@ export default async function OnboardingPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user || !session.user.id) {
-    redirect("/login");
+    redirect(localizePath("/login", await getRequestLocale()));
   }
 
   // 1. Consultar el perfil del usuario para verificar si completó los datos demográficos básicos
@@ -34,17 +35,17 @@ export default async function OnboardingPage() {
   });
 
   if (!user) {
-    redirect("/login");
+    redirect(localizePath("/login", await getRequestLocale()));
   }
 
   // Si el usuario ya ha completado el onboarding en la BD, redirigirlo a la raíz
   if (user.onboardingCompleted) {
-    redirect("/");
+    redirect(localizePath("/", await getRequestLocale()));
   }
 
   // Si no tiene completo el año de nacimiento o género, obligar a pasar por /welcome primero
   if (!user.birthYear || !user.gender) {
-    redirect("/welcome");
+    redirect(localizePath("/welcome", await getRequestLocale()));
   }
 
   // 2. Obtener todas las películas destacadas del onboarding (isFeatured: true)

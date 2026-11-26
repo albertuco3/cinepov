@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { getMovieLocalized } from "@/lib/movies";
 import { db } from "@/lib/db";
 import { AGE_RANGE_LABELS, ageKeyFromBirthYear } from "@/lib/demographics";
@@ -15,11 +15,10 @@ import WatchlistButton from "@/components/WatchlistButton";
 import MovieEmbedModal from "@/components/MovieEmbedModal";
 import AddToListButton from "@/components/AddToListButton";
 import { getSimilarMovies } from "@/lib/tmdb";
-import { parseMovieParam, buildCanonicalMoviePath } from "@/lib/slug";
+import { parseMovieParam } from "@/lib/slug";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { getRequestLocale } from "@/lib/i18n/server";
+import { getRequestLocale, localeAlternates } from "@/lib/i18n/server";
 import { SOCIAL_ENABLED } from "@/lib/features";
-import { SITE_URL } from "@/lib/site";
 
 interface MoviePageProps {
   params: Promise<{ id: string }>;
@@ -44,15 +43,12 @@ export async function generateMetadata({ params }: MoviePageProps): Promise<Meta
   const description = locale === "en"
     ? `Discover how ${movie.title} is rated by men and women across different generations on CinePOV. Verified demographic breakdown and cohort comparisons.`
     : `Descubre cómo valoran ${movie.title} mujeres y hombres de distintas generaciones en CinePOV. Desglose demográfico verificado y comparativa por segmento.`;
-  const baseUrl = SITE_URL;
-  const canonicalUrl = `${baseUrl}${buildCanonicalMoviePath(movie.tmdbId, movie.title)}`;
-
   return {
     title,
     description,
-    alternates: {
-      canonical: canonicalUrl,
-    },
+    // Canónica sin slug: el slug depende del título traducido, y cada idioma
+    // debe apuntar exactamente a la misma ruta que su `hreflang`.
+    alternates: localeAlternates(`/movie/${movie.tmdbId}`, locale),
     openGraph: {
       title,
       description,

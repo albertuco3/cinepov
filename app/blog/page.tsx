@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { BLOG_POSTS } from "@/lib/blog-data";
 
 export const metadata: Metadata = {

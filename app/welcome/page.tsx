@@ -4,12 +4,13 @@ import { errorMessage } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useI18n } from "@/lib/i18n/client";
+import { useI18n, useLocalePath } from "@/lib/i18n/client";
 import { birthYearOptions } from "@/lib/age";
 
 export default function WelcomePage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const lp = useLocalePath();
   const { dict } = useI18n();
   const t = dict.welcome;
   
@@ -26,13 +27,13 @@ export default function WelcomePage() {
   // Redirigir si no está autenticado
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.push(lp("/login"));
     }
     // Si ya tiene los datos demográficos completos, mandarlo a la raíz
     if (status === "authenticated" && session?.user && session.user.birthYear && session.user.gender) {
-      router.push("/");
+      router.push(lp("/"));
     }
-  }, [status, session, router]);
+  }, [status, session, router, lp]);
 
   const years = birthYearOptions();
 
@@ -72,7 +73,7 @@ export default function WelcomePage() {
       
       // Redirigir a la valoración rápida
       setTimeout(() => {
-        router.push("/onboarding");
+        router.push(lp("/onboarding"));
         router.refresh();
       }, 1500);
 

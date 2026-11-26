@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { Bell } from "lucide-react";
 
 interface NotificationItem {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useJson } from "@/lib/hooks/use-json";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { type DemographicContrast } from "@/lib/viral";
 
 interface PolarizingMovie {

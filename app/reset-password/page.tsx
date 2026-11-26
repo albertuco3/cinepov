@@ -2,9 +2,10 @@
 
 import { errorMessage } from "@/lib/errors";
 import { Suspense, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { useLocalePath } from "@/lib/i18n/client";
 
 function PanelShell({ children }: { children: React.ReactNode }) {
   return (
@@ -18,6 +19,7 @@ function PanelShell({ children }: { children: React.ReactNode }) {
 
 function ResetPasswordForm() {
   const router = useRouter();
+  const lp = useLocalePath();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
 
@@ -60,7 +62,7 @@ function ResetPasswordForm() {
       }
 
       toast.success("Contraseña actualizada. Ya puedes iniciar sesión.");
-      router.push("/login");
+      router.push(lp("/login"));
     } catch (err) {
       setError(errorMessage(err) || "Error de conexión.");
       setLoading(false);

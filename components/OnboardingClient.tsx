@@ -3,11 +3,11 @@
 import { errorMessage } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Check } from "lucide-react";
-import { useI18n } from "@/lib/i18n/client";
+import { useI18n, useLocalePath } from "@/lib/i18n/client";
 
 interface Movie {
   id: string;
@@ -29,6 +29,7 @@ interface OnboardingClientProps {
 
 export default function OnboardingClient({ initialMovies, userDisplayName }: OnboardingClientProps) {
   const router = useRouter();
+  const lp = useLocalePath();
   const { update } = useSession();
   const { dict, locale } = useI18n();
   const t = dict.onboarding;
@@ -184,7 +185,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
       console.error("Error al registrar finalización del onboarding:", err);
     } finally {
       setLoading(false);
-      router.push(targetUrl);
+      router.push(lp(targetUrl));
     }
   };
 

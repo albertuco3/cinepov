@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import UserProfileClient from "@/components/UserProfileClient";
+import { localizePath } from "@/lib/i18n/paths";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata = {
   title: "Mi Perfil — CinePOV",
@@ -13,7 +15,7 @@ export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user || !session.user.id) {
-    redirect("/login");
+    redirect(localizePath("/login", await getRequestLocale()));
   }
 
   // 1. Consultar información completa del usuario y su historial de ratings en la base de datos
@@ -22,7 +24,7 @@ export default async function ProfilePage() {
   });
 
   if (!user) {
-    redirect("/login");
+    redirect(localizePath("/login", await getRequestLocale()));
   }
 
   const ratings = await db.rating.findMany({

@@ -2,15 +2,16 @@
 
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
-import { useI18n } from "@/lib/i18n/client";
+import { useI18n, useLocalePath } from "@/lib/i18n/client";
 import { birthYearOptions } from "@/lib/age";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const lp = useLocalePath();
   const { dict, locale } = useI18n();
   
   // Estados del formulario
@@ -71,7 +72,7 @@ export default function RegisterPage() {
       // Redirigir al login tras 2 segundos
       toast.success(locale === "en" ? "Account created successfully!" : "¡Cuenta creada con éxito!");
       setTimeout(() => {
-        router.push("/login");
+        router.push(lp("/login"));
       }, 2000);
 
     } catch (err) {

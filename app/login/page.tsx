@@ -2,12 +2,13 @@
 
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { signIn } from "next-auth/react";
-import { useI18n } from "@/lib/i18n/client";
+import { useI18n, useLocalePath } from "@/lib/i18n/client";
 
 export default function LoginPage() {
   const { dict, locale } = useI18n();
+  const lp = useLocalePath();
   
   // Estados del formulario
   const [formData, setFormData] = useState({
@@ -46,11 +47,11 @@ export default function LoginPage() {
           const sessionData = await sessionRes.json();
           if (sessionData?.user) {
             if (!sessionData.user.gender || !sessionData.user.birthYear) {
-              window.location.href = "/welcome";
+              window.location.href = lp("/welcome");
               return;
             }
             if (!sessionData.user.onboardingCompleted) {
-              window.location.href = "/onboarding";
+              window.location.href = lp("/onboarding");
               return;
             }
           }
@@ -59,7 +60,7 @@ export default function LoginPage() {
         // Fallback seguro a la raíz
       }
 
-      window.location.href = "/";
+      window.location.href = lp("/");
     } catch (err) {
       setError(errorMessage(err) || (locale === "en" ? "Error signing in." : "Error al iniciar sesión."));
     } finally {

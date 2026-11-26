@@ -2,7 +2,7 @@
 
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {

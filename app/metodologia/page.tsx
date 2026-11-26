@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { db } from "@/lib/db";
 import { COUNTED_USER_WHERE, countedRatingWhere } from "@/lib/rating-filters";
 import { GRANULARITY_THRESHOLDS, SEGMENT_MIN_VOTES } from "@/lib/demographics";

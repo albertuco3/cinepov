@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { toast } from "sonner";
 import { type CinematicProfileData } from "@/lib/cinematic-profile";
 

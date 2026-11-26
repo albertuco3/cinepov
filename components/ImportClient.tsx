@@ -2,7 +2,7 @@
 
 import { errorMessage } from "@/lib/errors";
 import { useState, useRef } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 
 interface ImportedMovie {
   title: string;

@@ -10,7 +10,8 @@ import CookieBanner from "@/components/CookieBanner";
 
 import BottomNav from "@/components/BottomNav";
 import { I18nProvider } from "@/lib/i18n/client";
-import { getRequestLocale } from "@/lib/i18n/server";
+import { getRequestLocale, getRequestPathname, localeAlternates } from "@/lib/i18n/server";
+import { SITE_URL } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,7 +23,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: "CinePOV — Tu Punto de Vista Cinematográfico",
   description: "Descubre cómo valoran tus películas favoritas las personas con tus mismos gustos y perfil demográfico. Filtros por género y edad.",
   manifest: "/manifest.json",
@@ -31,6 +32,20 @@ export const metadata: Metadata = {
     apple: "/icon.svg",
   },
 };
+
+/**
+ * Metadatos comunes. Añade a cada página su canónica y sus `hreflang` a partir
+ * de la ruta que reescribe el middleware; las páginas que necesitan otra
+ * canónica (ficha, blog) la declaran ellas.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const [locale, pathname] = await Promise.all([getRequestLocale(), getRequestPathname()]);
+  return {
+    ...baseMetadata,
+    metadataBase: new URL(SITE_URL),
+    ...(pathname ? { alternates: localeAlternates(pathname, locale) } : {}),
+  };
+}
 
 export default async function RootLayout({
   children,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { useI18n } from "@/lib/i18n/client";
 
 export type CookieConsent = "accepted" | "rejected";
