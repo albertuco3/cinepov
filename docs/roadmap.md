@@ -27,7 +27,7 @@
 | Calidad | `tsc` sin errores, lint sin errores ni avisos, 85 tests en verde, `next build` correcto. |
 | Repositorio | En GitHub (privado), con `main` y `dev`. CI en verde. |
 | Base de datos | Neon con dos ramas: `production` (limpia: sin bots ni usuarios de prueba, migración base registrada) y `dev` (copia del estado anterior, para desarrollo). |
-| Producción | **Sin desplegar.** Faltan Vercel, dominio, Resend y PostHog. |
+| Producción | Desplegado en <https://cinepov-beta.vercel.app> desde `main`. Faltan dominio, Resend, PostHog y Sentry. |
 | Usuarios reales | 0. |
 | Hipótesis central | **No validada** con MovieLens: ver [En paralelo](#en-paralelo--validar-la-hipótesis-con-movielens). Requiere una decisión antes del lanzamiento público. |
 
@@ -55,7 +55,7 @@ Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.m
 - [x] Separar bases de datos: rama `dev` de Neon para desarrollo (el `.env` local apunta a ella) y `production` solo para producción.
 - [x] Retirar de la base de producción los votos sintéticos, los bots y los usuarios de prueba (15.557 votos y 5.010 usuarios borrados).
 - [x] Registrar la migración base en la rama `production` de Neon.
-- [ ] Proyecto en Vercel con todas las variables de entorno (incluidas `ADMIN_EMAILS`, `CRON_SECRET` y un `NEXTAUTH_SECRET` nuevo).
+- [x] Proyecto en Vercel desplegando `main`, con `ADMIN_EMAILS`, `CRON_SECRET`, `NEXTAUTH_URL` y un `NEXTAUTH_SECRET` nuevo.
 - [ ] Dominio definitivo (`.com` y `.es` defensivo) y handles en redes.
 - [ ] Resend con SPF, DKIM y DMARC en el dominio.
 - [ ] PostHog en la región UE.
@@ -85,6 +85,8 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Las recomendaciones presentaban la nota de TMDB como opinión del segmento** (y un perfil inventado de "mujer de 28" si faltaban datos). Ahora se etiqueta la procedencia y no se inventa perfil. Sus enlaces llevaban a la película equivocada.
 - [ ] *(código)* **`parseMovieParam` convertía un UUID en un id de TMDB** ("07bb…" → película 7).
 - [ ] *(código)* **El `NEXTAUTH_SECRET` de `.env.example` era el mismo que el de `.env`.** Nunca se versionó; ahora el ejemplo lleva un marcador y sí se versiona.
+- [x] **Las imágenes OG daban error 500 en todas las películas** (Satori exige `display: flex` en cualquier `div` cuyo contenido no sea una cadena). Corregido y comprobado en producción; la tarjeta tiene tests que reproducen la regla y generan PNG reales.
+- [x] **El sitemap, `robots.txt`, las URLs canónicas y los enlaces de los emails salían con `//`** si `NEXTAUTH_URL` llevaba barra final. Ahora todo sale de `lib/site.ts`. Comprobado en producción.
 
 ### 1.3 Medición
 
@@ -110,7 +112,8 @@ El idioma ya se resuelve una sola vez en el servidor (cookie y, si no hay, `Acce
 
 ### 1.6 Prueba de humo en producción
 
-- [ ] Registro → verificación de email → valoración → desglose, en móvil y escritorio.
+- [x] Rutas públicas comprobadas en producción el 26 de noviembre: páginas en 200, administración y social en 404, cron sin secreto en 401, perfil redirige al login, cabeceras de seguridad presentes.
+- [ ] Registro → verificación de email → valoración → desglose, en móvil y escritorio (necesita Resend).
 - [ ] Registrar un usuario, redesplegar y comprobar que sigue ahí.
 - [ ] Recuperación de contraseña y borrado de cuenta de principio a fin.
 - [ ] Ningún secreto en el repositorio ni en el bundle del cliente.
