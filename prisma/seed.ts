@@ -1,9 +1,10 @@
 /**
  * Seed de catálogo: seguro para producción.
  *
- * Solo crea o actualiza las 50 películas esenciales del onboarding. No borra
- * nada, no crea usuarios y no crea valoraciones: puede ejecutarse tantas veces
- * como haga falta y contra cualquier base de datos.
+ * Solo crea o actualiza las 50 películas esenciales del onboarding y retira
+ * del onboarding las que ya no están en la lista. No borra nada, no crea
+ * usuarios ni valoraciones: puede ejecutarse tantas veces como haga falta y
+ * contra cualquier base de datos.
  *
  * Los datos de prueba para desarrollo local están en `prisma/seed-dev.ts`.
  */
@@ -60,7 +61,14 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  console.log(`Catálogo listo: ${ok} de ${ESSENTIAL_MOVIE_IDS.length} películas.`);
+  // Las películas que dejan de estar en la lista siguen en el catálogo, pero
+  // ya no salen en el onboarding.
+  const { count: unfeatured } = await prisma.movie.updateMany({
+    where: { isFeatured: true, tmdbId: { notIn: ESSENTIAL_MOVIE_IDS } },
+    data: { isFeatured: false },
+  });
+
+  console.log(`Catálogo listo: ${ok} de ${ESSENTIAL_MOVIE_IDS.length} películas. Retiradas del onboarding: ${unfeatured}.`);
 }
 
 main()

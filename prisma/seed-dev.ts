@@ -18,7 +18,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 const CONFIRMATION = "borrar-y-rellenar";
 const USERS = 400;
-const RATING_PROBABILITY = 0.45;
+/**
+ * Probabilidad de que un usuario valore una película, distinta en cada una para
+ * cubrir toda la escalera de granularidad: fichas casi vacías, niveles a medio
+ * desbloquear y matrices completas.
+ */
+const MIN_RATING_PROBABILITY = 0.005;
+const MAX_RATING_PROBABILITY = 0.5;
 const GENDERS = ["male", "female", "non_binary"] as const;
 
 if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
@@ -82,8 +88,11 @@ async function main() {
   for (const movie of movies) {
     const base = movie.tmdbRating && movie.tmdbRating > 0 ? movie.tmdbRating : 7;
     const offsets = new Map<string, number>();
+    // Reparto cuadrático: más películas con pocos votos que con muchos.
+    const probability =
+      MIN_RATING_PROBABILITY + (MAX_RATING_PROBABILITY - MIN_RATING_PROBABILITY) * random() ** 2;
     for (const user of created) {
-      if (random() > RATING_PROBABILITY) continue;
+      if (random() > probability) continue;
       const group = `${user.gender}:${Math.floor((currentYear - user.birthYear) / 10)}`;
       if (!offsets.has(group)) offsets.set(group, (random() - 0.5) * 3);
       const noise = (random() - 0.5) * 2.4;
