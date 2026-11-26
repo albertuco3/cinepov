@@ -17,7 +17,7 @@ interface RecommendedMovie {
   cohortRating: number;
   cohortVotes: number;
   affinityScore: number | null;
-  source: "segment" | "tmdb";
+  source: "taste" | "segment" | "tmdb";
   inWatchlist: boolean;
   taglineReason: string;
 }
@@ -28,6 +28,7 @@ interface RecommendationsData {
   ageRange: string;
   userRatingsCount: number;
   averageAffinity: number | null;
+  tasteNeighbors: number;
   recommendations: RecommendedMovie[];
 }
 
@@ -126,10 +127,14 @@ export default function RecommendationsPage() {
         <div className="glass-panel px-5 py-3 rounded-2xl border border-white/10 flex items-center gap-4 shrink-0">
           <div className="flex flex-col">
             <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-              {t.cohortAffinity}
+              {data.tasteNeighbors > 0 ? t.tasteNeighborsLabel : t.cohortAffinity}
             </span>
             <span className="text-2xl font-black text-white">
-              {data.averageAffinity !== null ? `${data.averageAffinity}%` : "—"}
+              {data.tasteNeighbors > 0
+                ? data.tasteNeighbors
+                : data.averageAffinity !== null
+                  ? `${data.averageAffinity}%`
+                  : "—"}
             </span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
@@ -197,6 +202,7 @@ export default function RecommendationsPage() {
                   }`}
                 >
                   {movie.source === "tmdb" && <span className="mr-1 text-[9px] font-bold opacity-80">TMDB</span>}
+                  {movie.source === "taste" && <span className="mr-1 text-[9px] font-bold opacity-80">{t.yourScoreBadge}</span>}
                   {movie.cohortRating.toFixed(1)}
                 </div>
               </div>

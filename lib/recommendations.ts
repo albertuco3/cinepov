@@ -15,8 +15,13 @@ export interface RecommendedMovie {
   affinityScore: number | null;
   inWatchlist: boolean;
   taglineReason: string;
-  /** De dónde sale la nota: nunca se presenta una nota de TMDB como opinión del segmento. */
-  source: "segment" | "tmdb";
+  /**
+   * De dónde sale la nota, para etiquetarla siempre:
+   * - "taste": la nota que le darías, según cómo puntúas y la gente con tus gustos;
+   * - "segment": la media de tu grupo de edad y género;
+   * - "tmdb": la nota de TMDB, cuando aún no hay datos propios.
+   */
+  source: "taste" | "segment" | "tmdb";
 }
 
 export interface DemographicRecommendationsResult {
@@ -25,6 +30,8 @@ export interface DemographicRecommendationsResult {
   ageRange: string;
   userRatingsCount: number;
   averageAffinity: number | null;
+  /** Personas con gustos parecidos encontradas (0 si aún no hay). */
+  tasteNeighbors: number;
   recommendations: RecommendedMovie[];
 }
 
@@ -67,17 +74,21 @@ export function calculateAffinityScore(averageScore: number, voteCount: number):
 }
 
 /**
- * Motor de recomendaciones cinematográficas personalizadas según segmento demográfico (Fase 7.1).
- * Selecciona películas con alta calificación en el colectivo del usuario que aún no ha valorado.
- *
- * Mientras el segmento no tenga datos suficientes, completa la lista con
- * películas bien valoradas en TMDB, marcadas como tales (`source: "tmdb"`).
+ * Recomendaciones para un usuario, en tres capas por orden:
+ * 1. Por gusto: la nota que le darías, según cómo puntúa y la gente que puntúa
+ *    como él (lib/taste-db.ts). Es lo que mejor predice (ver la validación).
+ * 2. Por segmento: lo mejor valorado por su grupo de edad y género.
+ * 3. TMDB: relleno mientras no haya datos propios.
+ * Cada recomendación lleva su procedencia para etiquetarla.
  */
-export async function getDemographicRecommendations(
+export async function getRecommendations(
   userId: string,
-  limit = 12
+  limit = 12,
+  locale: "es" | "en" = "es"
 ): Promise<DemographicRecommendationsResult> {
   const { db } = await import("@/lib/db");
+  const { recommendByTaste } = await import("@/lib/taste-db");
+  const en = locale === "en";
   const currentYear = new Date().getFullYear();
 
   const user = await db.user.findUnique({
@@ -96,27 +107,32 @@ export async function getDemographicRecommendations(
   const watchlistMovieIds = new Set(user?.watchlists.map((w) => w.movieId) ?? []);
   const cohortName = ageKey ? `${getGenderLabel(gender)} de ${getAgeRangeLabel(ageKey)}` : "tu perfil";
 
-  // 1. Media del segmento por película, calculada en la base de datos sobre
-  // todas las películas que el usuario no ha valorado.
+  // 1. Por gusto.
+  const taste = await recommendByTaste(userId, limit);
+  const tasteIds = taste.recommendations.map((r) => r.movieId);
+
+  // 2. Por segmento, en la base de datos y sobre todas las películas que no ha
+  // valorado ni le recomienda ya su gusto.
+  const segmentLimit = limit - tasteIds.length;
   const segmentGroups =
-    gender && ageKey
+    gender && ageKey && segmentLimit > 0
       ? await db.rating.groupBy({
           by: ["movieId"],
           where: {
             ...countedRatingWhere(segmentUserWhere({ gender, ageKey }, currentYear)),
-            movieId: { notIn: ratedMovieIds },
+            movieId: { notIn: [...ratedMovieIds, ...tasteIds] },
           },
           _avg: { score: true },
           _count: { score: true },
           having: { score: { _count: { gte: SEGMENT_MIN_VOTES } } },
           orderBy: [{ _avg: { score: "desc" } }, { _count: { score: "desc" } }],
-          take: limit,
+          take: segmentLimit,
         })
       : [];
 
-  // 2. Relleno mientras el segmento no tiene datos: TMDB, etiquetado.
+  // 3. Relleno de TMDB, etiquetado.
   const segmentMovieIds = segmentGroups.map((g) => g.movieId);
-  const fillCount = limit - segmentGroups.length;
+  const fillCount = limit - tasteIds.length - segmentGroups.length;
   const movieSelect = {
     id: true,
     tmdbId: true,
@@ -127,61 +143,77 @@ export async function getDemographicRecommendations(
     genres: { select: { name: true } },
   } as const;
 
-  const [segmentMovies, fallbackMovies] = await Promise.all([
-    db.movie.findMany({ where: { id: { in: segmentMovieIds } }, select: movieSelect }),
+  const [knownMovies, fallbackMovies] = await Promise.all([
+    db.movie.findMany({ where: { id: { in: [...tasteIds, ...segmentMovieIds] } }, select: movieSelect }),
     fillCount > 0
       ? db.movie.findMany({
-          where: { id: { notIn: [...ratedMovieIds, ...segmentMovieIds] }, tmdbRating: { not: null } },
+          where: {
+            id: { notIn: [...ratedMovieIds, ...tasteIds, ...segmentMovieIds] },
+            tmdbRating: { not: null },
+          },
           orderBy: { tmdbRating: "desc" },
           take: fillCount,
           select: movieSelect,
         })
       : Promise.resolve([]),
   ]);
-  const segmentMovieById = new Map(segmentMovies.map((m) => [m.id, m]));
+  const movieById = new Map(knownMovies.map((m) => [m.id, m]));
 
-  const fromSegment: RecommendedMovie[] = segmentGroups.flatMap((group) => {
-    const movie = segmentMovieById.get(group.movieId);
-    if (!movie || group._avg.score === null) return [];
-    const cohortRating = parseFloat(group._avg.score.toFixed(1));
-    const cohortVotes = group._count.score;
-    return [
-      {
-        id: movie.id,
-        tmdbId: movie.tmdbId,
-        title: movie.title,
-        posterUrl: movie.posterUrl,
-        year: movie.year,
-        genres: movie.genres.map((g) => g.name),
-        cohortRating,
-        cohortVotes,
-        affinityScore: calculateAffinityScore(cohortRating, cohortVotes),
-        inWatchlist: watchlistMovieIds.has(movie.id),
-        taglineReason:
-          cohortRating >= 8
-            ? `Aclamada por ${cohortName} (${cohortRating}/10)`
-            : `Valorada con ${cohortRating}/10 por ${cohortName}`,
-        source: "segment" as const,
-      },
-    ];
-  });
-
-  const fromTmdb: RecommendedMovie[] = fallbackMovies.map((movie) => ({
+  const card = (movie: (typeof knownMovies)[number]) => ({
     id: movie.id,
     tmdbId: movie.tmdbId,
     title: movie.title,
     posterUrl: movie.posterUrl,
     year: movie.year,
     genres: movie.genres.map((g) => g.name),
+    inWatchlist: watchlistMovieIds.has(movie.id),
+  });
+
+  const fromTaste: RecommendedMovie[] = taste.recommendations.flatMap((rec) => {
+    const movie = movieById.get(rec.movieId);
+    if (!movie) return [];
+    return [
+      {
+        ...card(movie),
+        cohortRating: rec.score,
+        cohortVotes: rec.neighborCount,
+        affinityScore: null,
+        taglineReason: en
+          ? `You'd give it ${rec.score} · ${rec.neighborCount} people with your taste have seen it`
+          : `Le darías un ${rec.score} · la han visto ${rec.neighborCount} personas con tus gustos`,
+        source: "taste" as const,
+      },
+    ];
+  });
+
+  const fromSegment: RecommendedMovie[] = segmentGroups.flatMap((group) => {
+    const movie = movieById.get(group.movieId);
+    if (!movie || group._avg.score === null) return [];
+    const cohortRating = parseFloat(group._avg.score.toFixed(1));
+    const cohortVotes = group._count.score;
+    return [
+      {
+        ...card(movie),
+        cohortRating,
+        cohortVotes,
+        affinityScore: calculateAffinityScore(cohortRating, cohortVotes),
+        taglineReason: en
+          ? `Rated ${cohortRating}/10 by people your age and gender`
+          : `Valorada con ${cohortRating}/10 por ${cohortName}`,
+        source: "segment" as const,
+      },
+    ];
+  });
+
+  const fromTmdb: RecommendedMovie[] = fallbackMovies.map((movie) => ({
+    ...card(movie),
     cohortRating: parseFloat((movie.tmdbRating ?? 0).toFixed(1)),
     cohortVotes: 0,
     affinityScore: null,
-    inWatchlist: watchlistMovieIds.has(movie.id),
-    taglineReason: "Nota de TMDB: tu segmento aún no la ha valorado",
+    taglineReason: en ? "TMDB score: not enough CinePOV data yet" : "Nota de TMDB: aún no hay datos suficientes en CinePOV",
     source: "tmdb" as const,
   }));
 
-  const recommendations = [...fromSegment, ...fromTmdb];
   const averageAffinity =
     fromSegment.length > 0
       ? Math.round(fromSegment.reduce((sum, m) => sum + (m.affinityScore ?? 0), 0) / fromSegment.length)
@@ -193,6 +225,7 @@ export async function getDemographicRecommendations(
     ageRange: ageKey ?? "",
     userRatingsCount: ratedMovieIds.length,
     averageAffinity,
-    recommendations,
+    tasteNeighbors: taste.neighborCount,
+    recommendations: [...fromTaste, ...fromSegment, ...fromTmdb],
   };
 }

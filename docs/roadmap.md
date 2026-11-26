@@ -127,7 +127,11 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [x] Brechas: solo el **15,6 %** de las películas tiene una brecha relevante de género o edad (umbral: 33 %). Las de género, un 2,1 %.
 - [x] Poder predictivo: la media del segmento mejora la predicción un **0,4 %**; el sesgo personal, un **7,2 %**.
 - [x] Resultados y lectura en [validacion_movielens.md](./validacion_movielens.md).
-- [ ] **Decidir el reposicionamiento** que indica la tabla prerregistrada: utilidad basada en gustos propios, el desglose demográfico como capa de contenido (con la edad por delante), y revisar el lema y la landing antes del lanzamiento público.
+- [x] **Reposicionamiento decidido (27 de noviembre):** la utilidad es la nota estimada por gusto; el desglose demográfico pasa a ser contenido, con la edad por delante.
+- [x] Motor "gente que puntúa como tú" (`lib/taste.ts`, `lib/taste-db.ts`), elegido con MovieLens (sección 4 de la validación): nota estimada en la ficha y recomendaciones por gusto antes que por segmento.
+- [x] Lema conservado (ahora lo respalda el motor) y textos de portada, cómo funciona, recomendaciones y metadatos reescritos.
+- [ ] Destacar en la ficha y en la portada solo las películas con una brecha real ("cuando hay brecha, es noticia").
+- [ ] Ajustar el motor con datos propios cuando haya volumen (umbral de vecinos, orden de las recomendaciones con pocos vecinos).
 - [ ] Revisar la licencia de GroupLens antes de publicar nada derivado de estos datos.
 
 ---

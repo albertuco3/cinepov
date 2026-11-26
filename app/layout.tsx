@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 
 const baseMetadata: Metadata = {
   title: "CinePOV — Tu Punto de Vista Cinematográfico",
-  description: "Descubre cómo valoran tus películas favoritas las personas con tus mismos gustos y perfil demográfico. Filtros por género y edad.",
+  description: "Descubre qué nota le darías a cada película según cómo puntúas tú y la gente con tus gustos, y qué películas dividen a generaciones.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",

@@ -4,6 +4,7 @@ import { useJson } from "@/lib/hooks/use-json";
 import Link from "@/components/LocaleLink";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { useI18n } from "@/lib/i18n/client";
 
 interface RecommendedMovie {
   id: string;
@@ -13,7 +14,7 @@ interface RecommendedMovie {
   year: number;
   cohortRating: number;
   affinityScore: number | null;
-  source: "segment" | "tmdb";
+  source: "taste" | "segment" | "tmdb";
   taglineReason: string;
 }
 
@@ -24,6 +25,7 @@ interface RecommendationsData {
 
 export default function HomeRecommendationsSection() {
   const { status } = useSession();
+  const { dict } = useI18n();
   const { data } = useJson<RecommendationsData>(
     status === "authenticated" ? "/api/recommendations?limit=4" : null
   );
@@ -88,6 +90,9 @@ export default function HomeRecommendationsSection() {
                   }`}
                 >
                   {movie.source === "tmdb" && <span className="mr-1 text-[9px] font-bold opacity-80">TMDB</span>}
+                  {movie.source === "taste" && (
+                    <span className="mr-1 text-[9px] font-bold opacity-80">{dict.recommendations.yourScoreBadge}</span>
+                  )}
                   {movie.cohortRating.toFixed(1)}
                 </div>
               </div>

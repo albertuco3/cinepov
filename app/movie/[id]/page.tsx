@@ -6,6 +6,7 @@ import { getMovieLocalized } from "@/lib/movies";
 import { db } from "@/lib/db";
 import { AGE_RANGE_LABELS, ageKeyFromBirthYear } from "@/lib/demographics";
 import { countedRatingWhere, segmentUserWhere } from "@/lib/rating-filters";
+import { predictForMovie } from "@/lib/taste-db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import MovieRatingSection from "@/components/MovieRatingSection";
@@ -120,6 +121,10 @@ export default async function MoviePage({ params }: MoviePageProps) {
   ]);
 
   // 4. Calcular compatibilidad con el segmento del usuario (Fase 2.4.2)
+  // Nota estimada para quien aún no la ha valorado: según cómo puntúa y la
+  // gente que puntúa como él (lib/taste-db.ts).
+  const prediction = session?.user?.id && !userRating ? await predictForMovie(session.user.id, movie.id) : null;
+
   let compatibilityScore: number | null = null;
   let compatibilityCount = 0;
   let userSegmentLabel = "";
@@ -303,6 +308,38 @@ export default async function MoviePage({ params }: MoviePageProps) {
               userScore={userRating ? userRating.score : null}
               initialWatchedAt={userRating?.watchedAt ? userRating.watchedAt.toISOString() : null}
             />
+
+            {/* Nota estimada por gusto: la promesa principal de la ficha */}
+            {session?.user && !userRating && (
+              <div className="glass-panel p-5 rounded-2xl border border-primary/25 bg-primary/5 space-y-2">
+                <span className="text-[10px] font-bold text-primary-light uppercase tracking-wider block">
+                  {locale === "en" ? "Your estimated score" : "Tu nota estimada"}
+                </span>
+                {prediction ? (
+                  <>
+                    <p className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-white tabular-nums">{prediction.score.toFixed(1)}</span>
+                      <span className="text-xs text-muted-foreground">/10</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {prediction.neighborCount > 0
+                        ? locale === "en"
+                          ? `Based on how you rate and on ${prediction.neighborCount} ${prediction.neighborCount === 1 ? "person" : "people"} with similar taste who ${prediction.neighborCount === 1 ? "has" : "have"} seen it.`
+                          : `Según cómo puntúas tú y ${prediction.neighborCount} ${prediction.neighborCount === 1 ? "persona" : "personas"} con gustos parecidos que la ${prediction.neighborCount === 1 ? "ha" : "han"} visto.`
+                        : locale === "en"
+                          ? "Based on how you rate. No one with similar taste has seen it yet."
+                          : "Según cómo puntúas tú. Aún no la ha visto nadie con gustos parecidos a los tuyos."}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {locale === "en"
+                      ? "Rate at least 5 movies and we will tell you what score you would give this one."
+                      : "Valora al menos 5 películas y te diremos qué nota le darías a esta."}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Indicador de compatibilidad demográfica (Fase 2.4.2) */}
             {session?.user && (

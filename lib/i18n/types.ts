@@ -85,6 +85,8 @@ export interface Dictionary {
     registerCta: string;
     yourCohort: string;
     cohortAffinity: string;
+    tasteNeighborsLabel: string;
+    yourScoreBadge: string;
     noRecommendationsTitle: string;
     noRecommendationsDesc: string;
     exploreAll: string;
