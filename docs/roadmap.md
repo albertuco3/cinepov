@@ -52,7 +52,7 @@
 
 Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.md).
 
-- [ ] Separar bases de datos: rama `dev` creada en Neon; falta apuntar el `.env` local a ella.
+- [x] Separar bases de datos: rama `dev` de Neon para desarrollo (el `.env` local apunta a ella) y `production` solo para producción.
 - [x] Retirar de la base de producción los votos sintéticos, los bots y los usuarios de prueba (15.557 votos y 5.010 usuarios borrados).
 - [x] Registrar la migración base en la rama `production` de Neon.
 - [ ] Proyecto en Vercel con todas las variables de entorno (incluidas `ADMIN_EMAILS`, `CRON_SECRET` y un `NEXTAUTH_SECRET` nuevo).
