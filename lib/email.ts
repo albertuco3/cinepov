@@ -39,6 +39,20 @@ function getResendClient(): Resend | null {
 }
 
 /**
+ * Escapa un texto para insertarlo en el HTML de un email. Los textos se guardan
+ * como texto plano (lib/sanitize.ts), así que nombres y títulos se escapan aquí,
+ * en el momento de construir el HTML.
+ */
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
  * Enmascara una dirección para los logs: "ana.garcia@gmail.com" → "a***@gmail.com".
  * Los logs de la plataforma no deben contener datos personales.
  */
@@ -132,7 +146,7 @@ export async function sendWelcomeEmail(email: string, displayName: string): Prom
       </div>
       
       <div style="background-color: #1f2833; padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
-        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">¡Hola, ${displayName}!</h2>
+        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">¡Hola, ${escapeHtml(displayName)}!</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
           Te damos la bienvenida oficial a <strong>CinePOV</strong>, la plataforma que rompe la tiranía de la nota media general para darte el punto de vista cinéfilo que de verdad te interesa.
         </p>
@@ -169,7 +183,7 @@ export async function sendVerificationEmail(
   const htmlBody = renderLayout(
     `
       <div style="background-color: #1f2833; padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
-        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Solo falta un paso, ${displayName}</h2>
+        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Solo falta un paso, ${escapeHtml(displayName)}</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
           Confirma que esta dirección de correo es tuya para activar tu cuenta de <strong>CinePOV</strong>. Verificar tu email es lo que permite que tus valoraciones cuenten en las estadísticas demográficas públicas.
         </p>
@@ -206,7 +220,7 @@ export async function sendPasswordResetEmail(
   const htmlBody = renderLayout(
     `
       <div style="background-color: #1f2833; padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
-        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Hola, ${displayName}</h2>
+        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Hola, ${escapeHtml(displayName)}</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
           Hemos recibido una solicitud para restablecer la contraseña de tu cuenta de <strong>CinePOV</strong>. Pulsa el botón para elegir una contraseña nueva.
         </p>
@@ -247,7 +261,7 @@ export async function sendOAuthOnlyAccountEmail(
   const htmlBody = renderLayout(
     `
       <div style="background-color: #1f2833; padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
-        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Hola, ${displayName}</h2>
+        <h2 style="color: #ffffff; font-weight: 800; margin-top: 0;">Hola, ${escapeHtml(displayName)}</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7;">
           Has solicitado restablecer la contraseña de tu cuenta de <strong>CinePOV</strong>, pero esta cuenta no tiene contraseña: se creó accediendo con Google.
         </p>
@@ -288,7 +302,7 @@ export async function sendWeeklyTrendsEmail(
       <div style="display: flex; align-items: center; background-color: #0b0c10; padding: 15px; border-radius: 12px; border: 1px solid #1f2833; margin-bottom: 12px;">
         <div style="font-size: 20px; font-weight: 900; color: #66fcf1; width: 35px; text-align: center; margin-right: 10px;">${i + 1}º</div>
         <div style="flex: 1;">
-          <h4 style="color: #ffffff; margin: 0 0 4px 0; font-size: 14px; font-weight: 800;">${m.title}</h4>
+          <h4 style="color: #ffffff; margin: 0 0 4px 0; font-size: 14px; font-weight: 800;">${escapeHtml(m.title)}</h4>
           <span style="font-size: 11px; color: #666;">Año ${m.year}</span>
         </div>
         <div style="text-align: right; margin-left: 15px;">
@@ -307,7 +321,7 @@ export async function sendWeeklyTrendsEmail(
       </div>
       
       <p style="font-size: 14px; line-height: 1.6; color: #c5c6c7; margin-bottom: 25px;">
-        Hola <strong>${displayName}</strong>. Hemos calculado las películas más populares y mejor valoradas esta semana entre personas de tu mismo segmento demográfico (<span style="color: #66fcf1; font-weight: bold;">${segmentLabel}</span>):
+        Hola <strong>${escapeHtml(displayName)}</strong>. Hemos calculado las películas más populares y mejor valoradas esta semana entre personas de tu mismo segmento demográfico (<span style="color: #66fcf1; font-weight: bold;">${escapeHtml(segmentLabel)}</span>):
       </p>
       
       <div style="background-color: #1f2833; padding: 25px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">

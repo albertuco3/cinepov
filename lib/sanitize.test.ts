@@ -13,6 +13,18 @@ describe("sanitizeText", () => {
     expect(sanitizeText("Hola\u200B Mundo")).toBe("Hola Mundo");
   });
 
+  it("guarda texto plano sin escapar: el escapado es cosa de quien lo pinta", () => {
+    expect(sanitizeText("Tom & Jerry")).toBe("Tom & Jerry");
+    expect(sanitizeText("1 < 2 y 3 > 2")).toBe("1 < 2 y 3 > 2");
+  });
+
+  it("no deja etiquetas aunque se intenten anidar u ofuscar", () => {
+    expect(sanitizeText("<scr<script>ipt>alert(1)</scr</script>ipt>Hola")).toBe("Hola");
+    expect(sanitizeText('<img src=x onerror="alert(1)">Hola')).toBe("Hola");
+    expect(sanitizeText("<!-- comentario -->Hola<style>b{}</style>")).toBe("Hola");
+    expect(sanitizeText("<svg><script>alert(1)</script></svg>Hola")).toBe("Hola");
+  });
+
   it("normaliza espacios repetidos", () => {
     expect(sanitizeText("  Muchos   espacios   ")).toBe("Muchos espacios");
   });
