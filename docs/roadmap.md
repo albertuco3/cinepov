@@ -25,8 +25,8 @@
 |---|---|
 | Código | Fases 0–5 de la numeración anterior construidas. Bloqueantes de la auditoría de noviembre corregidos en código (ver [1.2](#12-bloqueantes-encontrados-en-la-auditoría-de-noviembre)). |
 | Calidad | `tsc` sin errores, lint sin errores ni avisos, 85 tests en verde, `next build` correcto. |
-| Repositorio | **Sin remoto.** Todo el trabajo vive en un único disco. |
-| Base de datos | Neon provisionado, pero contiene datos de desarrollo: 5.000 bots con 15.557 votos sintéticos y 10 usuarios de prueba. Migración base creada; falta registrarla en Neon. |
+| Repositorio | En GitHub (privado), con `main` y `dev`. CI en verde. |
+| Base de datos | Neon con dos ramas: `production` (limpia: sin bots ni usuarios de prueba, migración base registrada) y `dev` (copia del estado anterior, para desarrollo). |
 | Producción | **Sin desplegar.** Faltan Vercel, dominio, Resend y PostHog. |
 | Usuarios reales | 0. |
 | Hipótesis central | **No validada** con MovieLens: ver [En paralelo](#en-paralelo--validar-la-hipótesis-con-movielens). Requiere una decisión antes del lanzamiento público. |
@@ -35,12 +35,12 @@
 
 ## Hito 0 — Proteger el trabajo (hoy)
 
-- [ ] Crear el repositorio remoto **privado** y subir `main` y `dev`.
+- [x] Crear el repositorio remoto **privado** y subir `main` y `dev`.
 - [x] Dejar de versionar `dev.db`, `prisma/dev.db` y `ratings.csv`. Si el repositorio llega a ser público, purgarlos también del historial.
 - [x] Commitear el trabajo pendiente en commits pequeños, con la convención del README.
 - [x] Dejar el lint en verde ([R-01](#r-01--lint-en-verde)).
 
-**Criterio de salida:** el CI de GitHub Actions pasa en verde sobre `dev`.
+**Criterio de salida:** el CI de GitHub Actions pasa en verde sobre `dev`. **Cumplido el 26 de noviembre de 2026.**
 
 ---
 
@@ -52,9 +52,9 @@
 
 Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.md).
 
-- [ ] Separar bases de datos: una rama de Neon para desarrollo y la principal, limpia, para producción.
-- [ ] Retirar de la base de producción los votos sintéticos y los bots (`npm run db:remove-synthetic`, ya preparado).
-- [ ] Registrar la migración base en Neon (`prisma migrate resolve --applied 20261123000000_baseline`).
+- [ ] Separar bases de datos: rama `dev` creada en Neon; falta apuntar el `.env` local a ella.
+- [x] Retirar de la base de producción los votos sintéticos, los bots y los usuarios de prueba (15.557 votos y 5.010 usuarios borrados).
+- [x] Registrar la migración base en la rama `production` de Neon.
 - [ ] Proyecto en Vercel con todas las variables de entorno (incluidas `ADMIN_EMAILS`, `CRON_SECRET` y un `NEXTAUTH_SECRET` nuevo).
 - [ ] Dominio definitivo (`.com` y `.es` defensivo) y handles en redes.
 - [ ] Resend con SPF, DKIM y DMARC en el dominio.
@@ -70,7 +70,7 @@ Todos corregidos en código; se marcan del todo al comprobarse en producción.
 
 - [ ] *(código)* **Panel de administración** solo para emails de `ADMIN_EMAILS` con el email verificado; al resto se le responde 404.
 - [ ] *(código)* **Edad mínima de 18 años** en registro, bienvenida y edición de perfil, con declaración explícita (el año de nacimiento no basta para garantizarla).
-- [ ] *(código)* **Votos sintéticos retirados de todo lo público:** núcleo de agregación, API, interfaz, portada, metodología y textos legales. El decaimiento de bots ha desaparecido. Falta limpiar la base de datos (1.1).
+- [ ] *(código)* **Votos sintéticos retirados de todo lo público:** núcleo de agregación, API, interfaz, portada, metodología y textos legales. El decaimiento de bots ha desaparecido. La base de producción ya está limpia.
 - [ ] *(código)* **Sin datos personales en los logs**, y en producción el simulador de email ya no imprime enlaces de verificación ni de restablecimiento de contraseña.
 - [ ] *(código)* **Una sola definición de "voto que cuenta"** ([R-02](#r-02--una-sola-definición-de-voto-que-cuenta)).
 - [ ] *(código)* **Creación de películas sin condiciones de carrera** ([R-03](#r-03--creación-de-películas-sin-condiciones-de-carrera)).
@@ -288,4 +288,4 @@ Construido en código entre julio y septiembre de 2026, con la numeración anter
 
 ---
 
-> **Siguiente paso:** crear el remoto privado (Hito 0) y preparar la base de datos de producción (Hito 1.1). En paralelo, decidir el reposicionamiento que pide la validación con MovieLens.
+> **Siguiente paso:** desplegar en Vercel (Hito 1.1). En paralelo, decidir el reposicionamiento que pide la validación con MovieLens.
