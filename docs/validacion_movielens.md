@@ -98,3 +98,21 @@ Las mayores brechas significativas son sobre todo **generacionales** (*Happy Gil
 - Revisar el lema y la landing antes del lanzamiento público.
 
 **Recordatorio de limitaciones:** datos de hacia el año 2000, usuarios mayoritariamente estadounidenses de una web de recomendaciones, escala 1–5. Los datos reales de CinePOV pueden diferir; esta validación conviene repetirla con los datos propios cuando haya volumen.
+
+## 4. Motor "gente que puntúa como tú" (27 de noviembre de 2026)
+
+Tras decidir el reposicionamiento, se probó con los mismos datos qué motor de recomendación por gustos implementar. Muestra de 400 usuarios con al menos 40 valoraciones; se aparta el 20 % de las de cada uno como prueba (14.980 predicciones).
+
+| Modelo | Historial completo | Solo 20 valoraciones (como tras el onboarding) |
+|---|---|---|
+| M1, media de la película | — | — |
+| M2, media del segmento demográfico | +0,63 % | +0,40 % |
+| M3, película + sesgo personal | +7,65 % | +5,70 % |
+| Vecinos fijos (tus 30 usuarios más parecidos) | **−0,93 %** | −0,08 % |
+| **Vecinos por película sobre M3** (elegido) | **+9,74 %** | **+6,40 %** |
+
+Mejora del RMSE frente a M1.
+
+- La variante ingenua (vecinos fijos) predice **peor** que la media: pocos de tus 30 vecinos han visto cada película concreta. Se descarta.
+- La elegida es la estándar en la literatura (*KNN baseline*): predice con M3 y lo corrige con la desviación de los 40 usuarios más parecidos **entre quienes han valorado esa película** (Pearson sobre películas en común, contraído con 100, mínimo 5 en común).
+- Con pocos usuarios no hay vecinos y queda M3, que sigue siendo unas 10 veces mejor que el segmento demográfico. Para que M3 funcione desde el primer día, la media de cada película parte de la nota de TMDB y se va ajustando con los votos de CinePOV.
