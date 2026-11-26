@@ -30,22 +30,22 @@ Todo el trabajo vive en un único disco. Es lo más barato de esta lista y lo ú
 
 El proyecto de Neon ya existe y tu `.env` apunta a él, pero contiene datos de desarrollo: 5.000 bots con 15.557 votos sintéticos y 10 usuarios de prueba. Se conservaría solo tu cuenta de Gmail.
 
-1. **Rama de desarrollo.** En <https://console.neon.tech>, abre el proyecto → **Branches** → **Create branch**. Nombre: `dev`; rama padre: `main`.
-2. Copia las dos cadenas de conexión de la rama `dev` (la *pooled* y la directa). Las usarás en tu `.env` local cuando la rama `main` pase a ser la de producción (paso 4).
-3. **Limpieza de la rama `main`** (la de producción). Con tu `.env` todavía apuntando a `main`, desde `D:\cinepov`:
+1. **Rama de desarrollo.** En <https://console.neon.tech>, abre el proyecto → **Branches** → **Create branch**. Nombre: `dev`; rama padre: `production` (la rama por defecto; en proyectos antiguos de Neon se llama `main`); opción **Branch data and schema**.
+2. Copia las dos cadenas de conexión de la rama `dev` (la *pooled* y la directa). Las usarás en tu `.env` local cuando la rama `production` quede reservada para producción (paso 4). Las encuentras con el botón **Connect**, eligiendo la rama `dev` y activando o desactivando *Connection pooling*.
+3. **Limpieza de la rama `production`.** Con tu `.env` todavía apuntando a `production`, desde `D:\cinepov`:
    ```bash
    npm run db:remove-synthetic                               # modo de prueba: solo cuenta
    REMOVE_SYNTHETIC_CONFIRM=si npm run db:remove-synthetic   # borra de verdad
    npx prisma migrate resolve --applied 20261123000000_baseline
    ```
    El último comando no cambia ninguna tabla: registra que la base ya tiene el esquema de la migración base.
-4. Cambia tu `.env` local a las cadenas de la rama `dev`. A partir de aquí, `main` solo la usa Vercel.
+4. Cambia tu `.env` local a las cadenas de la rama `dev`. A partir de aquí, `production` solo la usa Vercel.
 5. En las dos cadenas (la de `.env` y la de Vercel), cambia `sslmode=require` por `sslmode=verify-full`. Es lo que recomienda el driver de PostgreSQL y elimina el aviso de seguridad.
 6. Si quieres datos de prueba en la rama `dev`:
    ```bash
    SEED_DEV_CONFIRM=borrar-y-rellenar npm run db:seed:dev
    ```
-7. Activa en Neon las copias de seguridad (*point-in-time restore*) de la rama `main` y **prueba una restauración** en una rama temporal.
+7. Activa en Neon las copias de seguridad (*point-in-time restore*) de la rama `production` y **prueba una restauración** en una rama temporal.
 
 ---
 
@@ -56,8 +56,8 @@ El proyecto de Neon ya existe y tu `.env` apunta a él, pero contiene datos de d
 
    | Variable | Valor |
    |---|---|
-   | `DATABASE_URL` | Cadena *pooled* de la rama `main` de Neon, con `sslmode=verify-full` |
-   | `DIRECT_URL` | Cadena directa de la rama `main`, con `sslmode=verify-full` |
+   | `DATABASE_URL` | Cadena *pooled* de la rama `production` de Neon, con `sslmode=verify-full` |
+   | `DIRECT_URL` | Cadena directa de la rama `production`, con `sslmode=verify-full` |
    | `NEXTAUTH_SECRET` | Uno **nuevo**, distinto del de tu `.env`: `openssl rand -base64 32` |
    | `NEXTAUTH_URL` | La URL pública definitiva, p. ej. `https://cinepov.com` |
    | `TMDB_API_KEY` | Tu clave de la API de TMDB (v3) |
@@ -71,7 +71,7 @@ El proyecto de Neon ya existe y tu `.env` apunta a él, pero contiene datos de d
 
    No añadas `NEXT_PUBLIC_SOCIAL_ENABLED`: lo social queda desactivado durante la beta.
 3. Despliega. El email semanal ya está programado en `vercel.json` (lunes a las 9:00 UTC).
-4. Cuando cambie el esquema de la base de datos, las migraciones se aplican a producción con `npm run db:deploy` (con las variables de `main`), no desde el build de Vercel.
+4. Cuando cambie el esquema de la base de datos, las migraciones se aplican a producción con `npm run db:deploy` (con las cadenas de la rama `production`), no desde el build de Vercel.
 
 ---
 
