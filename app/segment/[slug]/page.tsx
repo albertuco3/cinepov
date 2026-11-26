@@ -107,7 +107,7 @@ export default async function SegmentPage({ params }: PageProps) {
       {/* 1. Cabecera del segmento */}
       <div className="space-y-3 text-center sm:text-left border-b border-white/5 pb-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/15 border border-primary/25 text-primary-light text-[10px] font-black uppercase tracking-wider">
-          Segmento Demografico
+          Segmento Demográfico
         </div>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
           {config.headline}
@@ -198,7 +198,7 @@ export default async function SegmentPage({ params }: PageProps) {
       ) : (
         <div className="glass-panel p-12 rounded-3xl text-center space-y-4 border border-white/5">
           <p className="text-sm text-muted-foreground">
-            Aun no hay suficientes votos verificados para este segmento. ¡Valora peliculas en la plataforma para formar parte del ranking!
+            Aún no hay suficientes votos verificados para este segmento. ¡Valora películas en la plataforma para formar parte del ranking!
           </p>
           <Link
             href="/explore"

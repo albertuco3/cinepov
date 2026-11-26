@@ -30,7 +30,7 @@ export default function BattleShareBar({
     if (contrastText) {
       return `Veredicto de ${movieTitle}: ${contrastText}. Mira la comparativa completa en CinePOV:`;
     }
-    return `Mira el desglose demografico de ${movieTitle} en CinePOV:`;
+    return `Mira el desglose demográfico de ${movieTitle} en CinePOV:`;
   };
 
   const handleCopy = async () => {
@@ -50,7 +50,7 @@ export default function BattleShareBar({
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: `Batalla Demografica - ${movieTitle}`,
+          title: `Batalla Demográfica - ${movieTitle}`,
           text: getShareText(),
           url: getShareUrl(),
         });

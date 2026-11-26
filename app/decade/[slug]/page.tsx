@@ -193,13 +193,13 @@ export default async function DecadePage({ params }: PageProps) {
       ) : (
         <div className="glass-panel p-12 rounded-3xl text-center space-y-4 border border-white/5">
           <p className="text-sm text-muted-foreground">
-            Aun no hay titulos registrados de esta decada. Explora el catalogo para anadir peliculas de los {config.label}.
+            Aún no hay títulos registrados de esta década. Explora el catálogo para añadir películas de los {config.label}.
           </p>
           <Link
             href="/explore"
             className="inline-block px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider bg-primary hover:bg-primary-hover text-white transition-all"
           >
-            Buscar Peliculas
+            Buscar Películas
           </Link>
         </div>
       )}

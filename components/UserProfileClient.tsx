@@ -125,9 +125,9 @@ export default function UserProfileClient({
       });
       if (!res.ok) throw new Error();
       setWatchlist((prev) => prev.filter((w) => w.id !== id));
-      toast.success("Pelicula eliminada de tu lista");
+      toast.success("Película eliminada de tu lista");
     } catch {
-      toast.error("No se pudo quitar la pelicula de la lista");
+      toast.error("No se pudo quitar la película de la lista");
     } finally {
       setRemovingWatchlistId(null);
     }
@@ -206,20 +206,20 @@ export default function UserProfileClient({
   const unlocks = unlocksData?.unlocks ?? [];
   const loadingUnlocks = unlocksLoading && !unlocksData;
 
-  // Calcular estadisticas basicas
+  // Calcular estadísticas básicas
   const totalRatingsCount = ratings.length;
   const averageScore =
     totalRatingsCount > 0
       ? (ratings.reduce((sum, r) => sum + r.score, 0) / totalRatingsCount).toFixed(1)
       : "—";
 
-  // Desviaciones para perfil critico
+  // Desviaciones para perfil crítico
   const ratingsWithDeviations = ratings.map((r) => {
     const dev = r.score - (r.movie.globalAvgScore || 0);
     return { ...r, deviation: parseFloat(dev.toFixed(1)) };
   });
 
-  // Pelicula mas generosa y mas dura
+  // Película más generosa y más dura
   const generousCandidates = ratingsWithDeviations.filter((r) => r.deviation > 0);
   const generousMovie =
     generousCandidates.length > 0
@@ -274,7 +274,7 @@ export default function UserProfileClient({
         type: "success",
         text: "Tu perfil se ha actualizado correctamente.",
       });
-      toast.success("Perfil actualizado con exito.");
+      toast.success("Perfil actualizado con éxito.");
       update();
     } catch (err) {
       setProfileMessage({
@@ -287,7 +287,7 @@ export default function UserProfileClient({
     }
   };
 
-  // Eliminar valoracion
+  // Eliminar valoración
   const handleDeleteRating = async (ratingId: string, movieId: string) => {
     setDeletingId(ratingId);
     try {
@@ -296,15 +296,15 @@ export default function UserProfileClient({
       });
 
       if (!response.ok) {
-        throw new Error("No se pudo eliminar la valoracion.");
+        throw new Error("No se pudo eliminar la valoración.");
       }
 
       setRatings(ratings.filter((r) => r.id !== ratingId));
-      toast.success("Valoracion eliminada correctamente.");
+      toast.success("Valoración eliminada correctamente.");
       update();
     } catch (err) {
       console.error(err);
-      toast.error(errorMessage(err) || "Error al intentar eliminar la valoracion.");
+      toast.error(errorMessage(err) || "Error al intentar eliminar la valoración.");
     } finally {
       setDeletingId(null);
     }
@@ -354,8 +354,8 @@ export default function UserProfileClient({
   }, [ratings]);
 
   const levelLabels: Record<string, string> = {
-    age_broad: "Nivel 1: Generacion desbloqueada",
-    gender: "Nivel 2: Brecha por genero",
+    age_broad: "Nivel 1: Generación desbloqueada",
+    gender: "Nivel 2: Brecha por género",
     age_full: "Nivel 3: Rango de edad completo",
     cross: "Nivel 4: Matriz cruzada completa",
   };
@@ -386,11 +386,11 @@ export default function UserProfileClient({
                     ? "Mujer"
                     : initialUser.gender === "non_binary"
                       ? "No binario"
-                      : "Genero no especificado"}
+                      : "Género no especificado"}
               </span>
               <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-white/90">
                 {initialUser.birthYear
-                  ? `${new Date().getFullYear() - initialUser.birthYear} anos (Nacido en ${initialUser.birthYear})`
+                  ? `${new Date().getFullYear() - initialUser.birthYear} años (Nacido en ${initialUser.birthYear})`
                   : "Edad no especificada"}
               </span>
             </div>
@@ -403,7 +403,7 @@ export default function UserProfileClient({
                 {totalRatingsCount}
               </span>
               <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
-                Peliculas
+                Películas
               </span>
             </div>
             <div className="text-center px-2">
@@ -502,7 +502,7 @@ export default function UserProfileClient({
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            Mi Perfil Cinematografico
+            Mi Perfil Cinematográfico
           </Link>
           <Link
             href="/import"
@@ -542,7 +542,7 @@ export default function UserProfileClient({
                     Cinefilo Iniciado
                   </h4>
                   <p className="text-[10px] text-muted-foreground">
-                    Valorar 10 peliculas ({Math.min(totalRatingsCount, 10)}/10)
+                    Valorar 10 películas ({Math.min(totalRatingsCount, 10)}/10)
                   </p>
                 </div>
                 {totalRatingsCount >= 10 && (
@@ -564,10 +564,10 @@ export default function UserProfileClient({
                 </div>
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-wider">
-                    Critico de CinePOV
+                    Crítico de CinePOV
                   </h4>
                   <p className="text-[10px] text-muted-foreground">
-                    Valorar 50 peliculas ({Math.min(totalRatingsCount, 50)}/50)
+                    Valorar 50 películas ({Math.min(totalRatingsCount, 50)}/50)
                   </p>
                 </div>
                 {totalRatingsCount >= 50 && (
@@ -592,7 +592,7 @@ export default function UserProfileClient({
                     Maestro de la Perspectiva
                   </h4>
                   <p className="text-[10px] text-muted-foreground">
-                    Valorar 100 peliculas ({Math.min(totalRatingsCount, 100)}/100)
+                    Valorar 100 películas ({Math.min(totalRatingsCount, 100)}/100)
                   </p>
                 </div>
                 {totalRatingsCount >= 100 && (
@@ -608,7 +608,7 @@ export default function UserProfileClient({
           {(generousMovie || harshMovie) && (
             <div className="space-y-3">
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                Tu Identidad Critica
+                Tu Identidad Crítica
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {generousMovie && (
@@ -660,7 +660,7 @@ export default function UserProfileClient({
                     </div>
                     <div className="space-y-1 min-w-0">
                       <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[8px] font-black uppercase tracking-wider">
-                        Tu Critica mas Severa
+                        Tu Crítica más Severa
                       </span>
                       <h4 className="text-sm font-black text-white truncate leading-tight mt-1">
                         <Link
@@ -691,7 +691,7 @@ export default function UserProfileClient({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-white tracking-wide">
-                  Peliculas Calificadas
+                  Películas Calificadas
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground hidden sm:inline">
@@ -758,7 +758,7 @@ export default function UserProfileClient({
                         onClick={() => handleDeleteRating(rating.id, rating.movie.id)}
                         disabled={deletingId === rating.id}
                         className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:text-white transition-all cursor-pointer"
-                        title="Eliminar valoracion"
+                        title="Eliminar valoración"
                       >
                         <svg
                           className="h-4 w-4"
@@ -781,9 +781,9 @@ export default function UserProfileClient({
             </div>
           ) : (
             <div className="glass-panel p-10 rounded-3xl text-center space-y-4 border border-white/5">
-              <h3 className="text-lg font-bold text-white">Ninguna valoracion todavia</h3>
+              <h3 className="text-lg font-bold text-white">Ninguna valoración todavía</h3>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                No has valorado ninguna pelicula en CinePOV. Explora el catalogo para anadir tus primeras notas.
+                No has valorado ninguna película en CinePOV. Explora el catálogo para añadir tus primeras notas.
               </p>
               <Link
                 href="/explore"
@@ -805,7 +805,7 @@ export default function UserProfileClient({
                 Diario de Visionados
               </h2>
               <p className="text-xs text-muted-foreground">
-                Tu historial cronologico de cine. Registra la fecha en que viste cada pelicula para seguir tu ritmo.
+                Tu historial cronológico de cine. Registra la fecha en que viste cada película para seguir tu ritmo.
               </p>
             </div>
             <span className="text-xs font-semibold text-primary px-3 py-1 rounded-full bg-primary/10 border border-primary/20 self-start sm:self-auto">
@@ -822,7 +822,7 @@ export default function UserProfileClient({
                       {group.monthLabel}
                     </h3>
                     <span className="text-xs text-muted-foreground">
-                      ({group.items.length} {group.items.length === 1 ? "pelicula" : "peliculas"})
+                      ({group.items.length} {group.items.length === 1 ? "película" : "películas"})
                     </span>
                     <div className="flex-1 h-px bg-white/5" />
                   </div>
@@ -873,7 +873,7 @@ export default function UserProfileClient({
             <div className="glass-panel p-10 rounded-3xl text-center space-y-4 border border-white/5">
               <h3 className="text-lg font-bold text-white">Diario vacio</h3>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                Al valorar una pelicula, marca la casilla &quot;Registrar fecha en mi diario&quot; para crear tu timeline cinematografico.
+                Al valorar una película, marca la casilla &quot;Registrar fecha en mi diario&quot; para crear tu timeline cinematografico.
               </p>
             </div>
           )}
@@ -889,11 +889,11 @@ export default function UserProfileClient({
                 Mi Watchlist (Pendientes de Ver)
               </h2>
               <p className="text-xs text-muted-foreground">
-                Peliculas que has guardado para ver mas tarde.
+                Películas que has guardado para ver más tarde.
               </p>
             </div>
             <span className="text-xs font-semibold text-amber-400 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 self-start sm:self-auto">
-              {watchlist.length} {watchlist.length === 1 ? "pelicula" : "peliculas"}
+              {watchlist.length} {watchlist.length === 1 ? "película" : "películas"}
             </span>
           </div>
 
@@ -954,7 +954,7 @@ export default function UserProfileClient({
             <div className="glass-panel p-10 rounded-3xl text-center space-y-4 border border-white/5">
               <h3 className="text-lg font-bold text-white">Tu watchlist esta vacia</h3>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                Guarda peliculas para ver mas tarde haciendo clic en el boton &quot;Quiero Verla&quot; en cualquier ficha.
+                Guarda películas para ver más tarde haciendo clic en el botón &quot;Quiero Verla&quot; en cualquier ficha.
               </p>
               <Link
                 href="/explore"
@@ -1008,7 +1008,7 @@ export default function UserProfileClient({
                     required
                     value={newListName}
                     onChange={(e) => setNewListName(e.target.value)}
-                    placeholder="Ej. Joyas ocultas de ciencia ficcion"
+                    placeholder="Ej. Joyas ocultas de ciencia ficción"
                     className="w-full bg-[#0d101a] border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-primary/50"
                   />
                 </div>
@@ -1033,7 +1033,7 @@ export default function UserProfileClient({
                     className="rounded bg-[#0d101a] border-white/10 text-primary focus:ring-0 cursor-pointer"
                   />
                   <label htmlFor="listIsPublic" className="text-xs text-white/80 cursor-pointer font-semibold">
-                    Hacer publica esta lista (accesible con enlace compartido)
+                    Hacer pública esta lista (accesible con enlace compartido)
                   </label>
                 </div>
               </div>
@@ -1077,7 +1077,7 @@ export default function UserProfileClient({
                         {l.isPublic ? "Publica" : "Privada"}
                       </span>
                       <span className="text-[11px] font-semibold text-primary">
-                        {l.itemCount} {l.itemCount === 1 ? "pelicula" : "peliculas"}
+                        {l.itemCount} {l.itemCount === 1 ? "película" : "películas"}
                       </span>
                     </div>
 
@@ -1119,7 +1119,7 @@ export default function UserProfileClient({
           ) : (
             !creatingList && (
               <div className="glass-panel p-10 rounded-3xl text-center space-y-4 border border-white/5">
-                <h3 className="text-lg font-bold text-white">No tienes listas creadas todavia</h3>
+                <h3 className="text-lg font-bold text-white">No tienes listas creadas todavía</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                   Crea tu primera lista tematica para organizar tus recomendaciones y compartirlas en redes.
                 </p>
@@ -1143,7 +1143,7 @@ export default function UserProfileClient({
               Desbloqueos de la Comunidad
             </h2>
             <p className="text-xs text-muted-foreground">
-              A medida que otros usuarios valoran peliculas que ya calificaste, se desbloquean nuevos niveles de detalle demografico. Aqui puedes ver como cambia la percepcion comunitaria de tus favoritas.
+              A medida que otros usuarios valoran películas que ya calificaste, se desbloquean nuevos niveles de detalle demográfico. Aquí puedes ver como cambia la percepcion comunitaria de tus favoritas.
             </p>
           </div>
 
@@ -1202,7 +1202,7 @@ export default function UserProfileClient({
                             ? `Le diste +${unlock.deviation} puntos respecto a personas de tu grupo`
                             : unlock.deviation < 0
                               ? `Le diste ${unlock.deviation} puntos por debajo de personas de tu grupo`
-                              : "Tu valoracion coincide exactamente con la media de tu grupo"}
+                              : "Tu valoración coincide exactamente con la media de tu grupo"}
                         </p>
                       )}
                     </div>
@@ -1221,7 +1221,7 @@ export default function UserProfileClient({
             <div className="glass-panel p-10 rounded-3xl text-center space-y-4 border border-white/5">
               <h3 className="text-lg font-bold text-white">Sin desbloqueos recientes</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Las peliculas que has calificado todavia no han alcanzado el umbral de votos para desbloquear nuevos niveles en tu segmento. En cuanto la comunidad aporte mas valoraciones, apareceran aqui.
+                Las películas que has calificado todavía no han alcanzado el umbral de votos para desbloquear nuevos niveles en tu segmento. En cuanto la comunidad aporte más valoraciones, apareceran aquí.
               </p>
             </div>
           )}
@@ -1256,10 +1256,10 @@ export default function UserProfileClient({
               </svg>
               <div className="space-y-1">
                 <strong className="font-bold block">
-                  Advertencia de Impacto Demografico
+                  Advertencia de Impacto Demográfico
                 </strong>
                 <span>
-                  CinePOV filtra las calificaciones por tu genero y tu edad para calcular las tendencias. Cambiar tu perfil demografico reubicara de forma inmediata todos tus votos historicos a tu nuevo segmento.
+                  CinePOV filtra las calificaciones por tu género y tu edad para calcular las tendencias. Cambiar tu perfil demográfico reubicara de forma inmediata todos tus votos historicos a tu nuevo segmento.
                 </span>
               </div>
             </div>
@@ -1286,7 +1286,7 @@ export default function UserProfileClient({
 
               <div className="space-y-1.5 opacity-60">
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  Direccion de Correo (Fijo)
+                  Dirección de Correo (Fijo)
                 </label>
                 <div className="w-full bg-[#0f111a] border border-white/5 text-muted-foreground text-sm font-semibold px-4 py-3 rounded-2xl cursor-not-allowed select-none">
                   {initialUser.email}
@@ -1298,7 +1298,7 @@ export default function UserProfileClient({
                   htmlFor="gender"
                   className="text-xs font-bold text-muted-foreground uppercase tracking-wider"
                 >
-                  Genero
+                  Género
                 </label>
                 <select
                   id="gender"
@@ -1321,7 +1321,7 @@ export default function UserProfileClient({
                   htmlFor="birthYear"
                   className="text-xs font-bold text-muted-foreground uppercase tracking-wider"
                 >
-                  Ano de nacimiento
+                  Año de nacimiento
                 </label>
                 <input
                   id="birthYear"
@@ -1339,7 +1339,7 @@ export default function UserProfileClient({
             {/* Preferencias de Email */}
             <div className="pt-2 border-t border-white/5 space-y-3">
               <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-                Preferencias de Comunicacion
+                Preferencias de Comunicación
               </h3>
               <label className="flex items-start gap-3 bg-[#0f111a] border border-white/10 hover:border-white/15 p-4 rounded-2xl cursor-pointer transition-all">
                 <input
@@ -1353,7 +1353,7 @@ export default function UserProfileClient({
                     Boletin Semanal de Tendencias
                   </span>
                   <span className="text-xs text-muted-foreground block leading-normal font-medium">
-                    Deseo recibir por correo electronico un boletin semanal con el Top 3 de peliculas recomendadas para mi grupo demografico.
+                    Deseo recibir por correo electrónico un boletín semanal con el Top 3 de películas recomendadas para mí grupo demográfico.
                   </span>
                 </div>
               </label>

@@ -27,11 +27,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `Las Mejores Peliculas de ${genreName} | CinePOV`,
-    description: `Descubre las mejores peliculas de ${genreName.toLowerCase()} segun diferentes grupos demograficos. Rankings de hombres, mujeres y diferentes generaciones.`,
+    title: `Las Mejores Películas de ${genreName} | CinePOV`,
+    description: `Descubre las mejores películas de ${genreName.toLowerCase()} según diferentes grupos demográficos. Rankings de hombres, mujeres y diferentes generaciones.`,
     openGraph: {
-      title: `Peliculas de ${genreName} - CinePOV`,
-      description: `El ranking demografico de ${genreName.toLowerCase()}.`,
+      title: `Películas de ${genreName} - CinePOV`,
+      description: `El ranking demográfico de ${genreName.toLowerCase()}.`,
       type: "website",
     },
   };
@@ -95,13 +95,13 @@ export default async function GenrePage({ params }: PageProps) {
       {/* 1. Cabecera de la categoría */}
       <div className="space-y-3 text-center sm:text-left border-b border-white/5 pb-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/15 border border-primary/25 text-primary-light text-[10px] font-black uppercase tracking-wider">
-          Genero Cinematografico
+          Género Cinematográfico
         </div>
         <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-          Mejores Peliculas de {genreName}
+          Mejores Películas de {genreName}
         </h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
-          Explora los titulos mas destacados de {genreName.toLowerCase()}. Descubre como cambia la recepcion de cada pelicula segun la edad y el genero del espectador.
+          Explora los títulos más destacados de {genreName.toLowerCase()}. Descubre cómo cambia la recepción de cada película según la edad y el género del espectador.
         </p>
       </div>
 
@@ -182,13 +182,13 @@ export default async function GenrePage({ params }: PageProps) {
       ) : (
         <div className="glass-panel p-12 rounded-3xl text-center space-y-4 border border-white/5">
           <p className="text-sm text-muted-foreground">
-            Aun no hay titulos registrados en este genero. Explora el buscador global para añadir peliculas de {genreName}.
+            Aún no hay títulos registrados en este género. Explora el buscador global para añadir películas de {genreName}.
           </p>
           <Link
             href="/explore"
             className="inline-block px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider bg-primary hover:bg-primary-hover text-white transition-all"
           >
-            Buscar Peliculas
+            Buscar Películas
           </Link>
         </div>
       )}

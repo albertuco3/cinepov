@@ -51,7 +51,7 @@ export default async function MovieEmbedPage({ params }: Props) {
           </div>
           <div className="min-w-0">
             <span className="text-[9px] uppercase font-black tracking-wider text-primary-light block">
-              Termometro Demografico
+              Termómetro Demográfico
             </span>
             <h1 className="text-sm font-black text-white truncate leading-tight">
               {movie.title}
@@ -90,7 +90,7 @@ export default async function MovieEmbedPage({ params }: Props) {
           </div>
         ) : (
           <div className="text-[10px] text-muted-foreground text-center py-1">
-            Desbloqueo de genero en progreso ({realCount} votos)
+            Desbloqueo de género en progreso ({realCount} votos)
           </div>
         )}
 
@@ -98,7 +98,7 @@ export default async function MovieEmbedPage({ params }: Props) {
         {youngAvg !== null && seniorAvg !== null && (
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[10px] font-bold">
-              <span className="text-emerald-400">Jovenes (18-34): {youngAvg}</span>
+              <span className="text-emerald-400">Jóvenes (18-34): {youngAvg}</span>
               <span className="text-amber-400">Seniors (55+): {seniorAvg}</span>
             </div>
             <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden flex">

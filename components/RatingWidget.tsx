@@ -82,7 +82,7 @@ export default function RatingWidget({
       setSuccess(true);
       toast.success(dict.movie.ratingSaved);
 
-      // Sincronizar el contador en la sesion
+      // Sincronizar el contador en la sesión
       update();
 
       // Notificar al componente padre si existe
@@ -90,7 +90,7 @@ export default function RatingWidget({
         onRatingUpdated(data.stats.avgRating, data.stats.ratingCount);
       }
 
-      // Quitar el estado de exito tras 1.5 segundos
+      // Quitar el estado de éxito tras 1.5 segundos
       setTimeout(() => setSuccess(false), 1500);
     } catch (err) {
       setError(errorMessage(err) || dict.common.error);
@@ -122,7 +122,7 @@ export default function RatingWidget({
       setIncludeWatchedDate(false);
       toast.success(dict.movie.ratingDeleted);
 
-      // Sincronizar el contador en la sesion
+      // Sincronizar el contador en la sesión
       update();
 
       // Notificar al componente padre si existe

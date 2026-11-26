@@ -180,7 +180,7 @@ export default async function ListDetailPage({ params }: Props) {
       ) : (
         <div className="glass-panel p-12 rounded-3xl text-center space-y-4 border border-white/5">
           <p className="text-sm text-muted-foreground">
-            Esta lista aun no tiene películas añadidas.
+            Esta lista aún no tiene películas añadidas.
           </p>
           <Link
             href="/explore"

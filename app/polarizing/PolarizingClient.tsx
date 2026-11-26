@@ -36,17 +36,7 @@ export default function PolarizingClient() {
               : "bg-white/5 border-white/10 text-muted-foreground hover:text-white hover:bg-white/10"
           }`}
         >
-          Mayor Polarizacion Global
-        </button>
-        <button
-          onClick={() => setFilter("gender")}
-          className={`px-4 py-2 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
-            filter === "gender"
-              ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
-              : "bg-white/5 border-white/10 text-muted-foreground hover:text-white hover:bg-white/10"
-          }`}
-        >
-          Brecha de Genero (Mujeres vs Hombres)
+          Mayor Polarización Global
         </button>
         <button
           onClick={() => setFilter("age")}
@@ -56,7 +46,17 @@ export default function PolarizingClient() {
               : "bg-white/5 border-white/10 text-muted-foreground hover:text-white hover:bg-white/10"
           }`}
         >
-          Brecha Generacional (Jovenes vs Mayores)
+          Brecha Generacional (Jóvenes vs Mayores)
+        </button>
+        <button
+          onClick={() => setFilter("gender")}
+          className={`px-4 py-2 rounded-full text-xs font-black tracking-wide uppercase border transition-all cursor-pointer ${
+            filter === "gender"
+              ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
+              : "bg-white/5 border-white/10 text-muted-foreground hover:text-white hover:bg-white/10"
+          }`}
+        >
+          Brecha de Género (Mujeres vs Hombres)
         </button>
       </div>
 
@@ -128,7 +128,7 @@ export default function PolarizingClient() {
                   href={`/vs/${movie.tmdbId}`}
                   className="flex-1 text-center py-2 px-3 rounded-full bg-primary hover:bg-primary-hover text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-primary/10"
                 >
-                  Ver Batalla Demografica
+                  Ver Batalla Demográfica
                 </Link>
                 <Link
                   href={`/movie/${movie.tmdbId}`}
@@ -143,10 +143,10 @@ export default function PolarizingClient() {
       ) : (
         <div className="glass-panel p-12 rounded-3xl text-center space-y-4 border border-white/5">
           <h3 className="text-lg font-bold text-white">
-            Sin peliculas polarizantes registradas todavia
+            Sin películas polarizantes registradas todavía
           </h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            A medida que mas personas de diferentes edades y generos califiquen las peliculas del catalogo, se identificaran automaticamente las mayores discrepancias aqui.
+            A medida que más personas de diferentes edades y géneros califiquen las películas del catálogo, se identificarán automáticamente las mayores discrepancias aquí.
           </p>
           <Link
             href="/explore"

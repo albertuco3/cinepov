@@ -18,10 +18,10 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
 
   const handleCopySummary = async () => {
     const lines = [
-      `Perfil Cinematografico de ${userName} en CinePOV:`,
-      `- Nota media: ${profile.averageScore}/10 (${profile.totalRatings} peliculas)`,
+      `Perfil Cinematográfico de ${userName} en CinePOV:`,
+      `- Nota media: ${profile.averageScore}/10 (${profile.totalRatings} películas)`,
       profile.twinSegment
-        ? `- Gemelo Demografico: ${profile.twinSegment.segmentLabel} (${profile.twinSegment.affinityPercentage}% afinidad)`
+        ? `- Gemelo Demográfico: ${profile.twinSegment.segmentLabel} (${profile.twinSegment.affinityPercentage}% afinidad)`
         : "",
       profile.favoriteDecade ? `- Decada favorita: ${profile.favoriteDecade.decadeLabel}` : "",
       `- Criterio: ${profile.generosity.label}`,
@@ -47,10 +47,10 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
             Radiografia Personal
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Tu Perfil Cinematografico
+            Tu Perfil Cinematográfico
           </h1>
           <p className="text-sm text-muted-foreground">
-            Patrones de gusto, sesgo critico y afinidad estadistica calculados a partir de tus votos.
+            Patrones de gusto, sesgo crítico y afinidad estadística calculados a partir de tus votos.
           </p>
         </div>
 
@@ -78,7 +78,7 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
               Algoritmo de Afinidad
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-white">
-              Tu Gemelo Demografico
+              Tu Gemelo Demográfico
             </h2>
           </div>
 
@@ -114,8 +114,8 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
                 />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Necesitas al menos 5 valoraciones para calcular tu afinidad estadistica de forma fiable. Valora{" "}
-                <strong className="text-white">{5 - profile.totalRatings} {5 - profile.totalRatings === 1 ? "pelicula mas" : "peliculas mas"}</strong> para revelar que colectivo piensa exactamente como tu.
+                Necesitas al menos 5 valoraciones para calcular tu afinidad estadística de forma fiable. Valora{" "}
+                <strong className="text-white">{5 - profile.totalRatings} {5 - profile.totalRatings === 1 ? "película más" : "películas más"}</strong> para revelar qué colectivo piensa exactamente como tú.
               </p>
             </div>
           </div>
@@ -126,12 +126,12 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
               <span className="text-primary-light">{profile.twinSegment.segmentLabel}</span>
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-2xl">
-              Al comparar tus calificaciones directas con la media de cada grupo de la comunidad en las mismas peliculas ({profile.twinSegment.moviesCompared} titulos coincidentes), este es el segmento con la menor discrepancia respecto a tu criterio.
+              Al comparar tus calificaciones directas con la media de cada grupo de la comunidad en las mismas películas ({profile.twinSegment.moviesCompared} títulos coincidentes), este es el segmento con la menor discrepancia respecto a tu criterio.
             </p>
           </div>
         ) : (
           <div className="pt-2 text-xs text-muted-foreground leading-relaxed">
-            Aun no has calificado suficientes peliculas coincidentes con los segmentos de la comunidad. Sigue valorando peliculas del catalogo para calcular tu Gemelo.
+            Aún no has calificado suficientes películas coincidentes con los segmentos de la comunidad. Sigue valorando películas del catálogo para calcular tu Gemelo.
           </div>
         )}
       </div>
@@ -172,7 +172,7 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
                 </span>
               </div>
               <div className="p-3 rounded-2xl bg-white/5 border border-white/5 text-xs font-semibold text-white/90">
-                Has calificado {profile.favoriteDecade.count} titulos de esta epoca.
+                Has calificado {profile.favoriteDecade.count} títulos de esta epoca.
               </div>
             </>
           ) : (
@@ -234,7 +234,7 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
                     <span className="font-bold text-white">{g.genre}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-[10px]">({g.count} peliculas)</span>
+                    <span className="text-muted-foreground text-[10px]">({g.count} películas)</span>
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 font-black">
                       {g.avgScore}
                     </span>
@@ -264,7 +264,7 @@ export default function CinematicProfileClient({ profile, userName }: Props) {
                     <span className="font-bold text-white">{g.genre}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-[10px]">({g.count} peliculas)</span>
+                    <span className="text-muted-foreground text-[10px]">({g.count} películas)</span>
                     <span className="px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/25 text-rose-300 font-black">
                       {g.avgScore}
                     </span>

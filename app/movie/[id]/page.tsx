@@ -29,13 +29,13 @@ export async function generateMetadata({ params }: MoviePageProps): Promise<Meta
   const { id } = await params;
   const { tmdbId } = parseMovieParam(id);
   if (!tmdbId) {
-    return { title: "Pelicula no encontrada | CinePOV" };
+    return { title: "Película no encontrada | CinePOV" };
   }
 
   const locale = await getRequestLocale();
   const movie = await getMovieLocalized(tmdbId, locale);
   if (!movie) {
-    return { title: locale === "en" ? "Movie not found | CinePOV" : "Pelicula no encontrada | CinePOV" };
+    return { title: locale === "en" ? "Movie not found | CinePOV" : "Película no encontrada | CinePOV" };
   }
 
   const title = locale === "en"

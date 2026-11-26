@@ -24,8 +24,8 @@ export async function generateMetadata({ params }: BattlePageProps): Promise<Met
     return { title: "Batalla no encontrada | CinePOV" };
   }
 
-  const title = `Batalla Demografica: ${movie.title} (${movie.year}) - CinePOV`;
-  const description = `Mira como se divide la audiencia en ${movie.title}. Comparativa directa entre generos y generaciones basada en votos verificados.`;
+  const title = `Batalla Demográfica: ${movie.title} (${movie.year}) - CinePOV`;
+  const description = `Mira cómo se divide la audiencia en ${movie.title}. Comparativa directa entre géneros y generaciones basada en votos verificados.`;
 
   return {
     title,
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: BattlePageProps): Promise<Met
           url: `/movie/${tmdbId}/opengraph-image`,
           width: 1200,
           height: 630,
-          alt: `Batalla demografica de ${movie.title}`,
+          alt: `Batalla demográfica de ${movie.title}`,
         },
       ],
     },
@@ -86,7 +86,7 @@ export default async function BattlePage({ params }: BattlePageProps) {
           {movie.title}
         </Link>
         <span>/</span>
-        <span className="text-white">Batalla Demografica</span>
+        <span className="text-white">Batalla Demográfica</span>
       </nav>
 
       {/* 2. Tarjeta Principal de la Batalla */}
@@ -105,7 +105,7 @@ export default async function BattlePage({ params }: BattlePageProps) {
           </div>
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/15 border border-primary/25 text-primary-light text-[10px] font-black uppercase tracking-wider">
-              Batalla Demografica Oficial
+              Batalla Demográfica Oficial
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               {movie.title} ({movie.year})
@@ -129,7 +129,7 @@ export default async function BattlePage({ params }: BattlePageProps) {
                 Una discrepancia de {contrast.difference} puntos
               </h2>
               <p className="text-xs text-muted-foreground">
-                {contrast.leadLabel} valoran esta pelicula notablemente por encima del otro grupo.
+                {contrast.leadLabel} valoran esta película notablemente por encima del otro grupo.
               </p>
             </div>
 
@@ -177,10 +177,10 @@ export default async function BattlePage({ params }: BattlePageProps) {
         ) : (
           <div className="text-center py-10 space-y-3 bg-white/2 rounded-3xl border border-white/5 p-6">
             <h2 className="text-lg font-bold text-white">
-              Recopilando datos demograficos
+              Recopilando datos demográficos
             </h2>
             <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Esta pelicula aun no ha alcanzado los umbrales de valoraciones verificadas para mostrar una batalla concluyente. ¡Se el primero de tu grupo en valorarla!
+              Esta película aún no ha alcanzado los umbrales de valoraciones verificadas para mostrar una batalla concluyente. ¡Sé el primero de tu grupo en valorarla!
             </p>
           </div>
         )}
@@ -202,10 +202,10 @@ export default async function BattlePage({ params }: BattlePageProps) {
         <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
             <h3 className="text-base font-black text-white">
-              ¿Coincides con tu grupo demografico?
+              ¿Coincides con tu grupo demográfico?
             </h3>
             <p className="text-xs text-muted-foreground">
-              Entra en la ficha completa para calificarla y descubrir que piensan personas con tu misma edad y genero.
+              Entra en la ficha completa para calificarla y descubrir que piensan personas con tu misma edad y género.
             </p>
           </div>
           <Link

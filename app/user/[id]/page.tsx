@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: `${user.displayName} | Perfil Cinematografico - CinePOV`,
+    title: `${user.displayName} | Perfil Cinematográfico - CinePOV`,
     description: `Descubre las valoraciones y colecciones de cine de ${user.displayName} en CinePOV.`,
     openGraph: {
       title: `${user.displayName} en CinePOV`,
@@ -159,7 +159,7 @@ export default async function PublicUserProfilePage({ params }: Props) {
               {totalRatings}
             </span>
             <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
-              Peliculas Calificadas
+              Películas Calificadas
             </span>
           </div>
           <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-center">
@@ -284,7 +284,7 @@ export default async function PublicUserProfilePage({ params }: Props) {
         ) : (
           <div className="glass-panel p-10 rounded-3xl text-center space-y-2 border border-white/5">
             <p className="text-xs text-muted-foreground">
-              Este usuario aun no ha calificado peliculas en la plataforma.
+              Este usuario aún no ha calificado películas en la plataforma.
             </p>
           </div>
         )}
