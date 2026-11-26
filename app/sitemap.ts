@@ -4,9 +4,10 @@ import { ALL_GENRE_SLUGS } from "@/lib/genres";
 import { ALL_SEGMENT_SLUGS } from "@/lib/segments";
 import { ALL_DECADE_SLUGS } from "@/lib/decades";
 import { ALL_BLOG_SLUGS } from "@/lib/blog-data";
+import { SITE_URL } from "@/lib/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXTAUTH_URL || "https://cinepov.com";
+  const baseUrl = SITE_URL;
 
   // 1. Rutas públicas estáticas
   const staticRoutes: MetadataRoute.Sitemap = [

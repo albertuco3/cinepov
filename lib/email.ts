@@ -6,9 +6,10 @@
  */
 
 import { Resend } from "resend";
+import { SITE_URL } from "./site";
 
 /** Base pública de la aplicación, usada para construir los enlaces de los emails. */
-export const APP_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
+export const APP_URL = SITE_URL;
 
 const EMAIL_FROM = process.env.EMAIL_FROM || "CinePOV <onboarding@resend.dev>";
 

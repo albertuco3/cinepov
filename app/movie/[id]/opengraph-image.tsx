@@ -4,11 +4,10 @@ import { getMovieDemographics } from "@/lib/movie-demographics";
 import { getTopDemographicContrast } from "@/lib/viral";
 import { parseMovieParam } from "@/lib/slug";
 import { MovieOgCard } from "@/components/og/MovieOgCard";
+import { SITE_HOST } from "@/lib/site";
 
 export const runtime = "nodejs";
 
-/** Dominio que se muestra en la tarjeta: el de la URL pública configurada. */
-const SITE_HOST = new URL(process.env.NEXTAUTH_URL || "https://cinepov.com").host;
 export const alt = "CinePOV - Demografía de Cine";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

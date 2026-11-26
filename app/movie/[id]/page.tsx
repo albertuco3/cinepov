@@ -19,6 +19,7 @@ import { parseMovieParam, buildCanonicalMoviePath } from "@/lib/slug";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { SOCIAL_ENABLED } from "@/lib/features";
+import { SITE_URL } from "@/lib/site";
 
 interface MoviePageProps {
   params: Promise<{ id: string }>;
@@ -43,7 +44,7 @@ export async function generateMetadata({ params }: MoviePageProps): Promise<Meta
   const description = locale === "en"
     ? `Discover how ${movie.title} is rated by men and women across different generations on CinePOV. Verified demographic breakdown and cohort comparisons.`
     : `Descubre cómo valoran ${movie.title} mujeres y hombres de distintas generaciones en CinePOV. Desglose demográfico verificado y comparativa por segmento.`;
-  const baseUrl = process.env.NEXTAUTH_URL || "https://cinepov.com";
+  const baseUrl = SITE_URL;
   const canonicalUrl = `${baseUrl}${buildCanonicalMoviePath(movie.tmdbId, movie.title)}`;
 
   return {
