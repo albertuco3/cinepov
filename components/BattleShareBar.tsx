@@ -1,7 +1,7 @@
 "use client";
 
 import { isAbortError } from "@/lib/errors";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { track } from "@/lib/analytics";
 
@@ -12,12 +12,64 @@ interface BattleShareBarProps {
   contrastText?: string | null;
 }
 
+/** Descarga la imagen para compartir de una película como archivo PNG, o null si falla. */
+async function fetchImageFile(tmdbId: number, kind: "download" | "story"): Promise<File | null> {
+  const url = kind === "story" ? `/api/movies/${tmdbId}/story-image` : `/movie/${tmdbId}/opengraph-image`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const name = `cinepov-${tmdbId}${kind === "story" ? "-story" : ""}.png`;
+  return new File([await res.blob()], name, { type: "image/png" });
+}
+
 export default function BattleShareBar({
   tmdbId,
   movieTitle,
   contrastText,
 }: BattleShareBarProps) {
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState<"download" | "story" | null>(null);
+
+
+  // La imagen vertical se prepara al cargar: Safari solo deja abrir el menú de
+  // compartir justo después del toque, y generarla tarda más que eso.
+  const storyFile = useRef<Promise<File | null> | null>(null);
+  useEffect(() => {
+    storyFile.current = fetchImageFile(tmdbId, "story").catch(() => null);
+  }, [tmdbId]);
+
+  const saveFile = (file: Blob, name: string) => {
+    const objectUrl = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  };
+
+  /** Horizontal: siempre se descarga. Vertical: menú de compartir si el móvil lo admite (para subirla a stories). */
+  const handleImage = async (kind: "download" | "story") => {
+    setBusy(kind);
+    try {
+      const file = (kind === "story" && (await storyFile.current)) || (await fetchImageFile(tmdbId, kind));
+      if (!file) throw new Error("sin imagen");
+      track("share_clicked", { channel: kind === "story" ? "story_image" : "download_image", artifact_type: "movie_gap" });
+
+      if (kind === "story" && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: movieTitle });
+          return;
+        } catch (err) {
+          if (isAbortError(err)) return;
+          // Sin permiso para compartir (p. ej. el toque ha caducado): se descarga.
+        }
+      }
+      saveFile(file, file.name);
+    } catch {
+      toast.error("No se pudo generar la imagen. Inténtalo de nuevo.");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const getShareUrl = () => {
     if (typeof window !== "undefined") {
@@ -123,6 +175,25 @@ export default function BattleShareBar({
         title="Compartir en Reddit"
       >
         <span>Reddit</span>
+      </button>
+
+      {/* Imagen para stories (vertical) */}
+      <button
+        onClick={() => handleImage("story")}
+        disabled={busy !== null}
+        className="px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary-light text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+        title="Imagen vertical para Instagram, TikTok o WhatsApp"
+      >
+        <span>{busy === "story" ? "Generando…" : "Imagen para stories"}</span>
+      </button>
+
+      {/* Descargar imagen (horizontal) */}
+      <button
+        onClick={() => handleImage("download")}
+        disabled={busy !== null}
+        className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-muted-foreground hover:text-white text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+      >
+        <span>{busy === "download" ? "Generando…" : "Descargar imagen"}</span>
       </button>
 
       {/* Copiar enlace */}

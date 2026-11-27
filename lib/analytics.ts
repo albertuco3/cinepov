@@ -72,7 +72,8 @@ export type ShareChannel =
   | "reddit"
   | "native"
   | "copy_link"
-  | "download_image";
+  | "download_image"
+  | "story_image";
 
 export type ShareArtifact =
   | "movie_demographics"
