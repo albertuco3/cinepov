@@ -196,7 +196,7 @@ Series de TV, traducciones regionales y nuevos idiomas, API pública, monetizaci
 | [R-10](#r-10--helpers-para-las-rutas-de-api) | Helpers para las rutas de API | Parcial |
 | [R-11](#r-11--partir-los-componentes-gigantes) | Partir los componentes gigantes | Al tocarlos |
 | [R-12](#r-12--derivar-los-tipos-de-i18n) | Derivar los tipos de i18n | Al tocarlos |
-| [R-13](#r-13--tests-que-no-prueban-código) | Tests que no prueban código | Pendiente |
+| [R-13](#r-13--tests-que-no-prueban-código) | Tests que no prueban código | Hecho |
 | [R-14](#r-14--umbral-de-anonimato) | Umbral de anonimato | Decisión antes de reactivar lo social |
 
 ### R-01 — Lint en verde
@@ -249,7 +249,7 @@ Parcial: `lib/auth-guards.ts` tiene `requireUser()`, `requireAdmin()` y `getAdmi
 
 ### R-13 — Tests que no prueban código
 
-`lib/wrapped.test.ts` recalcula aritmética en línea y no importa `lib/wrapped.ts`: pasaría aunque el código estuviera roto. Revisar los tests con el mismo patrón y sustituirlos por tests de las funciones reales.
+Hecho: el cálculo del resumen anual está en `lib/wrapped-summary.ts` (puro) y `lib/wrapped-summary.test.ts` lo prueba; `lib/wrapped.ts` solo lee de la base. Las horas vistas usan la duración real de cada película (110 minutos si TMDB no la da) en vez de 110 fijos. El resto de tests ya importaban el código que prueban.
 
 ### R-14 — Umbral de anonimato
 
