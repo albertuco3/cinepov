@@ -56,6 +56,7 @@ Las migraciones solo avanzan. Nunca uses `prisma db push` contra producción.
 ## Tareas programadas
 
 - `vercel.json` programa el email semanal (`/api/cron/weekly-trends`) los lunes a las 9:00 UTC.
+- `vercel.json` fija las funciones en Fráncfort (`fra1`), la misma zona que la base de Neon (`eu-central-1`). Por defecto Vercel las ejecuta en Washington (`iad1`) y cada consulta cruzaba el Atlántico. Si cambias la región de la base, cambia también esta.
 - Vercel envía `Authorization: Bearer <CRON_SECRET>`. Sin `CRON_SECRET` configurada, la ruta responde 401 y no envía nada.
 
 ## Problemas conocidos
