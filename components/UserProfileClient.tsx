@@ -699,6 +699,7 @@ export default function UserProfileClient({
                     Ordenar por:
                   </span>
                   <select
+                    aria-label="Ordenar por"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                     className="bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-xl outline-none cursor-pointer focus:border-primary/50"
@@ -1005,6 +1006,7 @@ export default function UserProfileClient({
                     Nombre de la lista *
                   </label>
                   <input
+                    aria-label="Nombre de la lista"
                     type="text"
                     required
                     value={newListName}
@@ -1015,9 +1017,10 @@ export default function UserProfileClient({
                 </div>
                 <div>
                   <label className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
-                    Descripcion (opcional)
+                    Descripción (opcional)
                   </label>
                   <textarea
+                    aria-label="Descripción (opcional)"
                     value={newListDesc}
                     onChange={(e) => setNewListDesc(e.target.value)}
                     rows={2}

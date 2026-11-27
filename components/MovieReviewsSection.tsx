@@ -203,6 +203,7 @@ export default function MovieReviewsSection({
 
           {/* Selector de ordenación */}
           <select
+            aria-label={locale === "en" ? "Sort reviews" : "Ordenar reseñas"}
             value={sort}
             onChange={(e) => changeSort(e.target.value === "best" ? "best" : "recent")}
             className="bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-1.5 rounded-full outline-none cursor-pointer focus:border-primary/50"
@@ -278,6 +279,7 @@ export default function MovieReviewsSection({
                     {locale === "en" ? "Why do you want to report this review?" : "¿Por qué deseas reportar esta reseña?"}
                   </span>
                   <select
+                    aria-label={locale === "en" ? "Report reason" : "Motivo del reporte"}
                     value={reportReason}
                     onChange={(e) => setReportReason(e.target.value)}
                     className="w-full bg-[#0d101a] border border-white/10 rounded-lg p-1.5 text-xs text-white"

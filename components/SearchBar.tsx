@@ -95,6 +95,7 @@ export default function SearchBar() {
           <Search className="h-4 w-4 text-muted-foreground" />
         </div>
         <input
+          aria-label={dict.search.placeholder}
           type="text"
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}

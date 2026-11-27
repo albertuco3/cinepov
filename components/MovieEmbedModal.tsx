@@ -76,6 +76,7 @@ export default function MovieEmbedModal({ tmdbId, movieTitle }: Props) {
                 {locale === "en" ? "HTML Code for your website" : "Código HTML para tu web"}
               </label>
               <textarea
+                aria-label={locale === "en" ? "HTML Code for your website" : "Código HTML para tu web"}
                 readOnly
                 value={iframeCode}
                 rows={3}

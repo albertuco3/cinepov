@@ -124,7 +124,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [x] Recuperación de contraseña de principio a fin en producción (además verifica el email).
 - [x] Borrado de cuenta de principio a fin (probado sobre `dev`). Corregido de paso: los votos "conservados" dejaban de contar y quedaban reseñas, listas y pendientes de la persona.
 - [x] Ningún secreto en el repositorio ni en el bundle del cliente (comprobado el 27 de noviembre).
-- [ ] Accesibilidad básica (contraste, teclado, lector de pantalla) y textos de error en ambos idiomas.
+- [ ] Accesibilidad básica (contraste, teclado, lector de pantalla) y textos de error en ambos idiomas. Hecho en código: todos los campos de formulario tienen nombre accesible (19 no lo tenían), la zona de importación de CSV se puede usar con teclado, y no hay botones de solo icono sin nombre ni imágenes sin `alt`. Pendiente: contraste, una pasada con lector de pantalla, y los mensajes de error de la API, que solo están en español.
 
 **Criterio de salida:** al menos 50 usuarios reales verificados han completado el recorrido, el embudo y la D7 se leen en un panel, y ha pasado una semana sin errores críticos en Sentry.
 

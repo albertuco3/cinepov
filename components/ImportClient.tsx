@@ -251,6 +251,16 @@ export default function ImportClient() {
             onDragLeave={handleDrag}
             onDrop={handleDrop}
             onClick={onButtonClick}
+            // Accesible con teclado: el input de archivo está oculto.
+            role="button"
+            tabIndex={0}
+            aria-label="Seleccionar el archivo CSV"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onButtonClick();
+              }
+            }}
             className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer interactive-transition flex flex-col items-center justify-center space-y-4 shadow-2xl relative overflow-hidden bg-white/[0.02] ${
               dragActive
                 ? "border-primary bg-primary/5 scale-[1.02]"

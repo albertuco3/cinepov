@@ -205,6 +205,7 @@ export default function RankingsClient({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-white/70">{t.voterAge}</label>
               <select
+                aria-label={t.voterAge}
                 value={ageRange}
                 onChange={(e) => handleFilterChange(setAgeRange, e.target.value)}
                 className="w-full bg-[#0f111a] border border-white/10 text-white text-xs font-bold px-3 py-2 rounded-xl outline-none focus:border-primary/50 cursor-pointer h-[38px]"
@@ -231,6 +232,7 @@ export default function RankingsClient({
               {t.movieGenre}
             </label>
             <select
+              aria-label={t.movieGenre}
               value={selectedGenreId}
               onChange={(e) => handleFilterChange(setSelectedGenreId, e.target.value)}
               className="w-full bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-primary/50 cursor-pointer"
@@ -250,6 +252,7 @@ export default function RankingsClient({
               {t.releaseDecade}
             </label>
             <select
+              aria-label={t.releaseDecade}
               value={selectedDecade}
               onChange={(e) => handleFilterChange(setSelectedDecade, e.target.value)}
               className="w-full bg-[#0f111a] border border-white/10 text-white text-xs font-semibold px-3 py-2 rounded-xl outline-none focus:border-primary/50 cursor-pointer"

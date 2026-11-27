@@ -215,6 +215,7 @@ export default function RatingWidget({
         </label>
         {includeWatchedDate && (
           <input
+            aria-label={dict.movie.logDateInDiary}
             type="date"
             max={todayStr}
             value={watchedDate}
@@ -242,6 +243,7 @@ export default function RatingWidget({
               <span>{reviewText.length}/2000</span>
             </div>
             <textarea
+              aria-label={dict.movie.yourReview}
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
               maxLength={2000}

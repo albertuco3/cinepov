@@ -92,6 +92,7 @@ export default function TonightClient({ genres }: Props) {
                   {t.gender}
                 </label>
                 <select
+                  aria-label={t.gender}
                   value={genderA}
                   onChange={(e) => setGenderA(e.target.value)}
                   className="w-full bg-[#0d101a] border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-primary/50"
@@ -107,6 +108,7 @@ export default function TonightClient({ genres }: Props) {
                   {t.age}
                 </label>
                 <select
+                  aria-label={t.age}
                   value={ageA}
                   onChange={(e) => setAgeA(e.target.value)}
                   className="w-full bg-[#0d101a] border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-primary/50"
@@ -136,6 +138,7 @@ export default function TonightClient({ genres }: Props) {
                   {t.gender}
                 </label>
                 <select
+                  aria-label={t.gender}
                   value={genderB}
                   onChange={(e) => setGenderB(e.target.value)}
                   className="w-full bg-[#0d101a] border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-primary/50"
@@ -151,6 +154,7 @@ export default function TonightClient({ genres }: Props) {
                   {t.age}
                 </label>
                 <select
+                  aria-label={t.age}
                   value={ageB}
                   onChange={(e) => setAgeB(e.target.value)}
                   className="w-full bg-[#0d101a] border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-primary/50"
@@ -172,6 +176,7 @@ export default function TonightClient({ genres }: Props) {
               {t.filterByGenre}
             </span>
             <select
+              aria-label={t.filterByGenre}
               value={genreId}
               onChange={(e) => setGenreId(e.target.value)}
               className="bg-[#0d101a] border border-white/10 rounded-full px-3 py-1.5 text-xs text-white outline-none focus:border-primary/50 cursor-pointer"

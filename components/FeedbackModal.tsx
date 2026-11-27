@@ -69,6 +69,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               Categoría
             </label>
             <select
+              aria-label="Categoría"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="w-full bg-[#0f111a] border border-white/10 text-white text-xs font-bold px-3 py-2 rounded-xl outline-none focus:border-primary/50 cursor-pointer h-10"
@@ -85,6 +86,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               Mensaje
             </label>
             <textarea
+              aria-label="Mensaje"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Explica detalladamente tu sugerencia o reporte..."
