@@ -40,6 +40,9 @@ export default function Footer() {
             <Link href="/metodologia" className="hover:text-foreground interactive-transition">
               {dict.nav.methodology}
             </Link>
+            <Link href="/widget" className="hover:text-foreground interactive-transition">
+              {locale === "en" ? "Widget for websites" : "Widget para webs"}
+            </Link>
             <button
               onClick={() => setIsFeedbackOpen(true)}
               className="hover:text-foreground interactive-transition cursor-pointer font-medium text-sm text-left bg-transparent border-none"

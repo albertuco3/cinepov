@@ -153,7 +153,7 @@ Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisi
 - [ ] Core Web Vitals (LCP < 2,5 s, INP < 200 ms, CLS < 0,1). Hecho: las miniaturas piden a TMDB el tamaño que necesitan (`lib/tmdb-image.ts`, unos 20 KB en lugar de 130 KB). Pendiente: ninguna página se cachea (todas responden `Cache-Control: no-store` porque el layout lee cabeceras), así que cada visita consulta la base; medir el TTFB y cachear las públicas.
 - [ ] Enviar el sitemap a Search Console y vigilar la cobertura de indexación.
 - [ ] Texto introductorio con datos reales en las páginas de género, década y segmento. Ya enlazadas desde el pie en español (antes solo estaban en el sitemap).
-- [ ] Documentación del widget para blogs y medios.
+- [ ] *(código)* Documentación del widget para blogs y medios: `/widget`, en español e inglés, enlazada desde el pie, con el código, un ejemplo en vivo, qué muestra, privacidad (sin cookies ni analítica, comprobado) y condiciones de uso.
 - [ ] Traducir las páginas que solo existen en español, empezando por los textos legales, y añadirlas a `TRANSLATED_ROUTES`.
 - [ ] Tono de voz de la marca. *(código)* Imagen para redes por defecto (`app/opengraph-image.tsx`) en todas las páginas sin una propia; antes la portada, explorar, género, década, blog y demás se compartían sin imagen. Tarjeta grande en X.
 - [ ] Antes de reactivar lo social: decidir el umbral de anonimato ([R-14](#r-14--umbral-de-anonimato)) y cómo filtrar reseñas por segmento sin revelar el segmento de cada autor.
