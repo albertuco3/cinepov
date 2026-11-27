@@ -96,6 +96,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Las páginas de segmento ordenaban 60 películas arbitrarias y mostraban películas con un solo voto**, lo que revelaba la nota de una persona concreta. Ahora agregan en la base con el umbral de anonimato y, mientras estén vacías, no se indexan ni salen en el sitemap.
 - [ ] *(código)* **Las páginas de género y década tampoco elegían las mejores:** ordenaban las 30 últimas cacheadas (o 60 arbitrarias) y un solo voto ponía una película por delante de todas. Ahora ordenan todo el catálogo con la base del motor de gusto (TMDB como punto de partida, desplazada por los votos).
 - [ ] *(código)* **El widget para webs (`/embed/...`) salía con la cabecera, el pie, la barra inferior y el banner de cookies del sitio** dentro de un iframe de 320 px, y cargaba la analítica en webs de terceros sin consentimiento. Ahora el middleware lo marca y el layout sirve solo el contenido, sin analítica y con `noindex`.
+- [ ] *(código)* **La metodología, la página de transparencia, afirmaba cosas que ya no eran ciertas:** que no había algoritmos de recomendación (está el motor de gusto), que se podía no declarar el género (el registro lo exige), que los datos personales solo aparecen en medias "de decenas de personas" (el mínimo es 3) y que la nota de TMDB nunca se mezcla (es el punto de partida de la nota estimada y de las listas por género y década). Reescrita y traducida al inglés; ahora explica la nota estimada y cuándo hay una brecha real, y todas sus cifras salen de las constantes del código.
 
 ### 1.3 Medición
 
@@ -108,7 +109,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 ### 1.4 URLs por idioma
 
 - [x] Decidido: rutas con prefijo `/es/…` y `/en/…`. El middleware reescribe a las rutas internas sin duplicar el árbol; sin prefijo se redirige según la cookie o el navegador. Cada página declara canónica y `hreflang`, y el sitemap lista cada URL en sus idiomas. Comprobado en producción el 26 de noviembre.
-- [ ] Muchas páginas existen solo en español (legales, metodología, blog, polarizantes, década, género, segmento, wrapped, listas, perfiles, `/vs/`). Su versión `/en/` apunta la canónica a `/es/`. Al traducir una, añadirla a `TRANSLATED_ROUTES` en `lib/i18n/paths.ts` (Hito 2).
+- [ ] Muchas páginas existen solo en español (legales, blog, polarizantes, década, género, segmento, wrapped, listas, perfiles, `/vs/`). Su versión `/en/` apunta la canónica a `/es/`. Al traducir una, añadirla a `TRANSLATED_ROUTES` en `lib/i18n/paths.ts` (Hito 2).
 
 ### 1.5 Superficie de la beta
 
@@ -154,7 +155,7 @@ Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisi
 - [ ] Enviar el sitemap a Search Console y vigilar la cobertura de indexación.
 - [ ] Texto introductorio con datos reales en las páginas de género, década y segmento. Ya enlazadas desde el pie en español (antes solo estaban en el sitemap).
 - [ ] *(código)* Documentación del widget para blogs y medios: `/widget`, en español e inglés, enlazada desde el pie, con el código, un ejemplo en vivo, qué muestra, privacidad (sin cookies ni analítica, comprobado) y condiciones de uso.
-- [ ] Traducir las páginas que solo existen en español, empezando por los textos legales, y añadirlas a `TRANSLATED_ROUTES`.
+- [ ] Traducir las páginas que solo existen en español, empezando por los textos legales (cuando tengan los datos del titular), y añadirlas a `TRANSLATED_ROUTES`. Hechas: metodología y `/widget`.
 - [ ] Tono de voz de la marca. *(código)* Imagen para redes por defecto (`app/opengraph-image.tsx`) en todas las páginas sin una propia; antes la portada, explorar, género, década, blog y demás se compartían sin imagen. Tarjeta grande en X.
 - [ ] Antes de reactivar lo social: decidir el umbral de anonimato ([R-14](#r-14--umbral-de-anonimato)) y cómo filtrar reseñas por segmento sin revelar el segmento de cada autor.
 - [ ] Reactivar feed, seguidores y reseñas cuando haya densidad (umbral a fijar con los datos de la beta).
