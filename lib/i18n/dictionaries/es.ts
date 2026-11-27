@@ -1,6 +1,4 @@
-import { Dictionary } from "../types";
-
-export const es: Dictionary = {
+export const es = {
   common: {
     loading: "Cargando...",
     error: "Ha ocurrido un error inesperado.",

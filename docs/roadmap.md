@@ -199,7 +199,7 @@ Series de TV, traducciones regionales y nuevos idiomas, API pública, monetizaci
 | [R-09](#r-09--rankings-calculados-sobre-subconjuntos-arbitrarios) | Rankings sobre subconjuntos arbitrarios | Hecho |
 | [R-10](#r-10--helpers-para-las-rutas-de-api) | Helpers para las rutas de API | Hecho |
 | [R-11](#r-11--partir-los-componentes-gigantes) | Partir los componentes gigantes | Al tocarlos |
-| [R-12](#r-12--derivar-los-tipos-de-i18n) | Derivar los tipos de i18n | Al tocarlos |
+| [R-12](#r-12--derivar-los-tipos-de-i18n) | Derivar los tipos de i18n | Hecho |
 | [R-13](#r-13--tests-que-no-prueban-código) | Tests que no prueban código | Hecho |
 | [R-14](#r-14--umbral-de-anonimato) | Umbral de anonimato | Decisión antes de reactivar lo social |
 
@@ -249,7 +249,7 @@ Hecho: todas las rutas que exigen sesión usan `requireUser()` de `lib/auth-guar
 
 ### R-12 — Derivar los tipos de i18n
 
-`lib/i18n/types.ts` mantiene a mano una interfaz paralela a `es.ts` y `en.ts`. Sustituirla por `export type Dictionary = typeof es` y `en satisfies Dictionary`.
+Hecho: `Dictionary` es `typeof es` (unas 380 líneas de interfaz menos) y `en` se declara con ese tipo. Comprobado que una clave que falta o sobra en inglés no compila.
 
 ### R-13 — Tests que no prueban código
 
