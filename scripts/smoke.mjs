@@ -27,8 +27,11 @@ const checks = [
   ["GET", "/api/ratings", 405],
   ["GET", "/api/feedback", 405],
   ["GET", "/api/auth/complete-profile", 405],
-  ["POST", "/api/auth/register", 400],
+  // Un cuerpo vacío debe dar 400 (validación), no 500. No se usa el registro:
+  // tiene límite de 5 intentos por hora y la prueba bloquearía tu propia IP.
+  ["POST", "/api/auth/reset-password", 400],
   // Protegidas.
+  ["POST", "/api/watchlist", 401],
   ["GET", "/es/profile", 307],
   ["GET", "/es/admin/metrics", 404],
   ["GET", "/api/admin/reports", 404],

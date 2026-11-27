@@ -70,9 +70,9 @@ Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.m
 
 Todos corregidos en código; se marcan del todo al comprobarse en producción.
 
-- [ ] *(código)* **Panel de administración** solo para emails de `ADMIN_EMAILS` con el email verificado; al resto se le responde 404.
+- [x] **Panel de administración** solo para emails de `ADMIN_EMAILS` con el email verificado; al resto se le responde 404. Comprobado el 27 de noviembre: `/es/admin/metrics` y `/api/admin/reports` responden 404 sin sesión de administrador (`npm run smoke`).
 - [ ] *(código)* **Edad mínima de 18 años** en registro, bienvenida y edición de perfil, con declaración explícita (el año de nacimiento no basta para garantizarla).
-- [ ] *(código)* **Votos sintéticos retirados de todo lo público:** núcleo de agregación, API, interfaz, portada, metodología y textos legales. El decaimiento de bots ha desaparecido. La base de producción ya está limpia.
+- [x] **Votos sintéticos retirados de todo lo público:** núcleo de agregación, API, interfaz, portada, metodología y textos legales. El decaimiento de bots ha desaparecido. La base de producción ya está limpia. Comprobado el 27 de noviembre: el desglose de la API solo trae `real` y ninguna página pública (portada, metodología, legales) los menciona.
 - [ ] *(código)* **Sin datos personales en los logs**, y en producción el simulador de email ya no imprime enlaces de verificación ni de restablecimiento de contraseña.
 - [ ] *(código)* **Una sola definición de "voto que cuenta"** ([R-02](#r-02--una-sola-definición-de-voto-que-cuenta)).
 - [ ] *(código)* **Creación de películas sin condiciones de carrera** ([R-03](#r-03--creación-de-películas-sin-condiciones-de-carrera)).
@@ -80,12 +80,12 @@ Todos corregidos en código; se marcan del todo al comprobarse en producción.
 
 Encontrados y corregidos durante el trabajo de este hito:
 
-- [ ] *(código)* **El cron del email semanal no comprobaba `CRON_SECRET`:** cualquiera podía disparar el envío masivo. Ahora exige el secreto, envía solo a emails verificados y calcula una consulta por segmento en lugar de una por usuario. Añadido `vercel.json` con la programación semanal.
+- [x] **El cron del email semanal no comprobaba `CRON_SECRET`:** cualquiera podía disparar el envío masivo. Ahora exige el secreto, envía solo a emails verificados y calcula una consulta por segmento en lugar de una por usuario. Añadido `vercel.json` con la programación semanal. Comprobado el 27 de noviembre: sin el secreto responde 401 (`npm run smoke`).
 - [ ] *(código)* **Las reseñas mostraban el género y la edad de su autor** junto a su nombre, contra lo que promete el registro.
 - [ ] *(código)* **El seed borraba todas las tablas.** Un `npm run db:seed` contra producción habría eliminado a todos los usuarios. Ahora es solo de catálogo e idempotente; los datos de prueba están en `seed-dev`, con doble salvaguarda.
 - [ ] *(código)* **Las migraciones solo creaban 7 de las 13 tablas.** Sustituidas por una migración base que coincide con el esquema y con la base real; el CI aplica migraciones y falla si se desvían del esquema.
 - [ ] *(código)* **Las recomendaciones presentaban la nota de TMDB como opinión del segmento** (y un perfil inventado de "mujer de 28" si faltaban datos). Ahora se etiqueta la procedencia y no se inventa perfil. Sus enlaces llevaban a la película equivocada.
-- [ ] *(código)* **`parseMovieParam` convertía un UUID en un id de TMDB** ("07bb…" → película 7).
+- [x] **`parseMovieParam` convertía un UUID en un id de TMDB** ("07bb…" → película 7). Comprobado el 27 de noviembre: una URL con UUID da 404 en lugar de otra película. Los rankings enlazaban así cada título (todos daban 404); corregido.
 - [ ] *(código)* **Seis películas del onboarding eran otras** por ids de TMDB equivocados (*The Lone Ranger* en lugar de *Parásitos*, *Hocus Pocus* en lugar de *Torrente*…). Catálogo comprobado contra TMDB; el seed retira del onboarding las que salen de la lista. Falta aplicarlo en producción (1.1).
 - [ ] *(código)* **El `NEXTAUTH_SECRET` de `.env.example` era el mismo que el de `.env`.** Nunca se versionó; ahora el ejemplo lleva un marcador y sí se versiona.
 - [x] **Las imágenes OG daban error 500 en todas las películas** (Satori exige `display: flex` en cualquier `div` cuyo contenido no sea una cadena). Corregido y comprobado en producción; la tarjeta tiene tests que reproducen la regla y generan PNG reales.
