@@ -227,7 +227,7 @@ export const en: Dictionary = {
   },
   rankings: {
     title: "Demographic Rankings",
-    subtitle: "Discover top-rated movies. Break free from global average bias by filtering by any demographic cohort you choose.",
+    subtitle: "The movies the community rates highest, overall or by age and gender.",
     demographicFilters: "Demographic Filters (Cohort Segment)",
     voterGender: "Voter Gender",
     voterAge: "Voter Age",

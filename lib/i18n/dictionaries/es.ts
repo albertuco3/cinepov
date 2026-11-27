@@ -225,7 +225,7 @@ export const es = {
   },
   rankings: {
     title: "Rankings Demográficos",
-    subtitle: "Descubre las películas mejor valoradas. Rompe la tiranía de la nota media global filtrando por el segmento demográfico que desees.",
+    subtitle: "Las películas mejor valoradas por la comunidad, en general o por edad y género.",
     demographicFilters: "Filtros Demográficos (Segmento de Opinión)",
     voterGender: "Género del Votante",
     voterAge: "Edad del Votante",
