@@ -62,7 +62,7 @@ Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.m
 - [x] Resend con SPF, DKIM y DMARC en `cinepov.com`. Comprobado el 27 de noviembre: el email de restablecimiento llega a la bandeja de entrada desde `hola@cinepov.com`.
 - [ ] PostHog en la región UE.
 - [ ] Copias de seguridad automáticas y **una restauración probada**.
-- [ ] Documentar el despliegue y el rollback.
+- [x] Documentar el despliegue y el rollback: [despliegue.md](./despliegue.md), con `npm run smoke` para comprobar cada despliegue.
 - [ ] Rellenar los datos del titular en los textos legales.
 - [ ] Registro interno de actividades de tratamiento (RGPD).
 
@@ -97,8 +97,8 @@ Encontrados y corregidos durante el trabajo de este hito:
 
 - [ ] Embudo de activación: visita → registro → verificación de email → onboarding → primer desglose visto.
 - [ ] Retención D1, D7 y D30.
-- [ ] Distribución demográfica de los usuarios reales: ningún segmento por encima del 40 % (preocupación A4).
-- [ ] Cobertura: porcentaje de películas populares con cada nivel de granularidad desbloqueado.
+- [x] Distribución demográfica de las personas verificadas, con alertas del 40 % y el 8 %: `/admin/metrics`.
+- [x] Cobertura de los niveles de desglose en el onboarding y las películas más valoradas: `/admin/metrics`.
 - [ ] Sentry con alertas, y un canal (Discord o Telegram) para errores críticos.
 
 ### 1.4 URLs por idioma
@@ -109,7 +109,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 ### 1.5 Superficie de la beta
 
 - [x] Ocultar tras un flag el feed, los seguidores, las notificaciones y las reseñas (`NEXT_PUBLIC_SOCIAL_ENABLED`, desactivado por defecto). Las API correspondientes responden 404 y no se guarda texto de reseña.
-- [ ] Comprobar que las secciones de la portada que dependen de datos reales (polarizantes, tendencias) muestran progreso, no huecos.
+- [x] Las secciones que dependen de datos reales tienen estados vacíos que explican qué falta; corregidas además unas 130 cadenas sin tildes.
 
 ### 1.6 Prueba de humo en producción
 
@@ -117,8 +117,8 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] Registro → verificación de email → valoración → desglose, en móvil y escritorio (necesita Resend).
 - [ ] Registrar un usuario, redesplegar y comprobar que sigue ahí.
 - [x] Recuperación de contraseña de principio a fin en producción (además verifica el email).
-- [ ] Borrado de cuenta de principio a fin.
-- [ ] Ningún secreto en el repositorio ni en el bundle del cliente.
+- [x] Borrado de cuenta de principio a fin (probado sobre `dev`). Corregido de paso: los votos "conservados" dejaban de contar y quedaban reseñas, listas y pendientes de la persona.
+- [x] Ningún secreto en el repositorio ni en el bundle del cliente (comprobado el 27 de noviembre).
 - [ ] Accesibilidad básica (contraste, teclado, lector de pantalla) y textos de error en ambos idiomas.
 
 **Criterio de salida:** al menos 50 usuarios reales verificados han completado el recorrido, el embudo y la D7 se leen en un panel, y ha pasado una semana sin errores críticos en Sentry.
