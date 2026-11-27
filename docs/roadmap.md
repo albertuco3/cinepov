@@ -92,6 +92,9 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [x] **Las rutas de registro, perfil, sugerencias y valoraciones daban un error 500 en Vercel** (DOMPurify arrastraba jsdom, que no carga allí). Sustituido por un saneado propio sin dependencias; de paso, los textos ya no se guardan escapados ("Tom &amp; Jerry") y los emails escapan al construir su HTML.
 - [x] **Nadie sabía que su email estaba sin verificar** (y por tanto que sus votos no contaban): ahora un aviso bajo la cabecera lo explica y permite reenviar el email. La sesión lleva `emailVerified` y se refresca sola al verificar.
 - [x] **El sitemap, `robots.txt`, las URLs canónicas y los enlaces de los emails salían con `//`** si `NEXTAUTH_URL` llevaba barra final. Ahora todo sale de `lib/site.ts`. Comprobado en producción.
+- [ ] *(código)* **Tras borrar la cuenta, la sesión de otros dispositivos seguía activa** (el token dura 30 días): podía seguir valorando y esos votos contaban. Ahora toda ruta con sesión comprueba en la base que la cuenta existe y no está anonimizada ([R-10](#r-10--helpers-para-las-rutas-de-api)). Comprobado en local contra `dev`.
+- [ ] *(código)* **Las páginas de segmento ordenaban 60 películas arbitrarias y mostraban películas con un solo voto**, lo que revelaba la nota de una persona concreta. Ahora agregan en la base con el umbral de anonimato y, mientras estén vacías, no se indexan ni salen en el sitemap.
+- [ ] *(código)* **Las páginas de género y década tampoco elegían las mejores:** ordenaban las 30 últimas cacheadas (o 60 arbitrarias) y un solo voto ponía una película por delante de todas. Ahora ordenan todo el catálogo con la base del motor de gusto (TMDB como punto de partida, desplazada por los votos).
 
 ### 1.3 Medición
 
@@ -146,9 +149,9 @@ Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisi
 
 - [ ] Validar las imágenes OG en los depuradores de X, Facebook, LinkedIn y WhatsApp.
 - [ ] Botón "descargar imagen" en `/vs/` y formato vertical para stories.
-- [ ] Core Web Vitals (LCP < 2,5 s, INP < 200 ms, CLS < 0,1), lazy loading y `sizes` en los pósters.
+- [ ] Core Web Vitals (LCP < 2,5 s, INP < 200 ms, CLS < 0,1). Hecho: las miniaturas piden a TMDB el tamaño que necesitan (`lib/tmdb-image.ts`, unos 20 KB en lugar de 130 KB). Pendiente: ninguna página se cachea (todas responden `Cache-Control: no-store` porque el layout lee cabeceras), así que cada visita consulta la base; medir el TTFB y cachear las públicas.
 - [ ] Enviar el sitemap a Search Console y vigilar la cobertura de indexación.
-- [ ] Texto introductorio con datos reales en las páginas de género, década y segmento.
+- [ ] Texto introductorio con datos reales en las páginas de género, década y segmento. Ya enlazadas desde el pie en español (antes solo estaban en el sitemap).
 - [ ] Documentación del widget para blogs y medios.
 - [ ] Traducir las páginas que solo existen en español, empezando por los textos legales, y añadirlas a `TRANSLATED_ROUTES`.
 - [ ] Imagen OG estática de respaldo y tono de voz de la marca.
