@@ -87,6 +87,7 @@ export const TRANSLATED_ROUTES = [
   "/register",
   "/widget",
   "/metodologia",
+  "/about",
 ];
 
 /** Idiomas en los que existe una ruta sin prefijo ("/movie/1" → ["es", "en"]). */

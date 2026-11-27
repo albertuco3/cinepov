@@ -155,7 +155,7 @@ Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisi
 - [ ] Enviar el sitemap a Search Console y vigilar la cobertura de indexación.
 - [ ] Texto introductorio con datos reales en las páginas de género, década y segmento. Ya enlazadas desde el pie en español (antes solo estaban en el sitemap).
 - [ ] *(código)* Documentación del widget para blogs y medios: `/widget`, en español e inglés, enlazada desde el pie, con el código, un ejemplo en vivo, qué muestra, privacidad (sin cookies ni analítica, comprobado) y condiciones de uso.
-- [ ] Traducir las páginas que solo existen en español, empezando por los textos legales (cuando tengan los datos del titular), y añadirlas a `TRANSLATED_ROUTES`. Hechas: metodología y `/widget`.
+- [ ] Traducir las páginas que solo existen en español, empezando por los textos legales (cuando tengan los datos del titular), y añadirlas a `TRANSLATED_ROUTES`. Hechas: metodología, «Acerca de» (reescrita con el posicionamiento nuevo: hablaba de la «falacia de la nota media» con un ejemplo inventado que los datos desmienten) y `/widget`.
 - [ ] Tono de voz de la marca. *(código)* Imagen para redes por defecto (`app/opengraph-image.tsx`) en todas las páginas sin una propia; antes la portada, explorar, género, década, blog y demás se compartían sin imagen. Tarjeta grande en X.
 - [ ] Antes de reactivar lo social: decidir el umbral de anonimato ([R-14](#r-14--umbral-de-anonimato)) y cómo filtrar reseñas por segmento sin revelar el segmento de cada autor.
 - [ ] Reactivar feed, seguidores y reseñas cuando haya densidad (umbral a fijar con los datos de la beta).
