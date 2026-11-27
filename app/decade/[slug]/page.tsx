@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocaleLink";
-import { db } from "@/lib/db";
-import { countedRatingWhere } from "@/lib/rating-filters";
+import { getTopMovies } from "@/lib/catalog-ranking-db";
 import {
   getDecadeConfig,
   ALL_DECADE_SLUGS,
@@ -46,56 +45,8 @@ export default async function DecadePage({ params }: PageProps) {
     notFound();
   }
 
-  // Buscar películas de esa década en base de datos
-  const candidateMovies = await db.movie.findMany({
-    where: {
-      year: {
-        gte: config.startYear,
-        lte: config.endYear,
-      },
-    },
-    include: {
-      genres: {
-        select: { name: true },
-      },
-      ratings: {
-        where: countedRatingWhere(),
-        select: { score: true },
-      },
-    },
-    take: 60,
-  });
-
-  const rankedMovies = candidateMovies.map((m) => {
-    const count = m.ratings.length;
-    const avg =
-      count > 0
-        ? parseFloat(
-            (m.ratings.reduce((sum, r) => sum + r.score, 0) / count).toFixed(1)
-          )
-        : null;
-
-    return {
-      id: m.id,
-      tmdbId: m.tmdbId,
-      title: m.title,
-      year: m.year,
-      posterUrl: m.posterUrl,
-      director: m.director,
-      tmdbRating: m.tmdbRating,
-      genres: m.genres.map((g) => g.name),
-      realAvg: avg,
-      realCount: count,
-    };
-  });
-
-  // Ordenar por nota de la comunidad si hay votos, o por tmdbRating
-  rankedMovies.sort((a, b) => {
-    if (a.realAvg !== null && b.realAvg !== null) return b.realAvg - a.realAvg;
-    if (a.realAvg !== null) return -1;
-    if (b.realAvg !== null) return 1;
-    return (b.tmdbRating || 0) - (a.tmdbRating || 0);
-  });
+  // Las mejores de la década entre todas las del catálogo (ver lib/catalog-ranking.ts).
+  const rankedMovies = await getTopMovies({ year: { gte: config.startYear, lte: config.endYear } }, 60);
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-10">

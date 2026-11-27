@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocaleLink";
-import { db } from "@/lib/db";
-import { countedRatingWhere } from "@/lib/rating-filters";
+import { getTopMovies } from "@/lib/catalog-ranking-db";
 import {
   getGenreNameFromSlug,
   ALL_GENRE_SLUGS,
@@ -45,50 +44,8 @@ export default async function GenrePage({ params }: PageProps) {
     notFound();
   }
 
-  // 1. Buscar películas del género en la base de datos
-  const genre = await db.genre.findUnique({
-    where: { name: genreName },
-    include: {
-      movies: {
-        take: 30,
-        orderBy: { cachedAt: "desc" },
-        include: {
-          ratings: {
-            where: countedRatingWhere(),
-            select: { score: true },
-          },
-        },
-      },
-    },
-  });
-
-  const movies = (genre?.movies || []).map((m) => {
-    const realCount = m.ratings.length;
-    const realAvg =
-      realCount > 0
-        ? parseFloat((m.ratings.reduce((sum, r) => sum + r.score, 0) / realCount).toFixed(1))
-        : null;
-
-    return {
-      id: m.id,
-      tmdbId: m.tmdbId,
-      title: m.title,
-      year: m.year,
-      posterUrl: m.posterUrl,
-      director: m.director,
-      tmdbRating: m.tmdbRating,
-      realAvg,
-      realCount,
-    };
-  });
-
-  // Ordenar preferentemente por nota real de la comunidad si hay votos, o por tmdbRating
-  movies.sort((a, b) => {
-    if (a.realAvg !== null && b.realAvg !== null) return b.realAvg - a.realAvg;
-    if (a.realAvg !== null) return -1;
-    if (b.realAvg !== null) return 1;
-    return (b.tmdbRating || 0) - (a.tmdbRating || 0);
-  });
+  // Las mejores del género entre todas las del catálogo (ver lib/catalog-ranking.ts).
+  const movies = await getTopMovies({ genres: { some: { name: genreName } } }, 30);
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-10">
