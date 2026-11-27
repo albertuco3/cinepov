@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { ALL_GENRE_SLUGS } from "@/lib/genres";
-import { ALL_SEGMENT_SLUGS } from "@/lib/segments";
+import { ALL_SEGMENT_SLUGS, getSegmentConfig } from "@/lib/segments";
+import { segmentHasRanking } from "@/lib/segment-ranking";
 import { ALL_DECADE_SLUGS } from "@/lib/decades";
 import { ALL_BLOG_SLUGS } from "@/lib/blog-data";
 import { SITE_URL } from "@/lib/site";
@@ -100,8 +101,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  // 3. Rutas dinámicas de segmentos demográficos (SEO Programático)
-  const segmentRoutes: MetadataRoute.Sitemap = ALL_SEGMENT_SLUGS.map((slug) => ({
+  // 3. Rutas dinámicas de segmentos demográficos (SEO Programático). Solo las
+  // que ya tienen datos: sin votos suficientes la página está vacía y es noindex.
+  const segmentsWithData = (
+    await Promise.all(
+      ALL_SEGMENT_SLUGS.map(async (slug) => {
+        const config = getSegmentConfig(slug);
+        return config && (await segmentHasRanking(config)) ? slug : null;
+      })
+    )
+  ).filter((slug): slug is string => slug !== null);
+  const segmentRoutes: MetadataRoute.Sitemap = segmentsWithData.map((slug) => ({
     url: `/segment/${slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,

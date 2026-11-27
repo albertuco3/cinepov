@@ -2,19 +2,24 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocaleLink";
-import { db } from "@/lib/db";
-import { countedRatingWhere } from "@/lib/rating-filters";
+import { cache } from "react";
 import {
   getSegmentConfig,
   ALL_SEGMENT_SLUGS,
   DEMOGRAPHIC_SEGMENTS,
 } from "@/lib/segments";
-import { buildDemographicWhereClause } from "@/lib/consensus";
+import { getSegmentRanking } from "@/lib/segment-ranking";
 import { buildCanonicalMoviePath } from "@/lib/slug";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
+
+/** Compartido por los metadatos y la página: una sola consulta por petición. */
+const loadRanking = cache(async (slug: string) => {
+  const config = getSegmentConfig(slug);
+  return config ? getSegmentRanking(config) : [];
+});
 
 export async function generateStaticParams() {
   return ALL_SEGMENT_SLUGS.map((slug) => ({ slug }));
@@ -31,9 +36,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = `${config.headline} | CinePOV`;
   const description = config.description;
 
+  // Sin votos suficientes la página está vacía: que no se indexe hasta tener datos.
+  const hasData = (await loadRanking(slug)).length > 0;
+
   return {
     title,
     description,
+    ...(hasData ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
       title,
       description,
@@ -50,57 +59,7 @@ export default async function SegmentPage({ params }: PageProps) {
     notFound();
   }
 
-  const currentYear = new Date().getFullYear();
-  const userWhere = buildDemographicWhereClause(config.gender, config.ageBroad, currentYear);
-
-  // Buscar películas que tengan votos reales verificados de este segmento
-  const candidateMovies = await db.movie.findMany({
-    where: {
-      ratings: {
-        some: countedRatingWhere(userWhere),
-      },
-    },
-    include: {
-      genres: {
-        select: { name: true },
-      },
-      ratings: {
-        where: countedRatingWhere(userWhere),
-        select: { score: true },
-      },
-    },
-    take: 60,
-  });
-
-  const rankedMovies = candidateMovies
-    .map((m) => {
-      const count = m.ratings.length;
-      const avg =
-        count > 0
-          ? parseFloat(
-              (m.ratings.reduce((sum, r) => sum + r.score, 0) / count).toFixed(1)
-            )
-          : 0;
-
-      return {
-        id: m.id,
-        tmdbId: m.tmdbId,
-        title: m.title,
-        year: m.year,
-        posterUrl: m.posterUrl,
-        director: m.director,
-        genres: m.genres.map((g) => g.name),
-        segmentAvg: avg,
-        segmentCount: count,
-      };
-    })
-    .filter((m) => m.segmentCount > 0);
-
-  // Ordenar por nota del segmento descendente y luego por número de votos
-  rankedMovies.sort((a, b) => {
-    if (b.segmentAvg !== a.segmentAvg) return b.segmentAvg - a.segmentAvg;
-    return b.segmentCount - a.segmentCount;
-  });
+  const rankedMovies = await loadRanking(slug);
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-10">

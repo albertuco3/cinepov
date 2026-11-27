@@ -4,11 +4,13 @@ import { useState } from "react";
 import Link from "@/components/LocaleLink";
 import FeedbackModal from "@/components/FeedbackModal";
 import { useI18n } from "@/lib/i18n/client";
+import { GENRE_SLUG_MAP } from "@/lib/genres";
+import { DECADES_CONFIG } from "@/lib/decades";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
 
   return (
     <footer className="w-full border-t border-white/5 bg-background/50 py-8 mt-auto">
@@ -58,6 +60,29 @@ export default function Footer() {
             </Link>
           </div>
         </div>
+
+        {/* Páginas por género y década. Solo existen en español: enlazarlas desde
+            aquí evita que dependan únicamente del sitemap para indexarse. */}
+        {locale === "es" && (
+          <nav aria-label="Descubre películas" className="grid gap-4 border-b border-white/5 py-6 text-xs text-muted-foreground sm:grid-cols-[auto_1fr]">
+            <span className="font-bold uppercase tracking-wider text-foreground/70">Por género</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {Object.entries(GENRE_SLUG_MAP).map(([slug, name]) => (
+                <Link key={slug} href={`/genre/${slug}`} className="hover:text-foreground interactive-transition">
+                  {name}
+                </Link>
+              ))}
+            </div>
+            <span className="font-bold uppercase tracking-wider text-foreground/70">Por década</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {Object.values(DECADES_CONFIG).map((decade) => (
+                <Link key={decade.slug} href={`/decade/${decade.slug}`} className="hover:text-foreground interactive-transition">
+                  {decade.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
 
         {/* Atribuciones y Derechos */}
         <div className="flex flex-col gap-3 pt-6 text-xs text-muted-foreground">
