@@ -17,6 +17,8 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, ""); // Eliminar guiones iniciales y finales
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Parsea el parámetro de ruta de una película, admitiendo:
  * - "157336" (ID puro)
@@ -26,6 +28,8 @@ export function parseMovieParam(param: string): { tmdbId: number | null; slug?: 
   if (!param) return { tmdbId: null };
 
   // Sin reserva con parseInt: "07bb15f0-..." (un UUID) no debe leerse como la película 7.
+  // Y un UUID cuyo primer bloque son solo cifras ("07123456-...") tampoco es "id-slug".
+  if (UUID_PATTERN.test(param)) return { tmdbId: null };
   const match = param.match(/^(\d+)(?:-(.*))?$/);
   if (!match) return { tmdbId: null };
 

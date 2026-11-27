@@ -126,6 +126,7 @@ export async function GET(request: Request) {
         return {
           rank: skip + index + 1,
           id: movie.id,
+          tmdbId: movie.tmdbId,
           title: movie.title,
           year: movie.year,
           posterUrl: movie.posterUrl,

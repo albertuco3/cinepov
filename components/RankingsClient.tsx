@@ -4,6 +4,7 @@ import { errorMessage } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "@/components/LocaleLink";
+import { buildCanonicalMoviePath } from "@/lib/slug";
 import { useI18n } from "@/lib/i18n/client";
 
 interface Genre {
@@ -19,6 +20,7 @@ interface UserSegment {
 interface MovieRankingItem {
   rank: number;
   id: string;
+  tmdbId: number;
   title: string;
   year: number;
   posterUrl: string;
@@ -344,7 +346,7 @@ export default function RankingsClient({
                   {/* Detalles de Película */}
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <h3 className="text-lg font-black text-white truncate leading-tight group-hover:text-primary transition-colors">
-                      <Link href={`/movie/${movie.id}`}>
+                      <Link href={buildCanonicalMoviePath(movie.tmdbId, movie.title)}>
                         {movie.title}
                       </Link>
                     </h3>
