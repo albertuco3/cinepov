@@ -1,112 +1,98 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { parseJsonBody, requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sanitizeAndTruncate } from "@/lib/sanitize";
 import { checkContentModeration } from "@/lib/moderation";
 import { checkReviewBombingAnomaly } from "@/lib/anti-abuse";
-import { ratingSchema, getFirstZodError } from "@/lib/schemas";
+import { ratingRequestSchema } from "@/lib/schemas";
 import { countedRatingWhere } from "@/lib/rating-filters";
 import { SOCIAL_ENABLED } from "@/lib/features";
 
-// POST: Crear o actualizar una valoración de película
+// POST: Crear o actualizar una valoraciÃ³n de pelÃ­cula
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json(
-        { error: "Debes iniciar sesión para valorar películas." },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const userId = session.user.id;
+    const userId = auth.user.id;
 
     const limit = await checkRateLimit("rating", userId);
     if (!limit.allowed) {
-      return rateLimitResponse(limit, "Estás valorando demasiado rápido. Espera unos segundos.");
+      return rateLimitResponse(limit, "EstÃ¡s valorando demasiado rÃ¡pido. Espera unos segundos.");
     }
 
-    const body = await request.json();
-    const parseResult = ratingSchema.safeParse({ movieId: body.movieId, score: body.score });
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: getFirstZodError(parseResult.error) },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseJsonBody(request, ratingRequestSchema);
+    if (!parsed.ok) return parsed.response;
 
-    const { movieId, score: parsedScore } = parseResult.data;
-    const { watchedAt } = body;
-    // Las reseñas escritas solo se aceptan con las funciones sociales activas:
-    // sin moderación activa, no se guarda texto libre que nadie revisa.
-    const reviewText: unknown = SOCIAL_ENABLED ? body.reviewText : undefined;
+    const { movieId, score: parsedScore, watchedAt } = parsed.data;
+    // Las reseÃ±as escritas solo se aceptan con las funciones sociales activas:
+    // sin moderaciÃ³n activa, no se guarda texto libre que nadie revisa.
+    const reviewText = SOCIAL_ENABLED ? parsed.data.reviewText : undefined;
 
-    // Fecha de visionado opcional. Convierte la valoración en un diario, que es
-    // el hábito recurrente que sostiene la retención.
+    // Fecha de visionado opcional. Convierte la valoraciÃ³n en un diario, que es
+    // el hÃ¡bito recurrente que sostiene la retenciÃ³n.
     let parsedWatchedAt: Date | null = null;
     if (watchedAt) {
       const candidate = new Date(watchedAt);
       if (isNaN(candidate.getTime())) {
         return NextResponse.json(
-          { error: "La fecha de visionado no es válida." },
+          { error: "La fecha de visionado no es vÃ¡lida." },
           { status: 400 }
         );
       }
       if (candidate.getTime() > Date.now()) {
         return NextResponse.json(
-          { error: "No puedes registrar el visionado de una película en el futuro." },
+          { error: "No puedes registrar el visionado de una pelÃ­cula en el futuro." },
           { status: 400 }
         );
       }
       parsedWatchedAt = candidate;
     }
 
-    // Reseña de texto libre opcional, saneada contra XSS y limitada a 2000 caracteres
+    // ReseÃ±a de texto libre opcional, saneada contra XSS y limitada a 2000 caracteres
     let sanitizedReview: string | null = null;
     if (typeof reviewText === "string" && reviewText.trim().length > 0) {
       sanitizedReview = sanitizeAndTruncate(reviewText.trim(), 2000);
       if (sanitizedReview.length === 0) {
         sanitizedReview = null;
       } else {
-        // Filtro automático de contenido ofensivo (Fase 5.1.3)
+        // Filtro automÃ¡tico de contenido ofensivo (Fase 5.1.3)
         const moderation = checkContentModeration(sanitizedReview);
         if (moderation.isOffensive) {
           return NextResponse.json(
-            { error: "Tu reseña contiene términos que no cumplen las normas de la comunidad. Por favor, modifícala antes de publicarla." },
+            { error: "Tu reseÃ±a contiene tÃ©rminos que no cumplen las normas de la comunidad. Por favor, modifÃ­cala antes de publicarla." },
             { status: 400 }
           );
         }
       }
     }
 
-    // Verificar que la película existe físicamente
+    // Verificar que la pelÃ­cula existe fÃ­sicamente
     const movie = await db.movie.findUnique({
       where: { id: movieId },
     });
 
     if (!movie) {
       return NextResponse.json(
-        { error: "La película especificada no existe." },
+        { error: "La pelÃ­cula especificada no existe." },
         { status: 404 }
       );
     }
 
-    // Comprobación de anomalías de review bombing (Fase 3.6)
+    // ComprobaciÃ³n de anomalÃ­as de review bombing (Fase 3.6)
     const anomalyCheck = await checkReviewBombingAnomaly(movieId, parsedScore);
     if (anomalyCheck.isAnomaly) {
-      console.warn(`[ANTIABUSO / REVIEW BOMBING] Pico detectado en película ${movie.title}: ${anomalyCheck.details}`);
+      console.warn(`[ANTIABUSO / REVIEW BOMBING] Pico detectado en pelÃ­cula ${movie.title}: ${anomalyCheck.details}`);
     }
 
-    // Upsert: dos envíos seguidos del mismo voto no deben chocar con el índice
-    // único (usuario, película).
+    // Upsert: dos envÃ­os seguidos del mismo voto no deben chocar con el Ã­ndice
+    // Ãºnico (usuario, pelÃ­cula).
     const rating = await db.rating.upsert({
       where: { userId_movieId: { userId, movieId } },
       update: {
         score: parsedScore,
-        // Solo se sobrescribe la fecha si el cliente envía una nueva.
+        // Solo se sobrescribe la fecha si el cliente envÃ­a una nueva.
         ...(parsedWatchedAt ? { watchedAt: parsedWatchedAt } : {}),
         ...(typeof reviewText !== "undefined" ? { reviewText: sanitizedReview } : {}),
       },
@@ -120,7 +106,7 @@ export async function POST(request: Request) {
     });
 
     // Auto-limpieza de Watchlist (Fase 5.2.1):
-    // Si la película estaba en la watchlist, se retira automáticamente porque ya ha sido vista.
+    // Si la pelÃ­cula estaba en la watchlist, se retira automÃ¡ticamente porque ya ha sido vista.
     await db.watchlist.deleteMany({
       where: { userId, movieId },
     });
@@ -133,7 +119,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
-      message: "Valoración registrada con éxito.",
+      message: "ValoraciÃ³n registrada con Ã©xito.",
       rating,
       stats: {
         avgRating: realAgg._avg.score !== null ? realAgg._avg.score.toFixed(1) : null,
@@ -144,31 +130,25 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error en API de valoraciones (POST):", error);
     return NextResponse.json(
-      { error: "Ocurrió un error al registrar la valoración." },
+      { error: "OcurriÃ³ un error al registrar la valoraciÃ³n." },
       { status: 500 }
     );
   }
 }
 
-// DELETE: Eliminar la valoración de una película para el usuario actual
+// DELETE: Eliminar la valoraciÃ³n de una pelÃ­cula para el usuario actual
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json(
-        { error: "No autorizado." },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const userId = session.user.id;
+    const userId = auth.user.id;
     const { searchParams } = new URL(request.url);
     const movieId = searchParams.get("movieId");
 
     if (!movieId) {
       return NextResponse.json(
-        { error: "Falta el identificador de la película (movieId)." },
+        { error: "Falta el identificador de la pelÃ­cula (movieId)." },
         { status: 400 }
       );
     }
@@ -185,7 +165,7 @@ export async function DELETE(request: Request) {
 
     if (!targetRating) {
       return NextResponse.json(
-        { error: "No tienes ninguna valoración registrada para esta película." },
+        { error: "No tienes ninguna valoraciÃ³n registrada para esta pelÃ­cula." },
         { status: 404 }
       );
     }
@@ -201,7 +181,7 @@ export async function DELETE(request: Request) {
     });
 
     return NextResponse.json({
-      message: "Valoración eliminada correctamente.",
+      message: "ValoraciÃ³n eliminada correctamente.",
       stats: {
         avgRating: realAgg._avg.score !== null ? realAgg._avg.score.toFixed(1) : null,
         ratingCount: realAgg._count.score,
@@ -211,7 +191,7 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error("Error en API de valoraciones (DELETE):", error);
     return NextResponse.json(
-      { error: "Ocurrió un error al eliminar la valoración." },
+      { error: "OcurriÃ³ un error al eliminar la valoraciÃ³n." },
       { status: 500 }
     );
   }

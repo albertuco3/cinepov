@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
+import { notificationReadSchema } from "@/lib/schemas";
 import { db } from "@/lib/db";
 import { SOCIAL_ENABLED } from "@/lib/features";
 
@@ -9,23 +9,23 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   if (!SOCIAL_ENABLED) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const body = await request.json().catch(() => ({}));
-    const { notificationId } = body;
+    // El cuerpo es opcional: vacío significa "marcar todas".
+    const parsed = notificationReadSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) return NextResponse.json({ error: "Notificación no válida." }, { status: 400 });
+    const { notificationId } = parsed.data;
 
     if (notificationId) {
       await db.notification.updateMany({
-        where: { id: notificationId, userId: session.user.id },
+        where: { id: notificationId, userId: auth.user.id },
         data: { isRead: true },
       });
     } else {
       // Marcar todas como leídas
       await db.notification.updateMany({
-        where: { userId: session.user.id, isRead: false },
+        where: { userId: auth.user.id, isRead: false },
         data: { isRead: true },
       });
     }

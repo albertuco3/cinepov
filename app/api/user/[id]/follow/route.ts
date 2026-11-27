@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth-guards";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -48,15 +49,10 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
 export async function POST(request: NextRequest, { params }: RouteProps) {
   if (!SOCIAL_ENABLED) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Debes iniciar sesión para seguir usuarios" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const followerId = session.user.id;
+    const followerId = auth.user.id;
     const { id: followingId } = await params;
 
     if (followerId === followingId) {
@@ -107,7 +103,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
           userId: followingId,
           type: "new_follower",
           title: "Nuevo seguidor",
-          message: `${session.user.name || "Un cinéfilo"} ha comenzado a seguirte.`,
+          message: `${auth.user.name || "Un cinéfilo"} ha comenzado a seguirte.`,
           link: `/user/${followerId}`,
         },
       });

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { parseJsonBody, requireUser } from "@/lib/auth-guards";
+import { reviewReportSchema } from "@/lib/schemas";
 import { db } from "@/lib/db";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { sanitizeAndTruncate } from "@/lib/sanitize";
 import { SOCIAL_ENABLED } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
@@ -12,20 +11,13 @@ interface RouteProps {
   params: Promise<{ id: string }>;
 }
 
-const VALID_REASONS = ["offensive", "spam", "spoiler", "other"] as const;
-
 export async function POST(request: NextRequest, { params }: RouteProps) {
   if (!SOCIAL_ENABLED) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Debes iniciar sesión para reportar una reseña" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const userId = session.user.id;
+    const userId = auth.user.id;
     const { id: ratingId } = await params;
 
     // Control de tasa contra spam de reportes
@@ -37,15 +29,9 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
       );
     }
 
-    const body = await request.json();
-    const { reason, details } = body;
-
-    if (!reason || !VALID_REASONS.includes(reason)) {
-      return NextResponse.json(
-        { error: "Motivo de reporte no válido." },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseJsonBody(request, reviewReportSchema);
+    if (!parsed.ok) return parsed.response;
+    const { reason, details } = parsed.data;
 
     // Verificar existencia de la reseña
     const rating = await db.rating.findUnique({
@@ -85,10 +71,6 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
       );
     }
 
-    const sanitizedDetails = details
-      ? sanitizeAndTruncate(String(details), 500)
-      : null;
-
     // Transacción: Registrar reporte e incrementar contador de la reseña
     const newReportCount = rating.reportCount + 1;
     const shouldModerate = newReportCount >= 3;
@@ -99,7 +81,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
           ratingId,
           userId,
           reason,
-          details: sanitizedDetails,
+          details,
         },
       }),
       db.rating.update({

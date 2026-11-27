@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "./auth";
 import { db } from "./db";
 import { isAdminEmail } from "./admin";
+import { getFirstZodError } from "./schemas";
+import type { z } from "zod";
 
 export interface AdminUser {
   id: string;
@@ -30,13 +32,49 @@ export async function getAdminUser(): Promise<AdminUser | null> {
 
 type Guard<T> = { ok: true; user: T } | { ok: false; response: NextResponse };
 
-/** Para rutas de API: usuario con sesión o respuesta 401. */
-export async function requireUser(): Promise<Guard<{ id: string }>> {
+export interface ApiUser {
+  id: string;
+  name: string | null;
+}
+
+/**
+ * Para rutas de API: usuario con sesión o respuesta 401.
+ *
+ * Se comprueba en la base de datos que la cuenta sigue existiendo y no está
+ * anonimizada: el token dura 30 días y, si alguien borra su cuenta, la sesión
+ * de sus otros dispositivos no debe poder seguir valorando ni editando.
+ */
+export async function requireUser(): Promise<Guard<ApiUser>> {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return { ok: false, response: NextResponse.json({ error: "No autorizado." }, { status: 401 }) };
+  const id = session?.user?.id;
+  const user = id
+    ? await db.user.findUnique({ where: { id }, select: { id: true, displayName: true, isAnonymized: true } })
+    : null;
+  if (!user || user.isAnonymized) {
+    return { ok: false, response: NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 }) };
   }
-  return { ok: true, user: { id: session.user.id } };
+  return { ok: true, user: { id: user.id, name: user.displayName } };
+}
+
+type Parsed<T> = { ok: true; data: T } | { ok: false; response: NextResponse };
+
+/**
+ * Lee y valida el cuerpo JSON de una petición. Un cuerpo que no es JSON o que
+ * no cumple el esquema responde 400 con el primer error legible, en lugar de
+ * acabar en un 500.
+ */
+export async function parseJsonBody<S extends z.ZodType>(request: Request, schema: S): Promise<Parsed<z.output<S>>> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return { ok: false, response: NextResponse.json({ error: "El cuerpo de la petición no es JSON válido." }, { status: 400 }) };
+  }
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    return { ok: false, response: NextResponse.json({ error: getFirstZodError(result.error) }, { status: 400 }) };
+  }
+  return { ok: true, data: result.data };
 }
 
 /**

@@ -12,7 +12,7 @@ const TOKEN_ERROR_MESSAGES: Record<"not_found" | "expired" | "already_used", str
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { token, password } = body;
 
     if (!token || typeof token !== "string") {

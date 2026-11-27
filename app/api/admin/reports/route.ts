@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth-guards";
+import { parseJsonBody, requireAdmin } from "@/lib/auth-guards";
+import { moderationActionSchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -76,12 +77,9 @@ export async function POST(request: NextRequest) {
     const guard = await requireAdmin();
     if (!guard.ok) return guard.response;
 
-    const body = await request.json();
-    const { ratingId, action } = body;
-
-    if (!ratingId || !["dismiss", "moderate", "delete_text"].includes(action)) {
-      return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, moderationActionSchema);
+    if (!parsed.ok) return parsed.response;
+    const { ratingId, action } = parsed.data;
 
     if (action === "dismiss") {
       // Descartar reporte: Restaurar la reseña a estado normal y vaciar denuncias

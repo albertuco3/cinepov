@@ -5,7 +5,8 @@ import { APP_URL, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
 import { createToken, TOKEN_EMAIL_VERIFICATION } from "@/lib/tokens";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import { validateHoneypot } from "@/lib/anti-abuse";
-import { registerSchema, getFirstZodError } from "@/lib/schemas";
+import { registerSchema } from "@/lib/schemas";
+import { parseJsonBody } from "@/lib/auth-guards";
 
 export async function POST(request: Request) {
   try {
@@ -18,16 +19,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const parseResult = registerSchema.safeParse(body);
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: getFirstZodError(parseResult.error) },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseJsonBody(request, registerSchema);
+    if (!parsed.ok) return parsed.response;
 
-    const { email, password, displayName: cleanDisplayName, birthYear, gender, website } = parseResult.data;
+    const { email, password, displayName: cleanDisplayName, birthYear, gender, website } = parsed.data;
 
     // Validación Honeypot contra bots automáticos (Fase 3.6)
     if (!validateHoneypot(website)) {

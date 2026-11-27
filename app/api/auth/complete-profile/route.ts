@@ -1,32 +1,19 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { parseJsonBody, requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
-import { completeProfileSchema, getFirstZodError } from "@/lib/schemas";
+import { completeProfileSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   try {
-    // 1. Obtener la sesión del usuario actual
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json(
-        { error: "No estás autorizado. Por favor, inicia sesión." },
-        { status: 401 }
-      );
-    }
+    // 1. Obtener la sesiÃ³n del usuario actual
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const userId = session.user.id;
-    const body = await request.json();
-    const parseResult = completeProfileSchema.safeParse(body);
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: getFirstZodError(parseResult.error) },
-        { status: 400 }
-      );
-    }
+    const userId = auth.user.id;
+    const parsed = await parseJsonBody(request, completeProfileSchema);
+    if (!parsed.ok) return parsed.response;
 
-    const { birthYear: parsedBirthYear, gender } = parseResult.data;
+    const { birthYear: parsedBirthYear, gender } = parsed.data;
 
     // 5. Actualizar el perfil del usuario en la base de datos
     const updatedUser = await db.user.update({
@@ -40,7 +27,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        message: "Perfil demográfico completado correctamente.",
+        message: "Perfil demogrÃ¡fico completado correctamente.",
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -52,9 +39,9 @@ export async function POST(request: Request) {
     );
 
   } catch (error) {
-    console.error("Error al completar el perfil demográfico:", error);
+    console.error("Error al completar el perfil demogrÃ¡fico:", error);
     return NextResponse.json(
-      { error: "Ocurrió un error inesperado al actualizar el perfil." },
+      { error: "OcurriÃ³ un error inesperado al actualizar el perfil." },
       { status: 500 }
     );
   }

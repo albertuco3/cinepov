@@ -1,7 +1,6 @@
 import { errorMessage } from "@/lib/errors";
+import { requireUser } from "@/lib/auth-guards";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { searchMovieByTitleAndYear } from "@/lib/tmdb";
 import { getOrCreateMovie } from "@/lib/movies";
@@ -11,12 +10,10 @@ import { parseLetterboxdCsv } from "@/lib/csv";
 export async function POST(request: Request) {
   try {
     // 1. Validar sesión de usuario
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const userId = session.user.id;
+    const userId = auth.user.id;
 
     // Cada importación puede disparar cientos de llamadas a TMDB: limitarla
     // protege nuestra cuota de API antes que nuestro servidor.

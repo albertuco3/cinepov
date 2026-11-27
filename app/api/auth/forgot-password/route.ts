@@ -19,7 +19,7 @@ const REQUEST_COOLDOWN_MS = 60 * 1000;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { email } = body;
 
     if (!email || typeof email !== "string") {

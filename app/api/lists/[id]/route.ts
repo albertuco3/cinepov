@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth-guards";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -77,10 +78,8 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
 
 export async function DELETE(request: NextRequest, { params }: RouteProps) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
     const { id } = await params;
 
@@ -93,7 +92,7 @@ export async function DELETE(request: NextRequest, { params }: RouteProps) {
       return NextResponse.json({ error: "Lista no encontrada" }, { status: 404 });
     }
 
-    if (list.userId !== session.user.id) {
+    if (list.userId !== auth.user.id) {
       return NextResponse.json(
         { error: "No tienes permiso para eliminar esta lista" },
         { status: 403 }

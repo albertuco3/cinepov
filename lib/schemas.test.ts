@@ -6,6 +6,11 @@ import {
   feedbackSchema,
   updateProfileSchema,
   getFirstZodError,
+  createListSchema,
+  movieRefSchema,
+  notificationReadSchema,
+  ratingRequestSchema,
+  reviewReportSchema,
 } from "./schemas";
 
 describe("Validaciones Zod (lib/schemas.ts)", () => {
@@ -172,6 +177,40 @@ describe("Validaciones Zod (lib/schemas.ts)", () => {
         expect(result.data.name).toBe("Alberto");
         expect(result.data.message).toBe("Me encanta el desglose demográfico.");
       }
+    });
+  });
+
+  describe("cuerpos de las rutas de API", () => {
+    it("createListSchema sanea, recorta y convierte la descripción vacía en null", () => {
+      const ok = createListSchema.parse({ name: "  <b>Mis</b> favoritas ", description: "" });
+      expect(ok).toEqual({ name: "Mis favoritas", description: null, isPublic: true });
+      expect(createListSchema.parse({ name: "x".repeat(300), isPublic: false }).name).toHaveLength(100);
+      expect(createListSchema.safeParse({ name: "<i></i>" }).success).toBe(false);
+      expect(createListSchema.safeParse({ name: 42 }).success).toBe(false);
+    });
+
+    it("movieRefSchema exige un id de texto razonable", () => {
+      expect(movieRefSchema.parse({ movieId: " abc " })).toEqual({ movieId: "abc" });
+      expect(movieRefSchema.safeParse({}).success).toBe(false);
+      expect(movieRefSchema.safeParse({ movieId: { not: "x" } }).success).toBe(false);
+      expect(movieRefSchema.safeParse({ movieId: "x".repeat(65) }).success).toBe(false);
+    });
+
+    it("reviewReportSchema solo acepta motivos conocidos", () => {
+      expect(reviewReportSchema.parse({ reason: "spam" })).toEqual({ reason: "spam", details: null });
+      const bad = reviewReportSchema.safeParse({ reason: "aburrida" });
+      expect(bad.success).toBe(false);
+      if (!bad.success) expect(getFirstZodError(bad.error)).toBe("Motivo de reporte no válido.");
+    });
+
+    it("notificationReadSchema permite cuerpo vacío para marcar todas", () => {
+      expect(notificationReadSchema.parse({})).toEqual({});
+      expect(notificationReadSchema.safeParse({ notificationId: ["a"] }).success).toBe(false);
+    });
+
+    it("ratingRequestSchema acepta fecha y reseña opcionales", () => {
+      expect(ratingRequestSchema.parse({ movieId: "m1", score: "8" })).toEqual({ movieId: "m1", score: 8 });
+      expect(ratingRequestSchema.safeParse({ movieId: "m1", score: 8, watchedAt: 123 }).success).toBe(false);
     });
   });
 });

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { createToken, getLastTokenDate, TOKEN_EMAIL_VERIFICATION } from "@/lib/tokens";
 import { APP_URL, sendVerificationEmail } from "@/lib/email";
@@ -10,16 +9,10 @@ const RESEND_COOLDOWN_MS = 2 * 60 * 1000;
 
 export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Debes iniciar sesión para reenviar el correo de verificación." },
-        { status: 401 }
-      );
-    }
-
-    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    const user = await db.user.findUnique({ where: { id: auth.user.id } });
 
     if (!user) {
       return NextResponse.json(

@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { getFirstZodError, updateProfileSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
     const body = await request.json().catch(() => null);
     const parseResult = updateProfileSchema.safeParse(body);
@@ -21,7 +17,7 @@ export async function POST(request: Request) {
     const { displayName, gender, birthYear, emailWeeklyActive } = parseResult.data;
 
     const updatedUser = await db.user.update({
-      where: { id: session.user.id },
+      where: { id: auth.user.id },
       data: { displayName, gender, birthYear, emailWeeklyActive },
     });
 

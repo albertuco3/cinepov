@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { parseJsonBody, requireUser } from "@/lib/auth-guards";
+import { movieRefSchema } from "@/lib/schemas";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -14,18 +14,13 @@ interface RouteProps {
  */
 export async function POST(request: NextRequest, { params }: RouteProps) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
     const { id: listId } = await params;
-    const body = await request.json();
-    const { movieId } = body;
-
-    if (!movieId) {
-      return NextResponse.json({ error: "movieId es obligatorio" }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, movieRefSchema);
+    if (!parsed.ok) return parsed.response;
+    const { movieId } = parsed.data;
 
     const list = await db.customList.findUnique({
       where: { id: listId },
@@ -36,7 +31,7 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
       return NextResponse.json({ error: "Lista no encontrada" }, { status: 404 });
     }
 
-    if (list.userId !== session.user.id) {
+    if (list.userId !== auth.user.id) {
       return NextResponse.json(
         { error: "No tienes permiso para modificar esta lista" },
         { status: 403 }
@@ -84,10 +79,8 @@ export async function POST(request: NextRequest, { params }: RouteProps) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteProps) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
     const { id: listId } = await params;
     const { searchParams } = new URL(request.url);
@@ -106,7 +99,7 @@ export async function DELETE(request: NextRequest, { params }: RouteProps) {
       return NextResponse.json({ error: "Lista no encontrada" }, { status: 404 });
     }
 
-    if (list.userId !== session.user.id) {
+    if (list.userId !== auth.user.id) {
       return NextResponse.json(
         { error: "No tienes permiso para modificar esta lista" },
         { status: 403 }

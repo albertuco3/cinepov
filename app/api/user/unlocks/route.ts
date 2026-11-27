@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { GENDER_LABELS, AGE_RANGE_LABELS, ageKeyFromBirthYear, isGenderKey } from "@/lib/demographics";
 import { getManyMovieDemographics } from "@/lib/movie-demographics";
@@ -15,13 +14,11 @@ import { getManyMovieDemographics } from "@/lib/movie-demographics";
  */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
     const user = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: auth.user.id },
       select: { gender: true, birthYear: true },
     });
 
@@ -32,7 +29,7 @@ export async function GET() {
     // Solo las valoraciones más recientes del usuario: revisar su historial
     // completo en cada visita no escala y aporta poco.
     const userRatings = await db.rating.findMany({
-      where: { userId: session.user.id, isArtificial: false },
+      where: { userId: auth.user.id, isArtificial: false },
       select: { movieId: true, score: true },
       orderBy: { updatedAt: "desc" },
       take: 30,
@@ -103,7 +100,7 @@ export async function GET() {
       .slice(0, 5);
 
     await db.user.update({
-      where: { id: session.user.id },
+      where: { id: auth.user.id },
       data: { lastUnlockCheck: new Date() },
     });
 

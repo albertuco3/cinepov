@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
-import { feedbackSubmissionSchema, getFirstZodError } from "@/lib/schemas";
+import { feedbackSubmissionSchema } from "@/lib/schemas";
+import { parseJsonBody } from "@/lib/auth-guards";
 
 export async function POST(request: Request) {
   try {
@@ -14,16 +15,10 @@ export async function POST(request: Request) {
       return rateLimitResponse(limit, "Has enviado varias sugerencias seguidas. Inténtalo más tarde.");
     }
 
-    const rawBody = await request.json();
-    const parseResult = feedbackSubmissionSchema.safeParse(rawBody);
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: getFirstZodError(parseResult.error) },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseJsonBody(request, feedbackSubmissionSchema);
+    if (!parsed.ok) return parsed.response;
 
-    const { category, message: cleanMessage } = parseResult.data;
+    const { category, message: cleanMessage } = parsed.data;
 
     // El feedback se guarda vinculado al usuario si está autenticado
     const feedback = await db.feedback.create({

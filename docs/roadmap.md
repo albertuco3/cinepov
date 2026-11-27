@@ -154,7 +154,7 @@ Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisi
 - [ ] Imagen OG estática de respaldo y tono de voz de la marca.
 - [ ] Antes de reactivar lo social: decidir el umbral de anonimato ([R-14](#r-14--umbral-de-anonimato)) y cómo filtrar reseñas por segmento sin revelar el segmento de cada autor.
 - [ ] Reactivar feed, seguidores y reseñas cuando haya densidad (umbral a fijar con los datos de la beta).
-- [ ] Refactorización pendiente: resto de [R-10](#r-10--helpers-para-las-rutas-de-api).
+- [x] Refactorización: [R-10](#r-10--helpers-para-las-rutas-de-api).
 
 **Criterio de salida:** los objetivos del MVP del plan (500 usuarios y 5.000 valoraciones reales), con el K-factor y la tasa de compartición medidos.
 
@@ -193,7 +193,7 @@ Series de TV, traducciones regionales y nuevos idiomas, API pública, monetizaci
 | [R-07](#r-07--resolver-el-identificador-de-película-en-un-solo-sitio) | Resolver el identificador de película en un solo sitio | Hecho |
 | [R-08](#r-08--agregar-en-sql-no-en-memoria) | Agregar en SQL | Hecho |
 | [R-09](#r-09--rankings-calculados-sobre-subconjuntos-arbitrarios) | Rankings sobre subconjuntos arbitrarios | Hecho |
-| [R-10](#r-10--helpers-para-las-rutas-de-api) | Helpers para las rutas de API | Parcial |
+| [R-10](#r-10--helpers-para-las-rutas-de-api) | Helpers para las rutas de API | Hecho |
 | [R-11](#r-11--partir-los-componentes-gigantes) | Partir los componentes gigantes | Al tocarlos |
 | [R-12](#r-12--derivar-los-tipos-de-i18n) | Derivar los tipos de i18n | Al tocarlos |
 | [R-13](#r-13--tests-que-no-prueban-código) | Tests que no prueban código | Hecho |
@@ -237,7 +237,7 @@ Hecho: polarizantes parte de las películas con más votos; consenso y recomenda
 
 ### R-10 — Helpers para las rutas de API
 
-Parcial: `lib/auth-guards.ts` tiene `requireUser()`, `requireAdmin()` y `getAdminUser()`; de momento solo los usan las rutas de administración. Queda migrar el resto de rutas y validar todos los cuerpos con `lib/schemas.ts`.
+Hecho: todas las rutas que exigen sesión usan `requireUser()` de `lib/auth-guards.ts`, que además comprueba en la base de datos que la cuenta existe y no está anonimizada. Antes, tras borrar la cuenta, la sesión de otro dispositivo (el token dura 30 días) seguía pudiendo valorar, y esos votos contaban. Los cuerpos se leen con `parseJsonBody(request, esquema)`: un JSON mal formado o inválido responde 400 con un mensaje legible, no 500. Las rutas con sesión opcional (feed, listas públicas, reseñas, feedback) siguen leyendo la sesión directamente, que es lo correcto.
 
 ### R-11 — Partir los componentes gigantes
 

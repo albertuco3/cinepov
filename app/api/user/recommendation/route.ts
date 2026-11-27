@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { countedRatingWhere } from "@/lib/rating-filters";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -10,12 +9,10 @@ export async function GET() {
     const locale = await getRequestLocale();
 
     // 1. Obtener la sesión del usuario
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    const userId = session.user.id;
+    const userId = auth.user.id;
 
     // 2. Obtener el perfil del usuario actual (género y año de nacimiento)
     const user = await db.user.findUnique({

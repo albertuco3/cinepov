@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 
 const CSV_HEADERS = [
@@ -40,15 +39,12 @@ function toIsoDate(date: Date | null): string {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
     const ratings = await db.rating.findMany({
       where: {
-        userId: session.user.id,
+        userId: auth.user.id,
         // Las valoraciones de un usuario real nunca son artificiales, pero el
         // filtro se explicita para que el export jamás arrastre datos sintéticos.
         isArtificial: false,

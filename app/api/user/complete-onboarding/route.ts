@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 
 export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    const userId = auth.user.id;
 
     // Actualizar el estado de onboarding en la base de datos
     await db.user.update({

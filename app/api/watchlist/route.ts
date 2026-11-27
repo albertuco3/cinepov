@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { parseJsonBody, requireUser } from "@/lib/auth-guards";
+import { movieRefSchema } from "@/lib/schemas";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -9,14 +9,12 @@ export const dynamic = "force-dynamic";
  * GET: Obtener las películas de la watchlist del usuario autenticado.
  */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
 
   try {
     const items = await db.watchlist.findMany({
-      where: { userId: session.user.id },
+      where: { userId: auth.user.id },
       include: {
         movie: {
           select: {
@@ -52,32 +50,24 @@ export async function GET() {
  * POST: Añadir una película a la watchlist.
  */
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
-  }
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
 
   try {
-    const body = await request.json();
-    const { movieId } = body;
-
-    if (!movieId || typeof movieId !== "string") {
-      return NextResponse.json(
-        { error: "movieId es obligatorio" },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseJsonBody(request, movieRefSchema);
+    if (!parsed.ok) return parsed.response;
+    const { movieId } = parsed.data;
 
     const entry = await db.watchlist.upsert({
       where: {
         userId_movieId: {
-          userId: session.user.id,
+          userId: auth.user.id,
           movieId,
         },
       },
       update: {},
       create: {
-        userId: session.user.id,
+        userId: auth.user.id,
         movieId,
       },
       include: {
@@ -104,10 +94,8 @@ export async function POST(request: NextRequest) {
  * DELETE: Quitar una película de la watchlist.
  */
 export async function DELETE(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
   const movieId = searchParams.get("movieId");
@@ -122,7 +110,7 @@ export async function DELETE(request: NextRequest) {
   try {
     await db.watchlist.deleteMany({
       where: {
-        userId: session.user.id,
+        userId: auth.user.id,
         movieId,
       },
     });

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -9,13 +8,10 @@ const CONFIRMATION_KEYWORD = "ELIMINAR";
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    const userId = auth.user.id;
 
     let body: { confirmation?: unknown; password?: unknown };
     try {

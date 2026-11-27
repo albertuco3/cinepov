@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { validateDisplayName, sanitizeText, LIMITS } from "./sanitize";
+import { validateDisplayName, sanitizeText, sanitizeAndTruncate, LIMITS } from "./sanitize";
 import { MIN_AGE, MIN_BIRTH_YEAR, maxBirthYear } from "./age";
 
 export { MIN_BIRTH_YEAR };
@@ -111,6 +111,12 @@ export const ratingSchema = z.object({
 
 export type RatingInput = z.infer<typeof ratingSchema>;
 
+/** Cuerpo de POST /api/ratings: la nota y, opcionalmente, fecha de visionado y reseña. */
+export const ratingRequestSchema = ratingSchema.extend({
+  watchedAt: z.string({ error: "La fecha de visionado no es válida." }).nullish(),
+  reviewText: z.string({ error: "La reseña no es válida." }).nullish(),
+});
+
 /**
  * Esquema de validación para reseñas de películas
  */
@@ -174,6 +180,46 @@ export const feedbackSubmissionSchema = z.object({
 });
 
 export type FeedbackSubmissionInput = z.infer<typeof feedbackSubmissionSchema>;
+
+/** Identificador de una fila (UUID o id de TMDB en texto). */
+const rowIdField = (message: string) => z.string({ error: message }).trim().min(1, message).max(64, message);
+
+/** Cuerpo con una película: watchlist y elementos de lista. */
+export const movieRefSchema = z.object({
+  movieId: rowIdField("Falta la película."),
+});
+
+export const createListSchema = z.object({
+  name: z
+    .string({ error: "El nombre de la lista es obligatorio." })
+    .transform((v) => sanitizeAndTruncate(v.trim(), 100))
+    .refine((v) => v.length > 0, { message: "El nombre de la lista es obligatorio." }),
+  description: z
+    .string()
+    .nullish()
+    .transform((v) => (v ? sanitizeAndTruncate(v.trim(), 500) || null : null)),
+  isPublic: z.boolean().default(true),
+});
+
+export const REVIEW_REPORT_REASONS = ["offensive", "spam", "spoiler", "other"] as const;
+
+export const reviewReportSchema = z.object({
+  reason: z.enum(REVIEW_REPORT_REASONS, { error: "Motivo de reporte no válido." }),
+  details: z
+    .string()
+    .nullish()
+    .transform((v) => (v ? sanitizeAndTruncate(v, 500) || null : null)),
+});
+
+export const moderationActionSchema = z.object({
+  ratingId: rowIdField("Acción no válida"),
+  action: z.enum(["dismiss", "moderate", "delete_text"], { error: "Acción no válida" }),
+});
+
+/** Sin `notificationId` se marcan todas como leídas. */
+export const notificationReadSchema = z.object({
+  notificationId: rowIdField("Notificación no válida.").optional(),
+});
 
 /**
  * Helper para extraer de forma limpia el primer mensaje de error legible de Zod
