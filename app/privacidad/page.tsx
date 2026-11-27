@@ -374,9 +374,11 @@ export default function PrivacidadPage() {
           </p>
           <p>
             Esto significa que se eliminan o sustituyen de forma irreversible tu correo electrónico, tu resumen de
-            contraseña, tu nombre público y tu avatar, y la cuenta queda marcada como anonimizada. Lo que
-            permanece es la nota que pusiste a cada película junto a los atributos demográficos que la sitúan en un
-            segmento, sin ningún elemento que permita volver a asociarla contigo.
+            contraseña, tu nombre público y tu avatar, y la cuenta queda marcada como anonimizada. También se
+            borran el texto de tus reseñas, las fechas de tu diario de visionados, tus listas, tu lista de
+            pendientes, tus seguimientos y tus notificaciones. Lo que permanece es la nota que pusiste a cada
+            película junto a los atributos demográficos que la sitúan en un segmento, sin ningún elemento que
+            permita volver a asociarla contigo.
           </p>
           <p>
             Te lo contamos con este nivel de detalle porque es una decisión relevante y queremos que la conozcas

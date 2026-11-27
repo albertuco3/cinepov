@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "@/components/LocaleLink";
 import { db } from "@/lib/db";
 import { getAdminUser } from "@/lib/auth-guards";
 import ReportsAdminClient, { type ReportItem } from "./ReportsAdminClient";
@@ -74,7 +75,10 @@ export default async function AdminReportsPage() {
           Panel de Moderación de Reseñas
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground">
-          Revisión de opiniones reportadas por la comunidad y gestión de contenido inapropiado.
+          Revisión de opiniones reportadas por la comunidad y gestión de contenido inapropiado. ·{" "}
+          <Link href="/admin/metrics" className="text-primary-light hover:underline">
+            Métricas de la beta
+          </Link>
         </p>
       </div>
 

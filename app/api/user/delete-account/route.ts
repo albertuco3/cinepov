@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, passwordHash: true, isAnonymized: true },
+      select: { id: true, passwordHash: true, isAnonymized: true, emailVerified: true },
     });
 
     if (!user) {
@@ -89,7 +89,10 @@ export async function POST(request: Request) {
           displayName: "Usuario eliminado",
           avatarUrl: null,
           emailWeeklyActive: false,
-          emailVerified: null,
+          // Se conserva *que* estaba verificada, no cuándo: sin esto sus
+          // valoraciones dejarían de contar (solo cuentan las verificadas) y
+          // el agregado que se quiere conservar desaparecería en silencio.
+          emailVerified: user.emailVerified ? new Date(0) : null,
           isAnonymized: true,
           // birthYear y gender se conservan a propósito: son los únicos atributos
           // que sostienen los desgloses demográficos y, una vez roto el vínculo
@@ -98,6 +101,18 @@ export async function POST(request: Request) {
       });
 
       await tx.verificationToken.deleteMany({ where: { userId } });
+
+      // De las valoraciones solo se conserva la nota: el texto libre de las
+      // reseñas y las fechas del diario son contenido personal.
+      await tx.rating.updateMany({ where: { userId }, data: { reviewText: null, watchedAt: null } });
+
+      // Todo lo demás que creó la persona se borra: listas (eran públicas por
+      // enlace), watchlist, seguimientos, notificaciones y sus denuncias.
+      await tx.customList.deleteMany({ where: { userId } });
+      await tx.watchlist.deleteMany({ where: { userId } });
+      await tx.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followingId: userId }] } });
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.reviewReport.deleteMany({ where: { userId } });
 
       await tx.feedback.updateMany({
         where: { userId },
