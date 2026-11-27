@@ -19,17 +19,17 @@
 
 ---
 
-## Estado real a 23 de noviembre de 2026
+## Estado real a 27 de noviembre de 2026
 
 | Aspecto | Estado |
 |---|---|
 | Código | Fases 0–5 de la numeración anterior construidas. Bloqueantes de la auditoría de noviembre corregidos en código (ver [1.2](#12-bloqueantes-encontrados-en-la-auditoría-de-noviembre)). |
-| Calidad | `tsc` sin errores, lint sin errores ni avisos, 85 tests en verde, `next build` correcto. |
+| Calidad | `tsc` sin errores, lint sin errores ni avisos, 154 tests en verde, `next build` correcto. `npm run smoke` (22 comprobaciones) en verde en producción. |
 | Repositorio | En GitHub (privado), con `main` y `dev`. CI en verde. |
 | Base de datos | Neon con dos ramas: `production` (limpia: sin bots ni usuarios de prueba, migración base registrada) y `dev` (copia del estado anterior, para desarrollo). |
-| Producción | Desplegado en <https://www.cinepov.com> desde `main`, con emails reales (Resend). Faltan PostHog y Sentry. |
+| Producción | Desplegado en <https://www.cinepov.com> desde `main`, con emails reales (Resend). Funciones en Fráncfort, junto a la base: las páginas empiezan a responder en unos 0,2 s. Faltan PostHog y Sentry. |
 | Usuarios reales | 0. |
-| Hipótesis central | **No validada** con MovieLens: ver [En paralelo](#en-paralelo--validar-la-hipótesis-con-movielens). Requiere una decisión antes del lanzamiento público. |
+| Hipótesis central | **No validada** con MovieLens: ver [En paralelo](#en-paralelo--validar-la-hipótesis-con-movielens). Decidido reposicionar: la utilidad es la nota estimada; la demografía, contenido. Portada, «Acerca de» y metodología ya lo reflejan. |
 
 ---
 
@@ -95,8 +95,8 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Tras borrar la cuenta, la sesión de otros dispositivos seguía activa** (el token dura 30 días): podía seguir valorando y esos votos contaban. Ahora toda ruta con sesión comprueba en la base que la cuenta existe y no está anonimizada ([R-10](#r-10--helpers-para-las-rutas-de-api)). Comprobado en local contra `dev`.
 - [ ] *(código)* **Las páginas de segmento ordenaban 60 películas arbitrarias y mostraban películas con un solo voto**, lo que revelaba la nota de una persona concreta. Ahora agregan en la base con el umbral de anonimato y, mientras estén vacías, no se indexan ni salen en el sitemap.
 - [ ] *(código)* **Las páginas de género y década tampoco elegían las mejores:** ordenaban las 30 últimas cacheadas (o 60 arbitrarias) y un solo voto ponía una película por delante de todas. Ahora ordenan todo el catálogo con la base del motor de gusto (TMDB como punto de partida, desplazada por los votos).
-- [ ] *(código)* **El widget para webs (`/embed/...`) salía con la cabecera, el pie, la barra inferior y el banner de cookies del sitio** dentro de un iframe de 320 px, y cargaba la analítica en webs de terceros sin consentimiento. Ahora el middleware lo marca y el layout sirve solo el contenido, sin analítica y con `noindex`.
-- [ ] *(código)* **La metodología, la página de transparencia, afirmaba cosas que ya no eran ciertas:** que no había algoritmos de recomendación (está el motor de gusto), que se podía no declarar el género (el registro lo exige), que los datos personales solo aparecen en medias "de decenas de personas" (el mínimo es 3) y que la nota de TMDB nunca se mezcla (es el punto de partida de la nota estimada y de las listas por género y década). Reescrita y traducida al inglés; ahora explica la nota estimada y cuándo hay una brecha real, y todas sus cifras salen de las constantes del código.
+- [x] **El widget para webs (`/embed/...`) salía con la cabecera, el pie, la barra inferior y el banner de cookies del sitio** dentro de un iframe de 320 px, y cargaba la analítica en webs de terceros sin consentimiento. Ahora el middleware lo marca y el layout sirve solo el contenido, sin analítica y con `noindex`. Comprobado en producción el 27 de noviembre: sin cabecera ni pie, `noindex` y sin cookies.
+- [x] **La metodología, la página de transparencia, afirmaba cosas que ya no eran ciertas:** que no había algoritmos de recomendación (está el motor de gusto), que se podía no declarar el género (el registro lo exige), que los datos personales solo aparecen en medias "de decenas de personas" (el mínimo es 3) y que la nota de TMDB nunca se mezcla (es el punto de partida de la nota estimada y de las listas por género y década). Reescrita y traducida al inglés; ahora explica la nota estimada y cuándo hay una brecha real, y todas sus cifras salen de las constantes del código. Comprobado en producción el 27 de noviembre.
 
 ### 1.3 Medición
 
@@ -151,12 +151,12 @@ Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisi
 
 - [ ] Validar las imágenes OG en los depuradores de X, Facebook, LinkedIn y WhatsApp.
 - [ ] *(código)* Botón "descargar imagen" en `/vs/` y formato vertical para stories (`/api/movies/[id]/story-image`, 1080×1920; en móvil abre el menú de compartir con la imagen).
-- [ ] Core Web Vitals (LCP < 2,5 s, INP < 200 ms, CLS < 0,1). Hecho: las miniaturas piden a TMDB el tamaño que necesitan (`lib/tmdb-image.ts`, unos 20 KB en lugar de 130 KB). Pendiente: ninguna página se cachea (todas responden `Cache-Control: no-store` porque el layout lee cabeceras), así que cada visita consulta la base; medir el TTFB y cachear las públicas.
+- [ ] Core Web Vitals (LCP < 2,5 s, INP < 200 ms, CLS < 0,1). Hecho: las miniaturas piden a TMDB el tamaño que necesitan (`lib/tmdb-image.ts`, unos 20 KB en lugar de 130 KB). Las funciones pasaron de Washington a Fráncfort, junto a la base: el tiempo hasta el primer byte bajó de 0,4–0,8 s a 0,16–0,26 s. Pendiente: medir LCP, INP y CLS con datos reales; ninguna página se cachea (todas responden `Cache-Control: no-store` porque el layout lee cabeceras), así que cada visita consulta la base; medir el TTFB y cachear las públicas.
 - [ ] Enviar el sitemap a Search Console y vigilar la cobertura de indexación.
 - [ ] Texto introductorio con datos reales en las páginas de género, década y segmento. Ya enlazadas desde el pie en español (antes solo estaban en el sitemap).
-- [ ] *(código)* Documentación del widget para blogs y medios: `/widget`, en español e inglés, enlazada desde el pie, con el código, un ejemplo en vivo, qué muestra, privacidad (sin cookies ni analítica, comprobado) y condiciones de uso.
+- [x] Documentación del widget para blogs y medios (comprobada en producción): `/widget`, en español e inglés, enlazada desde el pie, con el código, un ejemplo en vivo, qué muestra, privacidad (sin cookies ni analítica, comprobado) y condiciones de uso.
 - [ ] Traducir las páginas que solo existen en español, empezando por los textos legales (cuando tengan los datos del titular), y añadirlas a `TRANSLATED_ROUTES`. Hechas: metodología, «Acerca de» (reescrita con el posicionamiento nuevo: hablaba de la «falacia de la nota media» con un ejemplo inventado que los datos desmienten) y `/widget`.
-- [ ] Tono de voz de la marca. *(código)* Imagen para redes por defecto (`app/opengraph-image.tsx`) en todas las páginas sin una propia; antes la portada, explorar, género, década, blog y demás se compartían sin imagen. Tarjeta grande en X.
+- [ ] Tono de voz de la marca. Hecho y comprobado en producción: imagen para redes por defecto (`app/opengraph-image.tsx`) en todas las páginas sin una propia; antes la portada, explorar, género, década, blog y demás se compartían sin imagen. Tarjeta grande en X.
 - [ ] Antes de reactivar lo social: decidir el umbral de anonimato ([R-14](#r-14--umbral-de-anonimato)) y cómo filtrar reseñas por segmento sin revelar el segmento de cada autor.
 - [ ] Reactivar feed, seguidores y reseñas cuando haya densidad (umbral a fijar con los datos de la beta).
 - [x] Refactorización: [R-10](#r-10--helpers-para-las-rutas-de-api).
