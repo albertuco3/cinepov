@@ -95,6 +95,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Tras borrar la cuenta, la sesión de otros dispositivos seguía activa** (el token dura 30 días): podía seguir valorando y esos votos contaban. Ahora toda ruta con sesión comprueba en la base que la cuenta existe y no está anonimizada ([R-10](#r-10--helpers-para-las-rutas-de-api)). Comprobado en local contra `dev`.
 - [ ] *(código)* **Las páginas de segmento ordenaban 60 películas arbitrarias y mostraban películas con un solo voto**, lo que revelaba la nota de una persona concreta. Ahora agregan en la base con el umbral de anonimato y, mientras estén vacías, no se indexan ni salen en el sitemap.
 - [ ] *(código)* **Las páginas de género y década tampoco elegían las mejores:** ordenaban las 30 últimas cacheadas (o 60 arbitrarias) y un solo voto ponía una película por delante de todas. Ahora ordenan todo el catálogo con la base del motor de gusto (TMDB como punto de partida, desplazada por los votos).
+- [ ] *(código)* **El widget para webs (`/embed/...`) salía con la cabecera, el pie, la barra inferior y el banner de cookies del sitio** dentro de un iframe de 320 px, y cargaba la analítica en webs de terceros sin consentimiento. Ahora el middleware lo marca y el layout sirve solo el contenido, sin analítica y con `noindex`.
 
 ### 1.3 Medición
 
@@ -148,7 +149,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 Plan de ejecución en [go_to_market.md](./go_to_market.md). Depende de la decisión de reposicionamiento.
 
 - [ ] Validar las imágenes OG en los depuradores de X, Facebook, LinkedIn y WhatsApp.
-- [ ] Botón "descargar imagen" en `/vs/` y formato vertical para stories.
+- [ ] *(código)* Botón "descargar imagen" en `/vs/` y formato vertical para stories (`/api/movies/[id]/story-image`, 1080×1920; en móvil abre el menú de compartir con la imagen).
 - [ ] Core Web Vitals (LCP < 2,5 s, INP < 200 ms, CLS < 0,1). Hecho: las miniaturas piden a TMDB el tamaño que necesitan (`lib/tmdb-image.ts`, unos 20 KB en lugar de 130 KB). Pendiente: ninguna página se cachea (todas responden `Cache-Control: no-store` porque el layout lee cabeceras), así que cada visita consulta la base; medir el TTFB y cachear las públicas.
 - [ ] Enviar el sitemap a Search Console y vigilar la cobertura de indexación.
 - [ ] Texto introductorio con datos reales en las páginas de género, década y segmento. Ya enlazadas desde el pie en español (antes solo estaban en el sitemap).

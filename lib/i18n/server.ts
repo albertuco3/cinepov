@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { LOCALE_COOKIE_NAME, type Locale } from "./types";
-import { LOCALE_HEADER, PATHNAME_HEADER, isLocale, localesForPath, localizePath, negotiateLocale } from "./paths";
+import { LOCALE_HEADER, PATHNAME_HEADER, isLocale, localesForPath, localizePath, negotiateLocale, EMBED_HEADER } from "./paths";
 import { SITE_URL } from "@/lib/site";
 
 /**
@@ -17,6 +17,11 @@ export async function getRequestLocale(): Promise<Locale> {
   if (isLocale(fromUrl)) return fromUrl;
   const cookieValue = (await cookies()).get(LOCALE_COOKIE_NAME)?.value;
   return negotiateLocale(cookieValue, headerStore.get("accept-language"));
+}
+
+/** Si la petición es del widget para webs de terceros (la marca el middleware). */
+export async function isEmbedRequest(): Promise<boolean> {
+  return (await headers()).get(EMBED_HEADER) === "1";
 }
 
 /** Ruta de la página actual sin prefijo de idioma ("/movie/1"), según el middleware. */

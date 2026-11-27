@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  isEmbedPath,
   isLocalizablePath,
   localeFromAcceptLanguage,
   localesForPath,
@@ -84,5 +85,14 @@ describe("localesForPath", () => {
     expect(localesForPath("/movie/27205")).toEqual(["es", "en"]);
     expect(localesForPath("/privacidad")).toEqual(["es"]);
     expect(localesForPath("/movies-old")).toEqual(["es"]);
+  });
+});
+
+describe("isEmbedPath", () => {
+  it("reconoce solo las rutas del widget", () => {
+    expect(isEmbedPath("/embed/movie/27205")).toBe(true);
+    expect(isEmbedPath("/embed")).toBe(true);
+    expect(isEmbedPath("/embedded")).toBe(false);
+    expect(isEmbedPath("/es/embed/movie/1")).toBe(false);
   });
 });

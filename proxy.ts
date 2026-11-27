@@ -2,8 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { LOCALE_COOKIE_NAME } from "@/lib/i18n/types";
 import {
+  EMBED_HEADER,
   LOCALE_HEADER,
   PATHNAME_HEADER,
+  isEmbedPath,
   isLocalizablePath,
   localizePath,
   negotiateLocale,
@@ -32,6 +34,13 @@ function isProtected(path: string) {
  */
 export default async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  // El widget se incrusta en webs de terceros: sin cabecera, pie ni banners.
+  if (isEmbedPath(pathname)) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set(EMBED_HEADER, "1");
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
   if (!isLocalizablePath(pathname)) return NextResponse.next();
 
   const { locale, rest } = splitLocale(pathname);
@@ -79,6 +88,8 @@ export default async function proxy(req: NextRequest) {
   }
 
   const requestHeaders = new Headers(req.headers);
+  // Solo el middleware decide qué es el widget: no se acepta la marca desde fuera.
+  requestHeaders.delete(EMBED_HEADER);
   requestHeaders.set(LOCALE_HEADER, locale);
   requestHeaders.set(PATHNAME_HEADER, rest);
 

@@ -11,7 +11,7 @@ import CookieBanner from "@/components/CookieBanner";
 import BottomNav from "@/components/BottomNav";
 import VerifyEmailBanner from "@/components/VerifyEmailBanner";
 import { I18nProvider } from "@/lib/i18n/client";
-import { getRequestLocale, getRequestPathname, localeAlternates } from "@/lib/i18n/server";
+import { getRequestLocale, getRequestPathname, localeAlternates, isEmbedRequest } from "@/lib/i18n/server";
 import { SITE_URL } from "@/lib/site";
 
 const geistSans = Geist({
@@ -55,7 +55,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getRequestLocale();
+  const [locale, embed] = await Promise.all([getRequestLocale(), isEmbedRequest()]);
+
+  // El widget (/embed) va dentro de un iframe en otra web: solo su contenido,
+  // sin estructura del sitio, banners ni analítica (no hay consentimiento allí).
+  if (embed) {
+    return (
+      <html lang={locale} className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <body className="bg-transparent text-foreground">
+          <I18nProvider initialLocale={locale}>{children}</I18nProvider>
+        </body>
+      </html>
+    );
+  }
 
   return (
     <html

@@ -12,6 +12,12 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from "./types";
 /** Cabeceras que fija el middleware al reescribir /es/... y /en/... */
 export const LOCALE_HEADER = "x-cinepov-locale";
 export const PATHNAME_HEADER = "x-cinepov-pathname";
+/** Marca las peticiones del widget (`/embed/...`): se sirven sin la estructura del sitio. */
+export const EMBED_HEADER = "x-cinepov-embed";
+
+export function isEmbedPath(pathname: string): boolean {
+  return /^\/embed(\/|$)/.test(pathname);
+}
 
 export function isLocale(value: string | null | undefined): value is Locale {
   return !!value && (SUPPORTED_LOCALES as string[]).includes(value);

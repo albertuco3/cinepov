@@ -8,6 +8,9 @@ import { tmdbImage } from "@/lib/tmdb-image";
 
 export const dynamic = "force-dynamic";
 
+// El widget no compite con la ficha en los buscadores.
+export const metadata = { robots: { index: false, follow: true } };
+
 interface Props {
   params: Promise<{ id: string }>;
 }
