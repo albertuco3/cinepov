@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "@/components/LocaleLink";
 import PolarizingClient from "./PolarizingClient";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Películas Polarizantes | CinePOV",
   description:
     "El ranking de las películas que más dividen a la audiencia. Descubre qué títulos separan la opinión de jóvenes y mayores, o de mujeres y hombres.",
   openGraph: {
+    images: [DEFAULT_OG_IMAGE],
     title: "Películas Polarizantes - CinePOV",
     description:
       "Las películas con mayor discrepancia de calificación entre grupos demográficos.",

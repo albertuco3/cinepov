@@ -10,6 +10,7 @@ import {
 } from "@/lib/segments";
 import { getSegmentRanking } from "@/lib/segment-ranking";
 import { buildCanonicalMoviePath } from "@/lib/slug";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -44,6 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     ...(hasData ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
+      images: [DEFAULT_OG_IMAGE],
       title,
       description,
       type: "website",

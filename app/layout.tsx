@@ -28,6 +28,8 @@ const baseMetadata: Metadata = {
   title: "CinePOV — Tu Punto de Vista Cinematográfico",
   description: "Descubre qué nota le darías a cada película según cómo puntúas tú y la gente con tus gustos, y qué películas dividen a generaciones.",
   manifest: "/manifest.json",
+  // Tarjeta grande en X; la imagen la toma de og:image.
+  twitter: { card: "summary_large_image" },
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",

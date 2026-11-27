@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import TonightClient from "./TonightClient";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getRequestLocale } from "@/lib/i18n/server";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
@@ -12,6 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `${dict.tonight.title} — ${dict.tonight.badge} | CinePOV`,
     description: dict.tonight.subtitle,
     openGraph: {
+      images: [DEFAULT_OG_IMAGE],
       title: `${dict.tonight.title} — ${dict.tonight.badge} | CinePOV`,
       description: dict.tonight.subtitle,
       type: "website",

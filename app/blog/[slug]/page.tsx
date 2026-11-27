@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "@/components/LocaleLink";
 import { getBlogPost, ALL_BLOG_SLUGS } from "@/lib/blog-data";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, DEFAULT_OG_IMAGE } from "@/lib/site";
 import { getRequestLocale, localeAlternates } from "@/lib/i18n/server";
 
 interface Props {
@@ -26,6 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: post.excerpt,
     alternates: localeAlternates(`/blog/${post.slug}`, await getRequestLocale()),
     openGraph: {
+      images: [DEFAULT_OG_IMAGE],
       title: post.title,
       description: post.excerpt,
       type: "article",

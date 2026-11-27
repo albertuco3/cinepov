@@ -8,6 +8,7 @@ import {
   ALL_GENRE_SLUGS,
   GENRE_SLUG_MAP,
 } from "@/lib/genres";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -29,6 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `Las Mejores Películas de ${genreName} | CinePOV`,
     description: `Descubre las mejores películas de ${genreName.toLowerCase()} según diferentes grupos demográficos. Rankings de hombres, mujeres y diferentes generaciones.`,
     openGraph: {
+      images: [DEFAULT_OG_IMAGE],
       title: `Películas de ${genreName} - CinePOV`,
       description: `El ranking demográfico de ${genreName.toLowerCase()}.`,
       type: "website",

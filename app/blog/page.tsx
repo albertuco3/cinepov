@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "@/components/LocaleLink";
 import { BLOG_POSTS } from "@/lib/blog-data";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Blog de Datos de Cine y Audiencias | CinePOV",
   description:
     "Estudios, análisis demográficos y tendencias cinematográficas a partir de datos reales de la comunidad de CinePOV.",
   openGraph: {
+    images: [DEFAULT_OG_IMAGE],
     title: "Blog de Datos de Cine - CinePOV",
     description: "Análisis y contrastes demográficos de cine basados en datos reales.",
     type: "website",

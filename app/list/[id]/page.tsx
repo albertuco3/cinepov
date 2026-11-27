@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { buildCanonicalMoviePath } from "@/lib/slug";
 import ListShareBar from "./ListShareBar";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${list.name} | Lista de Cine - CinePOV`,
     description: list.description || `Colección de películas seleccionada en CinePOV.`,
     openGraph: {
+      images: [DEFAULT_OG_IMAGE],
       title: `${list.name} - CinePOV`,
       description: list.description || `Lista temática de cine en CinePOV.`,
       type: "website",

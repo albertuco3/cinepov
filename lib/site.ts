@@ -17,3 +17,15 @@ export const SITE_URL = normalizeSiteUrl(process.env.NEXTAUTH_URL, FALLBACK);
 
 /** Dominio sin protocolo, para mostrarlo en textos ("cinepov.com"). */
 export const SITE_HOST = new URL(SITE_URL).host;
+
+/**
+ * Imagen para redes por defecto (`app/opengraph-image.tsx`). Next solo la hereda
+ * si la página no define su propio bloque `openGraph`: las que lo definen deben
+ * incluirla en `images`, o se compartirán sin imagen.
+ */
+export const DEFAULT_OG_IMAGE = {
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+  alt: "CinePOV: ¿qué nota le darías a cada película?",
+};

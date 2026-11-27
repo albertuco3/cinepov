@@ -9,6 +9,7 @@ import { buildCanonicalMoviePath } from "@/lib/slug";
 import UserShareButton from "./UserShareButton";
 import FollowButton from "@/components/FollowButton";
 import { SOCIAL_ENABLED } from "@/lib/features";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${user.displayName} | Perfil Cinematográfico - CinePOV`,
     description: `Descubre las valoraciones y colecciones de cine de ${user.displayName} en CinePOV.`,
     openGraph: {
+      images: [DEFAULT_OG_IMAGE],
       title: `${user.displayName} en CinePOV`,
       description: `Perfil cinéfilo y valoraciones en CinePOV.`,
       type: "profile",

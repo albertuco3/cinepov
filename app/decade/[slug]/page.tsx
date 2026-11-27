@@ -9,6 +9,7 @@ import {
   DECADES_CONFIG,
 } from "@/lib/decades";
 import { buildCanonicalMoviePath } from "@/lib/slug";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${config.headline} según la Audiencia | CinePOV`,
     description: config.description,
     openGraph: {
+      images: [DEFAULT_OG_IMAGE],
       title: `${config.headline} - CinePOV`,
       description: config.description,
       type: "website",
