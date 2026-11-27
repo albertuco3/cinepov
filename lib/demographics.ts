@@ -55,12 +55,14 @@ export interface RatingCell {
   gender: string;
   birthYear: number;
   sum: number;
+  /** Suma de los cuadrados de las notas: permite calcular la varianza del grupo. */
+  sumSq: number;
   count: number;
 }
 
 /** Una valoración individual como celda de un solo voto. */
 export function ratingCell(score: number, gender: string, birthYear: number): RatingCell {
-  return { gender, birthYear, sum: score, count: 1 };
+  return { gender, birthYear, sum: score, sumSq: score * score, count: 1 };
 }
 
 export interface Segment {
@@ -68,6 +70,8 @@ export interface Segment {
   count: number;
   /** Votos que faltan para alcanzar el umbral mínimo del segmento. */
   missing: number;
+  /** Varianza muestral de las notas (null con menos de dos votos o sin nota publicable). */
+  variance: number | null;
 }
 
 export interface AggregatedBreakdown {
@@ -169,29 +173,33 @@ export function isAgeBroadKey(value: string): value is AgeBroadKey {
 }
 
 function emptySegment(): Segment {
-  return { avg: null, count: 0, missing: SEGMENT_MIN_VOTES };
+  return { avg: null, count: 0, missing: SEGMENT_MIN_VOTES, variance: null };
 }
 
 interface Accumulator {
   sum: number;
+  sumSq: number;
   count: number;
 }
 
-const newAccumulator = (): Accumulator => ({ sum: 0, count: 0 });
+const newAccumulator = (): Accumulator => ({ sum: 0, sumSq: 0, count: 0 });
 
 function addTo(acc: Accumulator, cell: RatingCell) {
   acc.sum += cell.sum;
+  acc.sumSq += cell.sumSq;
   acc.count += cell.count;
 }
 
-function buildSegment({ sum, count }: Accumulator, minVotes = SEGMENT_MIN_VOTES): Segment {
+function buildSegment({ sum, sumSq, count }: Accumulator, minVotes = SEGMENT_MIN_VOTES): Segment {
   if (count < minVotes) {
-    return { avg: null, count, missing: minVotes - count };
+    return { avg: null, count, missing: minVotes - count, variance: null };
   }
+  const variance = count >= 2 ? Math.max(0, (sumSq - (sum * sum) / count) / (count - 1)) : null;
   return {
     avg: Math.round((sum / count) * 10) / 10,
     count,
     missing: 0,
+    variance,
   };
 }
 
@@ -267,7 +275,7 @@ export function emptyBreakdown(): AggregatedBreakdown {
   for (const a of AGE_KEYS) byAgeRange[a] = emptySegment();
 
   return {
-    global: { avg: null, count: 0, missing: 1 },
+    global: { avg: null, count: 0, missing: 1, variance: null },
     byGender,
     byAgeBroad,
     byAgeRange,

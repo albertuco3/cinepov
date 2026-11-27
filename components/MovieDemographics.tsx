@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "@/components/LocaleLink";
 import { track } from "@/lib/analytics";
+import { getTopDemographicContrast, type ContrastGroupKey, type DemographicContrast } from "@/lib/viral";
 import { useI18n } from "@/lib/i18n/client";
 import {
   AGE_BROAD_KEYS,
@@ -133,6 +134,9 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
       {/* 1. Origen de los datos: cuántas personas reales hay detrás */}
       <DataProvenanceBar realCount={counts.real} />
 
+      {/* 1b. Cuando hay brecha, es noticia; cuando no, también se dice */}
+      <GapHighlight contrast={getTopDemographicContrast(data)} />
+
       {/* 2. Tarjeta destacada del segmento del usuario */}
       {userSegment && (
         <UserSegmentCard
@@ -256,6 +260,45 @@ export default function MovieDemographics({ movieId, userGender, userBirthYear }
 }
 
 /* ------------------------------------------------------------------ */
+
+const GROUP_LABELS: Record<"es" | "en", Record<ContrastGroupKey, string>> = {
+  es: { female: "Mujeres", male: "Hombres", non_binary: "No binarios", young: "18-34 años", adult: "35-54 años", senior: "55+ años" },
+  en: { female: "Women", male: "Men", non_binary: "Non-binary", young: "Ages 18-34", adult: "Ages 35-54", senior: "Ages 55+" },
+};
+
+function GapHighlight({ contrast }: { contrast: DemographicContrast | null }) {
+  const { locale } = useI18n();
+  if (!contrast) return null;
+  const labels = GROUP_LABELS[locale === "en" ? "en" : "es"];
+  const a = labels[contrast.keyA];
+  const b = labels[contrast.keyB];
+  const generational = contrast.type === "age_broad";
+
+  if (!contrast.notable) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-muted-foreground">
+        {locale === "en"
+          ? `No real gap here: ${generational ? "different generations" : "women and men"} rate it about the same.`
+          : `Aquí no hay brecha: ${generational ? "las distintas generaciones" : "mujeres y hombres"} la puntúan de forma parecida.`}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-primary/10 px-5 py-4 space-y-1">
+      <p className="text-[10px] font-black uppercase tracking-widest text-primary-light">
+        {locale === "en"
+          ? generational ? "Generational gap" : "Gender gap"
+          : generational ? "Brecha generacional" : "Brecha de género"}
+      </p>
+      <p className="text-sm text-white font-semibold">
+        {locale === "en"
+          ? `${a} give it ${contrast.scoreA}; ${b}, ${contrast.scoreB}. A ${contrast.difference}-point gap that is not down to chance.`
+          : `${a} le dan un ${contrast.scoreA}; ${b}, un ${contrast.scoreB}. Una brecha de ${contrast.difference} puntos que no es casualidad.`}
+      </p>
+    </div>
+  );
+}
 
 function DataProvenanceBar({ realCount }: { realCount: number }) {
   const { dict } = useI18n();

@@ -134,7 +134,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [x] **Reposicionamiento decidido (27 de noviembre):** la utilidad es la nota estimada por gusto; el desglose demográfico pasa a ser contenido, con la edad por delante.
 - [x] Motor "gente que puntúa como tú" (`lib/taste.ts`, `lib/taste-db.ts`), elegido con MovieLens (sección 4 de la validación): nota estimada en la ficha y recomendaciones por gusto antes que por segmento.
 - [x] Lema conservado (ahora lo respalda el motor) y textos de portada, cómo funciona, recomendaciones y metadatos reescritos.
-- [ ] Destacar en la ficha y en la portada solo las películas con una brecha real ("cuando hay brecha, es noticia").
+- [x] Destacar solo las brechas reales ("cuando hay brecha, es noticia"): ≥ 1 punto, ≥ 5 votos por grupo y z de Welch ≥ 1,96, como en la validación. Lo aplican la ficha (que también dice cuándo no hay brecha), polarizantes, `/vs/` y las imágenes OG.
 - [ ] Ajustar el motor con datos propios cuando haya volumen (umbral de vecinos, orden de las recomendaciones con pocos vecinos).
 - [ ] Revisar la licencia de GroupLens antes de publicar nada derivado de estos datos.
 

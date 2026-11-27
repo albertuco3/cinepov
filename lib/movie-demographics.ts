@@ -7,6 +7,7 @@ interface CellRow {
   gender: string;
   birthYear: number;
   sum: number;
+  sumSq: number;
   count: number;
 }
 
@@ -23,7 +24,7 @@ export async function getRatingCells(movieIds: string[]): Promise<Map<string, Ra
 
   const rows = await db.$queryRaw<CellRow[]>`
     SELECT r."movieId", u."gender", u."birthYear",
-           SUM(r."score")::int AS "sum", COUNT(*)::int AS "count"
+           SUM(r."score")::int AS "sum", SUM(r."score" * r."score")::int AS "sumSq", COUNT(*)::int AS "count"
     FROM "Rating" r
     JOIN "User" u ON u."id" = r."userId"
     WHERE r."movieId" = ANY(${movieIds}) AND ${COUNTED_RATING_SQL}
@@ -35,6 +36,7 @@ export async function getRatingCells(movieIds: string[]): Promise<Map<string, Ra
       gender: row.gender,
       birthYear: row.birthYear,
       sum: row.sum,
+      sumSq: row.sumSq,
       count: row.count,
     });
   }

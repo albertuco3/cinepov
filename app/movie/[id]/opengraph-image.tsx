@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { getMovieDemographics } from "@/lib/movie-demographics";
-import { getTopDemographicContrast } from "@/lib/viral";
+import { getNotableContrast } from "@/lib/viral";
 import { parseMovieParam } from "@/lib/slug";
 import { MovieOgCard } from "@/components/og/MovieOgCard";
 import { SITE_HOST } from "@/lib/site";
@@ -73,7 +73,8 @@ export default async function OpengraphImage({ params }: Props) {
   }
 
   const payload = await getMovieDemographics(movie.id);
-  const contrast = getTopDemographicContrast(payload);
+  // Una imagen para compartir solo muestra brechas reales, nunca ruido.
+  const contrast = getNotableContrast(payload);
 
   const globalAvg = payload.real.global.avg !== null ? payload.real.global.avg.toFixed(1) : null;
 

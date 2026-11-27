@@ -132,14 +132,14 @@ describe("agregación por celdas", () => {
     // los tests construyen votos sueltos. Ambos caminos deben coincidir.
     const loose = [...rows(4, 9, "female", 1995), ...rows(2, 6, "female", 1995), ...rows(3, 7, "male", 1980)];
     const grouped: RatingCell[] = [
-      { gender: "female", birthYear: 1995, sum: 4 * 9 + 2 * 6, count: 6 },
-      { gender: "male", birthYear: 1980, sum: 3 * 7, count: 3 },
+      { gender: "female", birthYear: 1995, sum: 4 * 9 + 2 * 6, sumSq: 4 * 81 + 2 * 36, count: 6 },
+      { gender: "male", birthYear: 1980, sum: 3 * 7, sumSq: 3 * 49, count: 3 },
     ];
     expect(aggregateBreakdown(grouped, YEAR)).toEqual(aggregateBreakdown(loose, YEAR));
   });
 
   it("informa del número de valoraciones del payload", () => {
-    const payload = buildDemographicsPayload("movie-1", [{ gender: "male", birthYear: 1995, sum: 32, count: 4 }], YEAR);
+    const payload = buildDemographicsPayload("movie-1", [{ gender: "male", birthYear: 1995, sum: 32, sumSq: 256, count: 4 }], YEAR);
     expect(payload.counts).toEqual({ real: 4 });
     expect(payload.real.global.avg).toBe(8);
   });

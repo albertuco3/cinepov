@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildDemographicsPayload, ratingCell, type RatingCell } from "./demographics";
-import { getTopDemographicContrast } from "./viral";
+import { getNotableContrast, getTopDemographicContrast, isNotableGap } from "./viral";
 
 const YEAR = 2026;
 
@@ -52,8 +52,52 @@ describe("getTopDemographicContrast", () => {
 
     expect(contrast).not.toBeNull();
     expect(contrast?.type).toBe("age_broad");
-    expect(contrast?.labelA).toBe("Jovenes (18-34)");
+    expect(contrast?.labelA).toBe("Jóvenes (18-34)");
     expect(contrast?.labelB).toBe("Mayores (55+)");
     expect(contrast?.difference).toBeGreaterThan(4);
+  });
+});
+
+describe("brechas reales", () => {
+  const seg = (avg: number, count: number, variance: number) => ({ avg, count, missing: 0, variance });
+
+  it("exige al menos un punto de diferencia", () => {
+    expect(isNotableGap(seg(8, 50, 1), seg(7.2, 50, 1))).toBe(false);
+    expect(isNotableGap(seg(8, 50, 1), seg(6.8, 50, 1))).toBe(true);
+  });
+
+  it("exige al menos cinco votos por grupo", () => {
+    expect(isNotableGap(seg(9, 4, 0.5), seg(5, 40, 0.5))).toBe(false);
+  });
+
+  it("descarta las diferencias que pueden ser ruido de pocos votos muy dispersos", () => {
+    // 1,5 puntos, pero con varianza 9 y 6 votos por grupo: z ≈ 0,87.
+    expect(isNotableGap(seg(7.5, 6, 9), seg(6, 6, 9))).toBe(false);
+  });
+
+  it("marca como notable una brecha clara y la devuelve getNotableContrast", () => {
+    const r = [
+      ...rows(10, 9, "female", 2002),
+      ...rows(10, 8, "male", 2002),
+      ...rows(10, 5, "female", 1960),
+      ...rows(10, 4, "male", 1960),
+    ];
+    const payload = buildDemographicsPayload("m4", r, YEAR);
+    const notable = getNotableContrast(payload);
+    expect(notable?.type).toBe("age_broad");
+    expect(notable?.notable).toBe(true);
+    expect(notable?.keyA).toBe("young");
+  });
+
+  it("sin brecha real, getNotableContrast devuelve null aunque haya datos", () => {
+    const r = [
+      ...rows(8, 7, "female", 2002),
+      ...rows(8, 8, "male", 2002),
+      ...rows(8, 7, "male", 1960),
+      ...rows(8, 8, "female", 1960),
+    ];
+    const payload = buildDemographicsPayload("m5", r, YEAR);
+    expect(getTopDemographicContrast(payload)).not.toBeNull();
+    expect(getNotableContrast(payload)).toBeNull();
   });
 });

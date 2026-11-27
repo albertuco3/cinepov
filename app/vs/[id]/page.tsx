@@ -71,7 +71,7 @@ export default async function BattlePage({ params }: BattlePageProps) {
   const globalAvg = payload.real.global.avg !== null ? payload.real.global.avg.toFixed(1) : null;
 
   const contrastSummaryText = contrast
-    ? `${contrast.labelA}: ${contrast.scoreA}/10 frente a ${contrast.labelB}: ${contrast.scoreB}/10 (Brecha de ${contrast.difference} puntos)`
+    ? `${contrast.labelA}: ${contrast.scoreA}/10 frente a ${contrast.labelB}: ${contrast.scoreB}/10 (${contrast.notable ? `brecha de ${contrast.difference} puntos` : "sin brecha clara"})`
     : null;
 
   return (
@@ -126,10 +126,16 @@ export default async function BattlePage({ params }: BattlePageProps) {
                 {contrast.title}
               </span>
               <h2 className="text-lg sm:text-xl font-black text-white">
-                Una discrepancia de {contrast.difference} puntos
+                {contrast.notable
+                  ? `Una brecha de ${contrast.difference} puntos`
+                  : contrast.difference < 0.5
+                    ? "Aquí no hay brecha"
+                    : `Una diferencia de ${contrast.difference} puntos, sin brecha clara`}
               </h2>
               <p className="text-xs text-muted-foreground">
-                {contrast.leadLabel} valoran esta película notablemente por encima del otro grupo.
+                {contrast.notable
+                  ? `${contrast.leadLabel} la valoran claramente por encima del otro grupo.`
+                  : "Con los votos que hay, la diferencia entre grupos puede ser casualidad: la puntúan de forma parecida."}
               </p>
             </div>
 

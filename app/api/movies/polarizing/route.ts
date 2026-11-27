@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getManyMovieDemographics, getMostRatedMovieIds } from "@/lib/movie-demographics";
-import { getTopDemographicContrast } from "@/lib/viral";
+import { getTopDemographicContrast, isNotableGap } from "@/lib/viral";
+import type { Segment } from "@/lib/demographics";
 
 export const dynamic = "force-dynamic";
 
@@ -32,26 +33,16 @@ export async function GET(request: NextRequest) {
       if (!payload) continue;
       const contrast = getTopDemographicContrast(payload);
 
-      const female = payload.real.byGender.female;
-      const male = payload.real.byGender.male;
-      const genderGap =
-        female.avg !== null && male.avg !== null && female.count >= 3 && male.count >= 3
-          ? parseFloat(Math.abs(female.avg - male.avg).toFixed(1))
-          : 0;
-
-      const young = payload.real.byAgeBroad.young;
-      const senior = payload.real.byAgeBroad.senior;
-      const adult = payload.real.byAgeBroad.adult;
-      const ageGap =
-        young.avg !== null && senior.avg !== null && young.count >= 3 && senior.count >= 3
-          ? parseFloat(Math.abs(young.avg - senior.avg).toFixed(1))
-          : young.avg !== null && adult.avg !== null && young.count >= 3 && adult.count >= 3
-            ? parseFloat(Math.abs(young.avg - adult.avg).toFixed(1))
-            : 0;
-
+      // Solo cuentan las brechas reales (lib/viral.ts): una diferencia que
+      // puede ser ruido de pocos votos no es "polarizante".
+      const gap = (a: Segment, b: Segment) =>
+        isNotableGap(a, b) ? parseFloat(Math.abs(a.avg! - b.avg!).toFixed(1)) : 0;
+      const { byGender: g, byAgeBroad: age } = payload.real;
+      const genderGap = gap(g.female, g.male);
+      const ageGap = Math.max(gap(age.young, age.senior), gap(age.young, age.adult), gap(age.adult, age.senior));
       const polarizationScore = Math.max(genderGap, ageGap);
 
-      // Solo incluir si hay alguna brecha calculable mayor a 0
+      // Solo se incluye si tiene al menos una brecha real.
       if (polarizationScore > 0) {
         results.push({
           id: movie.id,
