@@ -5,6 +5,7 @@ import { useJson } from "@/lib/hooks/use-json";
 import Image from "next/image";
 import Link from "@/components/LocaleLink";
 import { type DemographicContrast } from "@/lib/viral";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 interface PolarizingMovie {
   id: string;
@@ -79,7 +80,7 @@ export default function PolarizingClient() {
                 {/* Póster */}
                 <div className="relative h-24 w-16 rounded-xl overflow-hidden flex-shrink-0 bg-white/5 border border-white/10 shadow-md">
                   <Image
-                    src={movie.posterUrl}
+                    src={tmdbImage(movie.posterUrl, "w154")}
                     alt={movie.title}
                     fill
                     sizes="64px"

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Check } from "lucide-react";
 import { useI18n, useLocalePath } from "@/lib/i18n/client";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 interface Movie {
   id: string;
@@ -333,7 +334,7 @@ export default function OnboardingClient({ initialMovies, userDisplayName }: Onb
           {/* Póster */}
           <div className="relative h-48 w-32 sm:h-56 sm:w-36 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-lg flex-shrink-0">
             <Image
-              src={currentMovie.posterUrl}
+              src={tmdbImage(currentMovie.posterUrl, "w342")}
               alt={activeTitle}
               fill
               sizes="(max-w-768px) 128px, 144px"

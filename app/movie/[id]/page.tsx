@@ -20,6 +20,7 @@ import { parseMovieParam } from "@/lib/slug";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getRequestLocale, localeAlternates } from "@/lib/i18n/server";
 import { SOCIAL_ENABLED } from "@/lib/features";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 interface MoviePageProps {
   params: Promise<{ id: string }>;
@@ -459,7 +460,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
                   <div className="space-y-2">
                     <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-white/5 border border-white/5 shadow-md flex-shrink-0">
                       <Image
-                        src={similar.posterUrl}
+                        src={tmdbImage(similar.posterUrl, "w342")}
                         alt={similar.title}
                         fill
                         sizes="(max-w-[120px]) 100vw, 120px"

@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "@/components/LocaleLink";
 import { buildCanonicalMoviePath } from "@/lib/slug";
 import { useI18n } from "@/lib/i18n/client";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 interface Genre {
   id: string;
@@ -334,7 +335,7 @@ export default function RankingsClient({
                   {/* Póster */}
                   <div className="relative h-28 w-20 rounded-2xl overflow-hidden bg-white/5 border border-white/5 shadow-md flex-shrink-0">
                     <Image
-                      src={movie.posterUrl}
+                      src={tmdbImage(movie.posterUrl, "w185")}
                       alt={movie.title}
                       fill
                       sizes="80px"

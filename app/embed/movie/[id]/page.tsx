@@ -4,6 +4,7 @@ import Link from "@/components/LocaleLink";
 import { getOrCreateMovie } from "@/lib/movies";
 import { getMovieDemographics } from "@/lib/movie-demographics";
 import { parseMovieParam } from "@/lib/slug";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function MovieEmbedPage({ params }: Props) {
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative h-16 w-11 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/10 shadow-md">
             <Image
-              src={movie.posterUrl}
+              src={tmdbImage(movie.posterUrl, "w154")}
               alt={movie.title}
               fill
               sizes="44px"

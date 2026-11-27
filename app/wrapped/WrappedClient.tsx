@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "@/components/LocaleLink";
 import { toast } from "sonner";
 import type { WrappedStats } from "@/lib/wrapped";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 interface Props {
   stats: WrappedStats;
@@ -137,7 +138,7 @@ export default function WrappedClient({ stats, userName }: Props) {
                   </span>
                   <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden shadow-md">
                     <Image
-                      src={stats.highestRated.posterUrl}
+                      src={tmdbImage(stats.highestRated.posterUrl, "w342")}
                       alt={stats.highestRated.title}
                       fill
                       className="object-cover"
@@ -160,7 +161,7 @@ export default function WrappedClient({ stats, userName }: Props) {
                   </span>
                   <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden shadow-md">
                     <Image
-                      src={stats.lowestRated.posterUrl}
+                      src={tmdbImage(stats.lowestRated.posterUrl, "w342")}
                       alt={stats.lowestRated.title}
                       fill
                       className="object-cover"

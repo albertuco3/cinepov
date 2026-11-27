@@ -9,6 +9,7 @@ import Link from "@/components/LocaleLink";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import AccountDangerZone from "@/components/AccountDangerZone";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 interface Movie {
   id: string;
@@ -615,7 +616,7 @@ export default function UserProfileClient({
                   <div className="glass-panel p-5 rounded-3xl border border-emerald-500/10 bg-emerald-500/5 flex items-center gap-4 relative overflow-hidden group">
                     <div className="relative h-20 w-14 rounded-xl overflow-hidden bg-white/5 border border-white/5 shadow-md flex-shrink-0">
                       <Image
-                        src={generousMovie.movie.posterUrl}
+                        src={tmdbImage(generousMovie.movie.posterUrl, "w154")}
                         alt={generousMovie.movie.title}
                         fill
                         sizes="56px"
@@ -650,7 +651,7 @@ export default function UserProfileClient({
                   <div className="glass-panel p-5 rounded-3xl border border-rose-500/10 bg-rose-500/5 flex items-center gap-4 relative overflow-hidden group">
                     <div className="relative h-20 w-14 rounded-xl overflow-hidden bg-white/5 border border-white/5 shadow-md flex-shrink-0">
                       <Image
-                        src={harshMovie.movie.posterUrl}
+                        src={tmdbImage(harshMovie.movie.posterUrl, "w154")}
                         alt={harshMovie.movie.title}
                         fill
                         sizes="56px"
@@ -722,7 +723,7 @@ export default function UserProfileClient({
                     <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full">
                       <div className="relative h-16 w-11 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/5 shadow-md">
                         <Image
-                          src={rating.movie.posterUrl}
+                          src={tmdbImage(rating.movie.posterUrl, "w154")}
                           alt={rating.movie.title}
                           fill
                           sizes="44px"
@@ -835,7 +836,7 @@ export default function UserProfileClient({
                       >
                         <div className="relative h-16 w-11 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 border border-white/5 shadow-md">
                           <Image
-                            src={item.movie.posterUrl}
+                            src={tmdbImage(item.movie.posterUrl, "w154")}
                             alt={item.movie.title}
                             fill
                             sizes="44px"
@@ -907,7 +908,7 @@ export default function UserProfileClient({
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="relative h-20 w-14 rounded-xl overflow-hidden flex-shrink-0 bg-white/5 border border-white/10 shadow-md">
                       <Image
-                        src={item.movie.posterUrl}
+                        src={tmdbImage(item.movie.posterUrl, "w154")}
                         alt={item.movie.title}
                         fill
                         sizes="56px"
@@ -1162,7 +1163,7 @@ export default function UserProfileClient({
                   <div className="flex items-center gap-4 w-full md:w-auto">
                     <div className="relative h-20 w-14 rounded-xl overflow-hidden flex-shrink-0 bg-white/5 border border-white/5 shadow-md">
                       <Image
-                        src={unlock.posterUrl}
+                        src={tmdbImage(unlock.posterUrl, "w154")}
                         alt={unlock.title}
                         fill
                         sizes="56px"

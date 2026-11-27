@@ -7,6 +7,7 @@ import { getMovieDemographics } from "@/lib/movie-demographics";
 import { parseMovieParam } from "@/lib/slug";
 import { getTopDemographicContrast } from "@/lib/viral";
 import BattleShareBar from "@/components/BattleShareBar";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 interface BattlePageProps {
   params: Promise<{ id: string }>;
@@ -95,7 +96,7 @@ export default async function BattlePage({ params }: BattlePageProps) {
         <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left border-b border-white/5 pb-6">
           <div className="relative h-32 w-22 rounded-2xl overflow-hidden flex-shrink-0 bg-white/5 border border-white/10 shadow-lg">
             <Image
-              src={movie.posterUrl}
+              src={tmdbImage(movie.posterUrl, "w185")}
               alt={movie.title}
               fill
               sizes="88px"

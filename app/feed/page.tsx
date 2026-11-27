@@ -9,6 +9,7 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getRequestLocale } from "@/lib/i18n/server";
 import { SOCIAL_ENABLED } from "@/lib/features";
 import { notFound } from "next/navigation";
+import { tmdbImage } from "@/lib/tmdb-image";
 
 export const dynamic = "force-dynamic";
 
@@ -118,7 +119,7 @@ export default async function FeedPage() {
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="relative h-20 w-14 rounded-2xl overflow-hidden flex-shrink-0 bg-white/5 border border-white/10 shadow-md">
                     <Image
-                      src={r.movie.posterUrl}
+                      src={tmdbImage(r.movie.posterUrl, "w154")}
                       alt={r.movie.title}
                       fill
                       sizes="56px"
