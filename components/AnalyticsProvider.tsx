@@ -40,6 +40,15 @@ const BASE_CONFIG: Partial<PostHogConfig> = {
   person_profiles: "identified_only",
   mask_all_text: true,
   mask_all_element_attributes: true,
+  // Lo que no recoge la política de privacidad queda apagado aquí, en el código: si
+  // no se fija, PostHog lo toma de los interruptores del proyecto y bastaría un clic
+  // en su panel para empezar a grabar sesiones o movimientos del ratón.
+  disable_session_recording: true,
+  enable_heatmaps: false,
+  capture_dead_clicks: false,
+  capture_performance: false,
+  capture_exceptions: false,
+  disable_surveys: true,
   session_recording: { maskAllInputs: true, maskTextSelector: "*" },
 };
 
