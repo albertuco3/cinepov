@@ -52,7 +52,7 @@
 
 Pasos detallados en [tareas_pendientes_usuario.md](./tareas_pendientes_usuario.md).
 
-- [ ] Aplicar en producción el catálogo corregido (`npm run db:seed` con las cadenas de la rama `production`): seis películas del onboarding eran otras.
+- [x] Catálogo corregido aplicado en producción (`npm run db:seed` con las cadenas de la rama `production`), 28 de noviembre.
 - [x] Separar bases de datos: rama `dev` de Neon para desarrollo (el `.env` local apunta a ella) y `production` solo para producción.
 - [x] Retirar de la base de producción los votos sintéticos, los bots y los usuarios de prueba (15.557 votos y 5.010 usuarios borrados).
 - [x] Registrar la migración base en la rama `production` de Neon.
@@ -86,7 +86,7 @@ Encontrados y corregidos durante el trabajo de este hito:
 - [ ] *(código)* **Las migraciones solo creaban 7 de las 13 tablas.** Sustituidas por una migración base que coincide con el esquema y con la base real; el CI aplica migraciones y falla si se desvían del esquema.
 - [ ] *(código)* **Las recomendaciones presentaban la nota de TMDB como opinión del segmento** (y un perfil inventado de "mujer de 28" si faltaban datos). Ahora se etiqueta la procedencia y no se inventa perfil. Sus enlaces llevaban a la película equivocada.
 - [x] **`parseMovieParam` convertía un UUID en un id de TMDB** ("07bb…" → película 7). Comprobado el 27 de noviembre: una URL con UUID da 404 en lugar de otra película. Los rankings enlazaban así cada título (todos daban 404); corregido.
-- [ ] *(código)* **Seis películas del onboarding eran otras** por ids de TMDB equivocados (*The Lone Ranger* en lugar de *Parásitos*, *Hocus Pocus* en lugar de *Torrente*…). Catálogo comprobado contra TMDB; el seed retira del onboarding las que salen de la lista. Falta aplicarlo en producción (1.1).
+- [x] **Seis películas del onboarding eran otras** por ids de TMDB equivocados (*The Lone Ranger* en lugar de *Parásitos*, *Hocus Pocus* en lugar de *Torrente*…). Catálogo comprobado contra TMDB; el seed retira del onboarding las que salen de la lista. Aplicado en producción el 28 de noviembre.
 - [ ] *(código)* **El `NEXTAUTH_SECRET` de `.env.example` era el mismo que el de `.env`.** Nunca se versionó; ahora el ejemplo lleva un marcador y sí se versiona.
 - [x] **Las imágenes OG daban error 500 en todas las películas** (Satori exige `display: flex` en cualquier `div` cuyo contenido no sea una cadena). Corregido y comprobado en producción; la tarjeta tiene tests que reproducen la regla y generan PNG reales.
 - [x] **Las rutas de registro, perfil, sugerencias y valoraciones daban un error 500 en Vercel** (DOMPurify arrastraba jsdom, que no carga allí). Sustituido por un saneado propio sin dependencias; de paso, los textos ya no se guardan escapados ("Tom &amp; Jerry") y los emails escapan al construir su HTML.
